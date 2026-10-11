@@ -5,8 +5,8 @@ description: EST / NestPay (Asseco) sanal POS entegrasyon referansı.
 
 İş Bankası, Ziraat Bankası, Halkbank, TEB ve Şekerbank aynı EST (Asseco) sanal POS altyapısını kullanır. Tek bir sağlayıcı hepsini kapsar: `bank` canlı ortam adresini seçer. 3D Secure istekleri ve callback'leri hash sürüm 3 ile imzalanır: `base64(SHA-512(alan adına göre sıralanmış değerler ve sonunda mağaza anahtarı, "|" ile birleştirilmiş))`.
 
-<Callout type="warn">
-  EST sağlayıcısı henüz EST test ortamında doğrulanmadı: kullanılabilir bir test mağazası yoktu. Canlıya geçmeden önce küçük bir tutarla test edin.
+<Callout type="info">
+  Ortak EST test ortamında İş Bankası test mağazasıyla doğrulandı: 3D'siz satış, iptal, iade, sipariş durumu ve dört 3D modelinin tamamı uçtan uca. Bankaların canlı ortam adresleri test edilmedi; canlıya geçmeden önce küçük bir tutarla deneyin.
 </Callout>
 
 ## Yapılandırma [#configuration]
@@ -24,6 +24,7 @@ const payment = betterPayment({
       storeKey: process.env.EST_STORE_KEY!,
       // storeType?: '3d' | '3d_pay' | '3d_pay_hosting' | '3d_host' (default '3d')
       // department?: number (BOLUM, when the bank assigned one)
+      // acceptedMdStatuses?: string[] (default ['1'], see below)
       // baseUrl: defaults from mode (shared EST test host / the bank's host)
     }),
   },
@@ -61,10 +62,14 @@ const result = await payment.isbank.completeThreeDSPayment(callbackBody);
 Hash, dönen tüm alanların değerlerini kapsar ama alan adlarını kapsamaz; bu yüzden geçerli bir hash tek başına hangi değerin sipariş numarası olduğunu kanıtlamaz. Sonuç bankayla doğrulanır:
 
 - hash'i geçersiz ya da başka bir `clientid` için gelen callback `INVALID_HASH` olarak reddedilir;
-- `3d`: `mdStatus` `1` ise kart XML API `Auth` ile tahsil edilir ve sonucu bankanın cevabı belirler;
-- `3d_pay` / `3d_host`: onaylı bir callback sipariş durumu sorgusuyla kontrol edilir; bankanın doğrulamadığı bir ödeme `INVALID_HASH` olarak reddedilir.
+- `3d` / `3d_host`: banka yalnızca kartı doğrular. `mdStatus` kabul edilen bir değerse kart XML API `Auth` ile (`md` kullanılarak) tahsil edilir ve sonucu bankanın cevabı belirler;
+- `3d_pay` / `3d_pay_hosting`: kartı banka tahsil eder. Onaylı bir callback sipariş durumu sorgusuyla kontrol edilir; bankanın doğrulamadığı bir ödeme `INVALID_HASH` olarak reddedilir.
 
 `paymentId` ve `conversationId` yalnızca bankanın doğruladığı bir ödemede doldurulur; bu yüzden başarısız bir sonuç hiçbir zaman callback'ten alınan bir sipariş numarası taşımaz.
+
+### mdStatus [#mdstatus]
+
+`mdStatus` `1`, kartın tam olarak doğrulandığı anlamına gelir. `2`, `3` ve `4` yarım güvenlidir: kart ya da bankası 3D Secure'a kayıtlı değildir veya yalnızca bir deneme yapılmıştır. `3d` ve `3d_host` modellerinde varsayılan olarak yalnızca `1` tahsil edilir; diğer değerler `MD_STATUS_<değer>` ile başarısız olur. Yarım güvenli ödemeleri de tahsil etmek için bunları `acceptedMdStatuses` içinde listeleyin (örneğin `['1', '2', '3', '4']`). Bu durumda ters ibraz (chargeback) sorumluluğu sizde kalabilir. `3d_pay` ve `3d_pay_hosting` modellerinde kararı banka verir.
 
 ## İade, iptal ve durum sorgusu [#refund-cancel--status]
 
@@ -72,7 +77,16 @@ Hash, dönen tüm alanların değerlerini kapsar ama alan adlarını kapsamaz; b
 await payment.isbank.refund({ paymentId: 'ORDER123', price: '50.00', currency: 'TRY', ip: '1.2.3.4' }); // Credit
 await payment.isbank.cancel({ paymentId: 'ORDER123', ip: '1.2.3.4' });                               // Void
 const status = await payment.isbank.getPayment('ORDER123');                                          // ORDERSTATUS
-// status: 'success' (captured sale), 'pending', 'failure'
+// status: 'success' (captured sale), 'cancelled' (voided or refunded),
+// 'failure' (declined or unknown order), 'pending' (anything else)
+```
+
+## Tarayıcı client'ı [#browser-client]
+
+`better-payment/client` içinde `client.isbank` özelliği yoktur. EST sağlayıcısına `providers` içindeki anahtarıyla ulaşın:
+
+```typescript
+const result = await client.use('isbank').initThreeDSPayment(request);
 ```
 
 <Callout type="info">

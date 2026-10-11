@@ -1,13 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { HttpError } from '../../../../src/core/http';
 import { PaymentErrorCode } from '../../../../src/core/error-codes';
-import { betterPayment } from '../../../../src';
-import { Est, est, isEstCapturedSale } from '../../../../src/providers/est';
-import {
-  createEstHash,
-  parseEstXmlResponse,
-  EST_SANDBOX_URL,
-} from '../../../../src/providers/est/utils';
+import { betterPayment, PROVIDER_DEFAULT_URLS, ProviderType } from '../../../../src';
+import { Est, est, estOrderStatus, isEstCapturedSale } from '../../../../src/providers/est';
+import { createEstHash, parseEstXmlResponse } from '../../../../src/providers/est/utils';
 import { PaymentStatus } from '../../../../src/types';
 import { mockPaymentRequest, mockThreeDSPaymentRequest } from '../../../fixtures/payment-data';
 import {
@@ -32,6 +28,8 @@ const signed = async (data: Record<string, string | undefined>) => {
   const { HASH: _hash, ...rest } = data;
   return { ...rest, HASH: await createEstHash(rest, EST_TEST.storeKey) };
 };
+
+const EST_SANDBOX_URL = 'https://entegrasyon.asseco-see.com.tr';
 
 const timeout = () => new HttpError('Request timed out', {}, { code: 'ETIMEDOUT' });
 
@@ -273,6 +271,68 @@ describe('EST provider', () => {
     });
   });
 
+  describe('completeThreeDSPayment (mdStatus)', () => {
+    it('rejects half-secure mdStatus values by default', async () => {
+      const result = await provider.completeThreeDSPayment(
+        await signed({ ...EST_3D_CALLBACK, mdStatus: '2' })
+      );
+      expect(post).not.toHaveBeenCalled();
+      expect(result.errorCode).toBe('MD_STATUS_2');
+      expectNoIds(result);
+    });
+
+    it('charges the mdStatus values listed in acceptedMdStatuses', async () => {
+      post.mockResolvedValue({ data: EST_APPROVED_XML });
+      const lenient = create({ acceptedMdStatuses: ['1', '2', '3', '4'] });
+      const result = await lenient.completeThreeDSPayment(
+        await signed({ ...EST_3D_CALLBACK, mdStatus: '4' })
+      );
+      expect(sentFields().fields).toMatchObject({ Type: 'Auth', Number: 'MDVALUE123' });
+      expect(result.status).toBe(PaymentStatus.SUCCESS);
+    });
+  });
+
+  describe('completeThreeDSPayment (3d_host)', () => {
+    // The hosted page only authenticates the card: the callback has md but no
+    // ProcReturnCode, and the merchant charges with XML Auth like 3d
+    const hostCallback = () =>
+      signed({
+        ...EST_3D_CALLBACK,
+        storetype: '3d_host',
+        Response: undefined,
+        ProcReturnCode: undefined,
+      });
+
+    beforeEach(() => {
+      provider = create({ storeType: '3d_host' });
+    });
+
+    it('charges the authenticated card with XML Auth', async () => {
+      post.mockResolvedValue({ data: EST_APPROVED_XML });
+
+      const result = await provider.completeThreeDSPayment(await hostCallback());
+
+      expect(sentFields().fields).toMatchObject({
+        Type: 'Auth',
+        OrderId: 'ORDER3D',
+        Number: 'MDVALUE123',
+        PayerTxnId: 'XIDVALUE=',
+        PayerAuthenticationCode: 'CAVVVALUE=',
+      });
+      expect(result.status).toBe(PaymentStatus.SUCCESS);
+      expect(result.paymentId).toBe('ORDER3D');
+    });
+
+    it('fails without ids when the card was not authenticated', async () => {
+      const result = await provider.completeThreeDSPayment(
+        await signed({ ...(await hostCallback()), mdStatus: '0' })
+      );
+      expect(post).not.toHaveBeenCalled();
+      expect(result.status).toBe(PaymentStatus.FAILURE);
+      expectNoIds(result);
+    });
+  });
+
   describe('completeThreeDSPayment (3d_pay)', () => {
     beforeEach(() => {
       provider = create({ storeType: '3d_pay' });
@@ -323,6 +383,15 @@ describe('EST provider', () => {
       const result = await provider.completeThreeDSPayment(EST_3DPAY_CALLBACK);
       expect(result.status).toBe(PaymentStatus.PENDING);
       expect(result.paymentId).toBe('ORDERPAY');
+    });
+
+    it('treats 3d_pay_hosting the same way', async () => {
+      post.mockResolvedValue({ data: estOrderStatusXml() });
+      const result = await create({ storeType: '3d_pay_hosting' }).completeThreeDSPayment(
+        await signed({ ...EST_3DPAY_CALLBACK, storetype: '3d_pay_hosting' })
+      );
+      expect(sentFields().extra).toMatchObject({ ORDERSTATUS: 'SOR' });
+      expect(result.status).toBe(PaymentStatus.SUCCESS);
     });
   });
 
@@ -384,6 +453,45 @@ describe('EST provider', () => {
       expect(missing.status).toBe(PaymentStatus.FAILURE);
       expect(missing.errorMessage).toBe('No record found for X');
     });
+
+    // Order status answers as seen in the EST test environment
+    it('returns cancelled for a voided order', async () => {
+      post.mockResolvedValue({ data: estOrderStatusXml({ TRANS_STAT: 'V', CAPTURE_AMT: '100' }) });
+      const result = await provider.getPayment('ORDERPAY');
+      expect(result.status).toBe(PaymentStatus.CANCELLED);
+      expect(result.paymentId).toBe('ORDERPAY');
+    });
+
+    it('returns cancelled for a refunded order', async () => {
+      post.mockResolvedValue({
+        data: estOrderStatusXml({ TRANS_STAT: 'C', CHARGE_TYPE_CD: 'C', CAPTURE_AMT: '50' }),
+      });
+      expect((await provider.getPayment('ORDERPAY')).status).toBe(PaymentStatus.CANCELLED);
+    });
+
+    it('returns failure with the bank code for a declined order', async () => {
+      post.mockResolvedValue({
+        data: estXml(
+          { ErrMsg: 'Record(s) found for ORDERPAY', ProcReturnCode: '12', Response: 'Declined' },
+          { TRANS_STAT: 'D', CHARGE_TYPE_CD: 'S', CAPTURE_AMT: '100', PROC_RET_CD: '12' }
+        ),
+      });
+      const result = await provider.getPayment('ORDERPAY');
+      expect(result.status).toBe(PaymentStatus.FAILURE);
+      expect(result.errorCode).toBe('12');
+      expect(result.errorMessage).toBe('Declined by the bank');
+    });
+  });
+
+  it('estOrderStatus maps the order status answer', () => {
+    const status = (extra: Record<string, string>) =>
+      estOrderStatus(parseEstXmlResponse(estOrderStatusXml(extra)));
+    expect(status({ TRANS_STAT: 'C' })).toBe(PaymentStatus.SUCCESS);
+    expect(status({ TRANS_STAT: 'V' })).toBe(PaymentStatus.CANCELLED);
+    expect(status({ CHARGE_TYPE_CD: 'C' })).toBe(PaymentStatus.CANCELLED);
+    expect(status({ TRANS_STAT: 'D' })).toBe(PaymentStatus.FAILURE);
+    expect(status({ TRANS_STAT: '' })).toBe(PaymentStatus.FAILURE);
+    expect(status({ CAPTURE_AMT: '0' })).toBe(PaymentStatus.PENDING);
   });
 
   it('isEstCapturedSale requires a captured sale', () => {
@@ -396,9 +504,29 @@ describe('EST provider', () => {
   });
 
   describe('est()', () => {
-    it('uses the shared test environment in sandbox mode', () => {
-      const bp = betterPayment({ mode: 'sandbox', providers: { isbank: est(EST_TEST) } });
-      expect((bp.isbank as any).config.baseUrl).toBe(EST_SANDBOX_URL);
+    it.each(['isbank', 'ziraat', 'halkbank', 'teb', 'sekerbank'] as const)(
+      'uses the shared test environment for %s in sandbox mode',
+      (bank) => {
+        const bp = betterPayment({
+          mode: 'sandbox',
+          providers: { pos: est({ ...EST_TEST, bank }) },
+        });
+        expect((bp.pos as any).config.baseUrl).toBe(EST_SANDBOX_URL);
+      }
+    );
+
+    it('registers each bank as a provider type with default URLs', () => {
+      expect(ProviderType.ISBANK).toBe('isbank');
+      expect(PROVIDER_DEFAULT_URLS[ProviderType.SEKERBANK]).toEqual({
+        sandbox: EST_SANDBOX_URL,
+        production: 'https://sanalpos.sekerbank.com.tr',
+      });
+    });
+
+    it('requires baseUrl for an unknown bank', () => {
+      expect(() =>
+        betterPayment({ providers: { pos: est({ ...EST_TEST, bank: 'x' as any }) } })
+      ).toThrow(/baseUrl/);
     });
 
     it.each([

@@ -3,21 +3,11 @@ import { digest, randomHex, toBase64 } from '../../core/crypto';
 import { ValidationError } from '../../core/errors';
 import { buildXmlFields, unescapeXml, type XmlValue } from '../parampos/utils';
 
-/** Shared EST (Asseco) test environment of all banks */
-export const EST_SANDBOX_URL = 'https://entegrasyon.asseco-see.com.tr';
-
 /**
- * Production hosts of the banks on the EST platform
+ * Banks on the EST platform. Each is also a provider id (`ProviderType`) whose
+ * default URLs are in `PROVIDER_DEFAULT_URLS`.
  */
-export const EST_BANK_URLS = {
-  isbank: 'https://sanalpos.isbank.com.tr',
-  ziraat: 'https://sanalpos2.ziraatbank.com.tr',
-  halkbank: 'https://sanalpos.halkbank.com.tr',
-  teb: 'https://sanalpos.teb.com.tr',
-  sekerbank: 'https://sanalpos.sekerbank.com.tr',
-} as const;
-
-export type EstBank = keyof typeof EST_BANK_URLS;
+export type EstBank = 'isbank' | 'ziraat' | 'halkbank' | 'teb' | 'sekerbank';
 
 export const EST_ENDPOINTS = {
   /** 3D Secure form target (customer's browser) */
@@ -39,6 +29,15 @@ export type EstStoreType = (typeof EST_STORE_TYPES)[number];
 /** Store types where the bank collects the card on its own page */
 export function isEstHostedStoreType(storeType: EstStoreType): boolean {
   return storeType === '3d_pay_hosting' || storeType === '3d_host';
+}
+
+/**
+ * Store types where the bank only authenticates the card and the merchant
+ * charges it with XML `Auth` (using `md`). With 3d_pay / 3d_pay_hosting the
+ * bank charges the card itself.
+ */
+export function isEstMerchantChargedStoreType(storeType: EstStoreType): boolean {
+  return storeType === '3d' || storeType === '3d_host';
 }
 
 function isDigit(char: string): boolean {

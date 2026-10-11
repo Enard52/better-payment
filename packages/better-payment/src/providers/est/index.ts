@@ -1,4 +1,10 @@
-import { defineProvider, type ProviderDefinition } from '../../core/BetterPaymentConfig';
+import {
+  defineProvider,
+  withProviderDefaults,
+  ProviderType,
+  type ProviderDefinition,
+  type RemoteProviderType,
+} from '../../core/BetterPaymentConfig';
 import type { HttpClient } from '../../core/http';
 import { PaymentProvider } from '../../core/PaymentProvider';
 import { ConfigurationError, ValidationError } from '../../core/errors';
@@ -19,13 +25,13 @@ import {
   PaymentStatus,
 } from '../../types';
 import {
-  EST_SANDBOX_URL,
-  EST_BANK_URLS,
   EST_ENDPOINTS,
   EST_STORE_TYPES,
+  type EstBank,
   type EstStoreType,
   type EstXmlResponse,
   isEstHostedStoreType,
+  isEstMerchantChargedStoreType,
   createEstHash,
   verifyEstCallback,
   generateEstRandom,
@@ -56,8 +62,9 @@ function escapeHtml(value: string): string {
  * - createPayment():          XML API `Auth` (non-3D)
  * - initThreeDSPayment():     auto-submitting form to `/fim/est3Dgate` (storetype 3d,
  *                             3d_pay, 3d_pay_hosting or 3d_host), signed with hash ver3
- * - completeThreeDSPayment(): verifies the callback hash; 3d charges with XML `Auth`,
- *                             3d_pay / 3d_host are confirmed with an order status query
+ * - completeThreeDSPayment(): verifies the callback hash; 3d / 3d_host charge with XML
+ *                             `Auth`, 3d_pay / 3d_pay_hosting are confirmed with an order
+ *                             status query
  * - refund() `Credit`, cancel() `Void`, getPayment() order status (`ORDERSTATUS`)
  *
  * `paymentId` is your order id (`oid`): the `conversationId` you pass, or a generated one.
@@ -268,8 +275,10 @@ export class Est extends PaymentProvider<EstConfig> {
    *
    * The ver3 hash covers the values but not the field names, so a valid hash
    * alone does not pin which value is the order id. The result is therefore
-   * confirmed with the bank: the 3d model charges with XML `Auth` (the bank's
-   * answer decides), 3d_pay / 3d_host are checked with an order status query.
+   * confirmed with the bank: 3d and 3d_host only authenticate the card, so they
+   * charge with XML `Auth` (the bank's answer decides); in 3d_pay and
+   * 3d_pay_hosting the bank charged the card, which is checked with an order
+   * status query.
    * A callback that fails the hash, names another store, or claims a payment
    * the bank does not confirm is rejected as INVALID_HASH.
    *
@@ -296,8 +305,9 @@ export class Est extends PaymentProvider<EstConfig> {
 
     let reached = false;
     try {
-      if (this.storeType === '3d') {
-        if (callbackData.mdStatus !== '1') {
+      if (isEstMerchantChargedStoreType(this.storeType)) {
+        const accepted = this.config.acceptedMdStatuses ?? ['1'];
+        if (!callbackData.mdStatus || !accepted.includes(callbackData.mdStatus)) {
           return this.withErrorCode({
             status: PaymentStatus.FAILURE,
             errorCode: `MD_STATUS_${callbackData.mdStatus ?? ''}`,
@@ -337,7 +347,7 @@ export class Est extends PaymentProvider<EstConfig> {
         });
       }
 
-      // 3d_pay / 3d_host: the bank already charged the card
+      // 3d_pay / 3d_pay_hosting: the bank already charged the card
       if (!isEstApproved(callbackData)) {
         return this.withErrorCode({
           status: PaymentStatus.FAILURE,
@@ -427,19 +437,17 @@ export class Est extends PaymentProvider<EstConfig> {
   async getPayment(paymentId: string): Promise<PaymentResponse> {
     try {
       const inquiry = await this.orderStatus(paymentId);
-      if (!isEstApproved(inquiry.fields)) {
-        return this.withErrorCode({
-          status: PaymentStatus.FAILURE,
-          paymentId,
-          conversationId: paymentId,
-          ...Est.errorOf(inquiry.fields),
-          rawResponse: inquiry,
-        });
-      }
+      const status = estOrderStatus(inquiry);
+      const { fields, extra } = inquiry;
       return this.withErrorCode({
-        status: isEstCapturedSale(inquiry) ? PaymentStatus.SUCCESS : PaymentStatus.PENDING,
+        status,
         paymentId,
         conversationId: paymentId,
+        ...(status !== PaymentStatus.FAILURE
+          ? {}
+          : extra.TRANS_STAT === 'D'
+            ? { errorCode: extra.PROC_RET_CD || undefined, errorMessage: 'Declined by the bank' }
+            : Est.errorOf(fields)),
         rawResponse: inquiry,
       });
     } catch (error) {
@@ -449,6 +457,33 @@ export class Est extends PaymentProvider<EstConfig> {
       });
     }
   }
+}
+
+/**
+ * Maps an order status answer: voided (TRANS_STAT V) or refunded (charge type C)
+ * orders are cancelled, declined ones (D) failed, captured sales succeeded. An
+ * answer without a record (unknown order) is a failure; anything else, such as
+ * a pre-authorization, is pending.
+ */
+export function estOrderStatus(inquiry: EstXmlResponse): PaymentStatus {
+  const { fields, extra } = inquiry;
+  if (!extra.TRANS_STAT) {
+    return PaymentStatus.FAILURE;
+  }
+  if (extra.TRANS_STAT === 'V') {
+    return PaymentStatus.CANCELLED;
+  }
+  if (extra.CHARGE_TYPE_CD === 'C') {
+    // The answer shows the last approved transaction: a (partial) refund
+    return PaymentStatus.CANCELLED;
+  }
+  if (extra.TRANS_STAT === 'D') {
+    return PaymentStatus.FAILURE;
+  }
+  if (!isEstApproved(fields)) {
+    return PaymentStatus.FAILURE;
+  }
+  return isEstCapturedSale(inquiry) ? PaymentStatus.SUCCESS : PaymentStatus.PENDING;
 }
 
 /**
@@ -465,21 +500,29 @@ export function isEstCapturedSale(inquiry: EstXmlResponse): boolean {
   );
 }
 
+const EST_PROVIDER_TYPES: Record<EstBank, RemoteProviderType> = {
+  isbank: ProviderType.ISBANK,
+  ziraat: ProviderType.ZIRAAT,
+  halkbank: ProviderType.HALKBANK,
+  teb: ProviderType.TEB,
+  sekerbank: ProviderType.SEKERBANK,
+};
+
 /**
  * An EST provider, for
  * `betterPayment({ providers: { isbank: est({ bank: 'isbank', clientId, username, password, storeKey }) } })`.
- * Sandbox mode uses the shared EST test environment; production uses the bank's host.
+ * Sandbox mode uses the shared EST test host; production uses the bank's host
+ * (`PROVIDER_DEFAULT_URLS`). `baseUrl` overrides both.
  */
 export const est = (config: EstConfig): ProviderDefinition<Est> =>
-  defineProvider(
-    (ctx) =>
-      new Est({
-        ...config,
-        baseUrl:
-          config.baseUrl ?? (ctx.mode === 'sandbox' ? EST_SANDBOX_URL : EST_BANK_URLS[config.bank]),
-        logger: config.logger ?? ctx.logger,
-        retry: config.retry ?? ctx.retry,
-        fetch: config.fetch ?? ctx.fetch,
-        validate: config.validate ?? ctx.validate,
-      })
-  );
+  defineProvider((ctx) => {
+    const type: RemoteProviderType | undefined = EST_PROVIDER_TYPES[config.bank];
+    if (type) {
+      return new Est(withProviderDefaults(type, config, ctx));
+    }
+    // Unknown bank: no default URL, validateConfig reports it unless baseUrl is set
+    return new Est({
+      ...withProviderDefaults(ProviderType.ISBANK, config, ctx),
+      baseUrl: config.baseUrl,
+    });
+  });

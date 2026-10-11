@@ -21,6 +21,13 @@ export interface EstConfig extends PaymentProviderConfig {
   storeType?: EstStoreType;
   /** Merchant department (`BOLUM`), when the bank assigned one */
   department?: number;
+  /**
+   * `mdStatus` values that are charged in the 3d and 3d_host models. Default: ['1']
+   * (full 3D Secure authentication). 2, 3 and 4 are half-secure (the card or its bank
+   * is not enrolled, or only an attempt was made); accepting them can leave chargeback
+   * liability with the merchant.
+   */
+  acceptedMdStatuses?: string[];
 }
 
 /**
@@ -40,7 +47,7 @@ export interface Est3DCallbackData {
   xid?: string;
   eci?: string;
   cavv?: string;
-  /** Set by the bank when it charged the card (3d_pay, 3d_host) */
+  /** Set by the bank when it charged the card (3d_pay, 3d_pay_hosting) */
   ProcReturnCode?: string;
   Response?: string;
   ErrMsg?: string;

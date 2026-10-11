@@ -156,8 +156,9 @@ this id to `refund`, `cancel` and `getPayment`.
   bank's order id and charges the card with `Provision`; the payment is `success`
   only when `Provision` succeeds.
 - **EST:** the bank POSTs to your `callbackUrl`. The hash (ver3) is verified, then the
-  result is confirmed with the bank: the `3d` model charges with the XML API, `3d_pay` /
-  `3d_host` are checked with an order status query.
+  result is confirmed with the bank: `3d` and `3d_host` only authenticate the card and
+  charge it with the XML API, `3d_pay` / `3d_pay_hosting` are checked with an order
+  status query.
 - **PayTR:** `callbackUrl` is only where the customer's browser returns. The
   result is sent to the **notification URL** set in the PayTR panel. Point it at
   `/api/pay/paytr/callback`; the handler verifies the notification and replies
