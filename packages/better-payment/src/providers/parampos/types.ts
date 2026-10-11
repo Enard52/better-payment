@@ -39,9 +39,4 @@ export interface Parampos3DSCallbackData {
  * Param Durum values returned by TP_Islem_Sorgulama4
  */
 export type ParamposOrderStatus =
-  | 'SUCCESS'
-  | 'FAIL'
-  | 'BANK_FAIL'
-  | 'CANCEL'
-  | 'REFUND'
-  | 'PARTIAL_REFUND';
+  'SUCCESS' | 'FAIL' | 'BANK_FAIL' | 'CANCEL' | 'REFUND' | 'PARTIAL_REFUND';
