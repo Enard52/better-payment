@@ -1,6 +1,7 @@
 ---
 title: Garanti BBVA
 description: Garanti BBVA sanal POS (GVP) entegrasyon referansı.
+since: 0.12.0
 ---
 
 Garanti BBVA sanal POS XML API'sini (sürüm 512) kullanır. Her istek bir `HashData` taşır: `SHA512(OrderID + TerminalID + kart numarası + Amount + CurrencyCode + SecurityData)`; burada `SecurityData`, `SHA1(şifre + 9 haneye tamamlanmış terminal numarası)` değeridir. İkisi de ISO-8859-9 üzerinden büyük harfli hex olarak hesaplanır.
