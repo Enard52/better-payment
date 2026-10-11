@@ -167,6 +167,12 @@ describe('parseSipayForm', () => {
       'a&b': `"x'<`,
     });
   });
+
+  it('decodes each entity only once', () => {
+    expect(parseSipayForm('<input name="a" value="&amp;lt;&#x26;gt;&#38;amp;">')).toEqual({
+      a: '&lt;&gt;&amp;',
+    });
+  });
 });
 
 describe('mapSipayTransactionStatus', () => {

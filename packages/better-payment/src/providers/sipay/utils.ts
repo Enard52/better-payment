@@ -222,15 +222,22 @@ export function getSipayLanguage(locale: string | undefined): 'tr' | 'en' {
   return (locale || 'tr').toLowerCase().startsWith('en') ? 'en' : 'tr';
 }
 
+const HTML_ENTITIES: Record<string, string> = {
+  quot: '"',
+  apos: "'",
+  lt: '<',
+  gt: '>',
+  amp: '&',
+};
+
+/** Decodes HTML entities in one pass, so decoded text is never decoded again */
 function decodeHtml(value: string): string {
-  return value
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(Number(dec)))
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&');
+  return value.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (entity, code: string) => {
+    if (code[0] !== '#') return HTML_ENTITIES[code.toLowerCase()] ?? entity;
+    const point =
+      code[1] === 'x' || code[1] === 'X' ? parseInt(code.slice(2), 16) : Number(code.slice(1));
+    return point <= 0x10ffff ? String.fromCodePoint(point) : entity;
+  });
 }
 
 /**
