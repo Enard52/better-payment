@@ -160,6 +160,9 @@ export type { ParamposConfig } from './providers/parampos';
 export type { Parampos3DSCallbackData } from './providers/parampos/types';
 export { KuveytTurk, kuveytturk } from './providers/kuveytturk';
 export type { KuveytTurkConfig, KuveytTurk3DCallbackData } from './providers/kuveytturk/types';
+export { Est, est } from './providers/est';
+export type { EstConfig, Est3DCallbackData } from './providers/est/types';
+export type { EstBank, EstStoreType } from './providers/est/utils';
 
 export { BetterPaymentClient, createBetterPaymentClient } from './client';
 export type { BetterPaymentClientConfig } from './client';
