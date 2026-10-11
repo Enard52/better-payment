@@ -15,6 +15,12 @@ export enum ProviderType {
   AKBANK = 'akbank',
   PARAMPOS = 'parampos',
   KUVEYTTURK = 'kuveytturk',
+  /** EST (Asseco) banks, all created with `est({ bank })` */
+  ISBANK = 'isbank',
+  ZIRAAT = 'ziraat',
+  HALKBANK = 'halkbank',
+  TEB = 'teb',
+  SEKERBANK = 'sekerbank',
   /** In-memory provider for tests, from `better-payment/testing` */
   MOCK = 'mock',
 }
@@ -124,6 +130,27 @@ export const PROVIDER_DEFAULT_URLS: Record<
   [ProviderType.KUVEYTTURK]: {
     sandbox: 'https://boatest.kuveytturk.com.tr/boa.virtualpos.services',
     production: 'https://sanalpos.kuveytturk.com.tr/ServiceGateWay',
+  },
+  // The EST banks share Asseco's test host
+  [ProviderType.ISBANK]: {
+    sandbox: 'https://entegrasyon.asseco-see.com.tr',
+    production: 'https://sanalpos.isbank.com.tr',
+  },
+  [ProviderType.ZIRAAT]: {
+    sandbox: 'https://entegrasyon.asseco-see.com.tr',
+    production: 'https://sanalpos2.ziraatbank.com.tr',
+  },
+  [ProviderType.HALKBANK]: {
+    sandbox: 'https://entegrasyon.asseco-see.com.tr',
+    production: 'https://sanalpos.halkbank.com.tr',
+  },
+  [ProviderType.TEB]: {
+    sandbox: 'https://entegrasyon.asseco-see.com.tr',
+    production: 'https://sanalpos.teb.com.tr',
+  },
+  [ProviderType.SEKERBANK]: {
+    sandbox: 'https://entegrasyon.asseco-see.com.tr',
+    production: 'https://sanalpos.sekerbank.com.tr',
   },
 };
 

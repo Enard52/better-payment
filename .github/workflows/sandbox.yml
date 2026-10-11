@@ -71,6 +71,14 @@ jobs:
           AKBANK_SANDBOX_CARD_EXPIRE_MONTH: ${{ secrets.AKBANK_SANDBOX_CARD_EXPIRE_MONTH }}
           AKBANK_SANDBOX_CARD_EXPIRE_YEAR: ${{ secrets.AKBANK_SANDBOX_CARD_EXPIRE_YEAR }}
           AKBANK_SANDBOX_CARD_CVC: ${{ secrets.AKBANK_SANDBOX_CARD_CVC }}
+          EST_SANDBOX_CLIENT_ID: ${{ secrets.EST_SANDBOX_CLIENT_ID }}
+          EST_SANDBOX_USERNAME: ${{ secrets.EST_SANDBOX_USERNAME }}
+          EST_SANDBOX_PASSWORD: ${{ secrets.EST_SANDBOX_PASSWORD }}
+          EST_SANDBOX_STORE_KEY: ${{ secrets.EST_SANDBOX_STORE_KEY }}
+          EST_SANDBOX_CARD_NUMBER: ${{ secrets.EST_SANDBOX_CARD_NUMBER }}
+          EST_SANDBOX_CARD_EXPIRE_MONTH: ${{ secrets.EST_SANDBOX_CARD_EXPIRE_MONTH }}
+          EST_SANDBOX_CARD_EXPIRE_YEAR: ${{ secrets.EST_SANDBOX_CARD_EXPIRE_YEAR }}
+          EST_SANDBOX_CARD_CVC: ${{ secrets.EST_SANDBOX_CARD_CVC }}
 
       - name: Upload recorded responses
         if: ${{ inputs.record && always() }}
