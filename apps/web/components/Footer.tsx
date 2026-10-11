@@ -30,6 +30,7 @@ function footerLinks(t: Dictionary["footer"]) {
         { label: "iyzico", href: "/docs/providers/iyzico" },
         { label: "PayTR", href: "/docs/providers/paytr" },
         { label: "Parampos", href: "/docs/providers/parampos" },
+        { label: "Sipay", href: "/docs/providers/sipay" },
         { label: "Akbank", href: "/docs/banks/akbank" },
       ],
     },

@@ -102,3 +102,20 @@ Akbank, test kartlarını ve kimlik bilgilerini test üye işyeri hesabınızla 
 - **Dokümantasyon**: [Param Geliştirici Dokümantasyonu](https://dev.param.com.tr/)
 
 Parampos, test kartlarını, test kimlik bilgilerini (Müşteri Kodu, Kullanıcı Adı, Şifre ve GUID) ve SOAP uç noktalarını test üye işyeri hesabınızla birlikte sağlar; Param temsilcinizle iletişime geçin.
+
+---
+
+## Sipay Sandbox [#sipay-sandbox]
+
+- **Sandbox Uç Noktası**: `https://provisioning.sipay.com.tr`
+- **Dokümantasyon**: [Sipay API Dokümantasyonu](https://apidocs.sipay.com.tr/)
+
+Sipay dokümanı ortak bir test üye işyeri (app id, app secret ve merchant key) ve şu test kartlarını verir:
+
+| Kart | Numara | Son kullanma | CVV | 3D Secure kodu |
+| ---- | ------ | ------------ | --- | -------------- |
+| Visa | `4508034508034509` | 12/30 | `000` | `000000` |
+| Mastercard | `5406675406675403` | 12/30 | `000` | `000000` |
+| Troy | `6501700139082826` | 12/30 | `000` | `000000` |
+
+Farklı CVV değerleri banka hatalarını taklit eder: `510` yetersiz bakiye, `050` işlem onaylanmadı, `330` süresi dolmuş kart, `820` geçersiz CVV.

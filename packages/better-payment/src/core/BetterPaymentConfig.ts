@@ -15,6 +15,7 @@ export enum ProviderType {
   AKBANK = 'akbank',
   PARAMPOS = 'parampos',
   KUVEYTTURK = 'kuveytturk',
+  SIPAY = 'sipay',
   /** EST (Asseco) banks, all created with `est({ bank })` */
   ISBANK = 'isbank',
   ZIRAAT = 'ziraat',
@@ -130,6 +131,10 @@ export const PROVIDER_DEFAULT_URLS: Record<
   [ProviderType.KUVEYTTURK]: {
     sandbox: 'https://boatest.kuveytturk.com.tr/boa.virtualpos.services',
     production: 'https://sanalpos.kuveytturk.com.tr/ServiceGateWay',
+  },
+  [ProviderType.SIPAY]: {
+    sandbox: 'https://provisioning.sipay.com.tr',
+    production: 'https://app.sipay.com.tr',
   },
   // The EST banks share Asseco's test host
   [ProviderType.ISBANK]: {

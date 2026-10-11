@@ -1,0 +1,128 @@
+---
+title: Sipay
+description: Sipay payment integration reference.
+---
+
+Uses Sipay's `ccpayment` API. Requests carry a Bearer token, which the provider
+requests with your app id and secret and reuses until it expires. Payment,
+status, refund and confirmation requests also carry a `hash_key`: the request
+fields encrypted with AES-256-CBC, with a key derived from your app secret.
+
+Payments, 3D Secure (including the callback check), refunds, cancels,
+pre-authorization and installment queries are verified end to end against the
+Sipay test environment.
+
+## Configuration
+
+```typescript
+import { betterPayment, sipay } from 'better-payment';
+
+const payment = betterPayment({
+  providers: {
+    sipay: sipay({
+      appId: process.env.SIPAY_APP_ID!,
+      appSecret: process.env.SIPAY_APP_SECRET!,
+      merchantKey: process.env.SIPAY_MERCHANT_KEY!,
+      // saleWebhookKey?: string (sale_web_hook_key, see Webhooks)
+      // baseUrl: defaults from mode (provisioning.sipay.com.tr / app.sipay.com.tr)
+    }),
+  },
+});
+```
+
+The credentials are in the Sipay merchant panel under **Settings → Integration & API**.
+For a first test, Sipay's documentation lists a shared test merchant; use it with
+`mode: 'sandbox'`.
+
+`paymentId` is the Sipay invoice id: the `conversationId` you pass, or a generated
+id. Sipay rejects an invoice id that was already used (`DUPLICATE_ORDER`).
+
+The request needs `buyer.name`, `buyer.surname`, `buyer.email`, `buyer.gsmNumber`,
+`buyer.ip` (IPv4) and `billingAddress.address`. The amount charged is `paidPrice`.
+Basket items are sent when their prices add up to `paidPrice`; otherwise one item
+for the whole order is sent, since Sipay rejects items that do not add up.
+Currencies: TRY, USD, EUR and GBP (depending on your account); installments: 1 to 12.
+
+## Non-3D Payment
+
+```typescript
+const result = await payment.sipay.createPayment({
+  ...paymentRequest,
+  conversationId: 'ORDER123',
+});
+```
+
+Sipay enables non-3D payments per merchant; ask Sipay whether your account
+accepts them.
+
+## 3D Secure
+
+```typescript
+const init = await payment.sipay.initThreeDSPayment({
+  ...paymentRequest,
+  conversationId: 'ORDER123',
+  callbackUrl: 'https://yoursite.com/api/pay/sipay/payment/complete-3ds',
+  // failUrl?: string (cancel_url, defaults to callbackUrl)
+});
+// init.threeDSHtmlContent is Sipay's page that sends the card to 3D Secure
+```
+
+Callback domains must be whitelisted in the Sipay panel; otherwise Sipay answers
+with code 1049. After 3D Secure, Sipay POSTs the result to `callbackUrl` on success
+and to `failUrl` on failure:
+
+```typescript
+const result = await payment.sipay.completeThreeDSPayment(callbackBody);
+```
+
+Only the callback's `hash_key` is trusted. It is decrypted with your app secret,
+and its content (`status|total|invoice_id|order_id|currency`) decides the result:
+
+- a callback without a valid `hash_key`, or whose `invoice_id` or `order_id` differs from it, is rejected as `INVALID_HASH` and carries no `paymentId`;
+- the payment is `success` only when the signed status is `1`, whatever the other fields say;
+- `rawResponse.verified` holds the verified values. Compare `total` and `currency` with your order before shipping it.
+
+No API call is made to complete the payment: Sipay charges the card itself.
+
+## Refund, Cancel & Status
+
+```typescript
+await payment.sipay.refund({ paymentId: 'ORDER123', price: '50.00', currency: 'TRY', ip: '1.2.3.4' });
+await payment.sipay.cancel({ paymentId: 'ORDER123', ip: '1.2.3.4' });
+const status = await payment.sipay.getPayment('ORDER123'); // checkstatus
+// status: 'success' (also after a partial refund), 'cancelled' (fully refunded or voided), 'failure', 'pending'
+```
+
+Sipay has no separate void call: a refund on the day of the payment is processed as
+a void. `cancel()` refunds what is left of the payment, or releases it when it is
+an open pre-authorization. Sipay asks for 30 seconds between two refunds of the
+same payment.
+
+## Pre-Authorization
+
+```typescript
+const auth = await payment.sipay.authorize({ ...paymentRequest, conversationId: 'ORDER123' });
+// or initThreeDSAuthorize() + completeThreeDSPayment() for 3D Secure
+await payment.sipay.capture({ paymentId: 'ORDER123', amount: '80.00', ip: '1.2.3.4' }); // all or part
+await payment.sipay.voidAuthorization({ paymentId: 'ORDER123', ip: '1.2.3.4' });
+```
+
+`capture()` and `voidAuthorization()` use Sipay's `confirmPayment`. A pre-authorization
+that is not captured is cancelled by the bank after about 20 days.
+
+## BIN & Installments
+
+```typescript
+const bin = await payment.sipay.binCheck('540667');
+const options = await payment.sipay.installmentInfo({ binNumber: '540667', price: '100.00' });
+// options.installmentDetails[0].installmentPrices: the amount to charge for each count
+```
+
+Both use Sipay's `getpos`. The totals are the amounts Sipay calculates for your
+account; send the chosen total as `paidPrice` and the count as `installment`.
+
+## Webhooks
+
+Set `saleWebhookKey` to have Sipay notify the sale webhook that you defined for
+that key in the merchant panel. Webhooks are not verified by this provider yet:
+confirm a webhook with `getPayment()` before acting on it.

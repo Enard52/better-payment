@@ -86,7 +86,36 @@ const paytrNotification = (status, total) =>
     hash: paytrSign('ORDER1' + PAYTR.merchantSalt + status + total),
   }).toString();
 
+const SIPAY = { appId: 'APP', appSecret: 'SECRET', merchantKey: 'MERCHANT' };
+const hexDigest = async (algorithm, text) =>
+  Buffer.from(await crypto.webcrypto.subtle.digest(algorithm, Buffer.from(text))).toString('hex');
+/** Sipay's AES key: sha256hex(sha1hex(app secret) + salt), first 32 characters */
+const sipayKey = async (salt) =>
+  Buffer.from(
+    (await hexDigest('SHA-256', (await hexDigest('SHA-1', SIPAY.appSecret)) + salt)).slice(0, 32)
+  );
+/** A hash key encrypted as Sipay does (AES-256-CBC) */
+const sipayEncrypt = async (plain, iv = '0123456789abcdef', salt = 'a1b2') => {
+  const cipher = crypto.createCipheriv('aes-256-cbc', await sipayKey(salt), Buffer.from(iv));
+  const encrypted = cipher.update(plain, 'utf8', 'base64') + cipher.final('base64');
+  return `${iv}:${salt}:${encrypted}`.replace(/\//g, '__');
+};
+const SIPAY_CALLBACK = {
+  invoice_id: 'BP3D1',
+  order_id: 'VP1',
+  sipay_status: '1',
+  hash_key: await sipayEncrypt('1|10.00|BP3D1|VP1|TRY'),
+};
+/** Sipay's reference hash key decryption ("Hash Validation" page) */
+const sipayDecrypt = async (hashKey) => {
+  const [iv, salt, encrypted] = hashKey.replace(/__/g, '/').split(':');
+  const decipher = crypto.createDecipheriv('aes-256-cbc', await sipayKey(salt), Buffer.from(iv));
+  return decipher.update(encrypted, 'base64', 'utf8') + decipher.final('utf8');
+};
+
 const input = {
+  SIPAY,
+  SIPAY_CALLBACK,
   PAYTR,
   PARAM_GUID,
   AKBANK,
@@ -125,6 +154,7 @@ const scenario = `(async (input) => {
       paytr: BP.paytr(input.PAYTR),
       parampos: BP.parampos({ clientCode: '10738', clientUsername: 'Test', clientPassword: 'Test', guid: input.PARAM_GUID }),
       akbank: BP.akbank(input.AKBANK),
+      sipay: BP.sipay(input.SIPAY),
     },
     plugins: [{ id: 'events', events: { '*': (event) => { events.push(event.type); } } }],
     handler: { onCallback: async (result) => { notified.push(result.status); } },
@@ -165,6 +195,14 @@ const scenario = `(async (input) => {
   replies.push(JSON.stringify({ responseCode: 'VPS-0000', hostResponseCode: '00', order: { orderId: 'A1' } }));
   await bp.use('akbank').createPayment({ ...order, conversationId: 'A1' });
   out.akbankRequest = calls.at(-1);
+
+  // Sipay: AES-256-CBC hash keys on requests and 3D callbacks
+  out.sipayCallback = (await bp.use('sipay').completeThreeDSPayment(input.SIPAY_CALLBACK)).status;
+  out.sipayForged = (await bp.use('sipay').completeThreeDSPayment({ ...input.SIPAY_CALLBACK, invoice_id: 'OTHER' })).errorCode;
+  replies.push(JSON.stringify({ status_code: 100, data: { token: 'T' } }));
+  replies.push(JSON.stringify({ status_code: 100, data: { payment_status: 1 } }));
+  out.sipayPayment = (await bp.use('sipay').createPayment({ ...order, conversationId: 'S1' })).status;
+  out.sipayRequest = calls.at(-1);
 
   return JSON.stringify(out);
 })`;
@@ -249,6 +287,30 @@ check('Akbank tampered callback rejected', out.akbankForged === 'INVALID_HASH', 
   const req = out.akbankRequest;
   const expected = crypto.createHmac('sha512', AKBANK.secretKey).update(req.body).digest('base64');
   check('Akbank request auth-hash (HMAC-SHA512)', req.headers['auth-hash'] === expected);
+}
+check(
+  'Sipay 3D callback (AES-256-CBC hash key)',
+  out.sipayCallback === 'success',
+  out.sipayCallback
+);
+check(
+  'Sipay callback for another invoice rejected',
+  out.sipayForged === 'INVALID_HASH',
+  out.sipayForged
+);
+{
+  const req = out.sipayRequest;
+  const body = JSON.parse(req.body);
+  check('Sipay payment result', out.sipayPayment === 'success', out.sipayPayment);
+  check(
+    'Sipay Bearer token',
+    req.headers.Authorization === 'Bearer T',
+    JSON.stringify(req.headers)
+  );
+  check(
+    'Sipay request hash key (AES-256-CBC)',
+    (await sipayDecrypt(body.hash_key)) === `1000.01|1|TRY|${SIPAY.merchantKey}|S1`
+  );
 }
 
 if (failures.length > 0) {

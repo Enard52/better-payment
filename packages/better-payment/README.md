@@ -2,7 +2,7 @@
 
 > Unified, type-safe payment gateway for Node.js & TypeScript.
 
-One API for Turkish payment providers — iyzico, PayTR, Parampos, Akbank, Kuveyt Türk and the EST banks
+One API for Turkish payment providers — iyzico, PayTR, Parampos, Sipay, Akbank, Kuveyt Türk and the EST banks
 (İş Bankası, Ziraat, Halkbank, TEB, Şekerbank).
 
 [![npm](https://img.shields.io/npm/v/better-payment)](https://www.npmjs.com/package/better-payment)
@@ -128,7 +128,7 @@ list and suggested customer messages.
 if (result.code === PaymentErrorCode.INSUFFICIENT_FUNDS) askForAnotherCard();
 ```
 
-For PayTR, Parampos, Akbank, Kuveyt Türk and EST, `paymentId` is your **order id**: the
+For PayTR, Parampos, Sipay, Akbank, Kuveyt Türk and EST, `paymentId` is your **order id**: the
 `conversationId` you pass in, or an alphanumeric id generated for you. Pass
 this id to `refund`, `cancel` and `getPayment`.
 
@@ -139,6 +139,7 @@ this id to `refund`, `cancel` and `getPayment`.
 | iyzico      | ✓                         | ✓                           |   ✓    | ✓               |   ✓    |  ✓  | ✓                 |
 | PayTR       | ✓ (needs non-3D approval) | ✓ iFrame                    |   ✓    | ✓ (full refund) |   ✓    |  ✓  | ✓ (account rates) |
 | Parampos    | ✓ (TRY)                   | ✓ `TP_WMD_UCD`/`TP_WMD_Pay` |   ✓    | ✓               |   ✓    |  ✓  | ✓ (account rates) |
+| Sipay       | ✓ (needs non-3D approval) | ✓ paySmart3D                |   ✓    | ✓ (refund)      |   ✓    |  ✓  | ✓ (account rates) |
 | Akbank      | ✓                         | ✓ 3D_PAY                    |   ✓    | ✓               |   ✓    |  —  | —                 |
 | Kuveyt Türk | —                         | ✓ KT Pay Gate               |   ✓    | ✓ (same day)    |   ✓    |  —  | —                 |
 | EST ¹       | ✓                         | ✓ 3D / 3D Pay / 3D Host     |   ✓    | ✓               |   ✓    |  —  | —                 |
@@ -155,6 +156,9 @@ this id to `refund`, `cancel` and `getPayment`.
   signed. `completeThreeDSPayment()` looks the order up at the bank, checks the
   bank's order id and charges the card with `Provision`; the payment is `success`
   only when `Provision` succeeds.
+- **Sipay:** Sipay POSTs to your `callbackUrl` (or `failUrl`). The callback's
+  `hash_key` is decrypted with your app secret; its signed status, invoice id and
+  order id decide the result, and the other fields are not trusted.
 - **EST:** the bank POSTs to your `callbackUrl`. The hash (ver3) is verified, then the
   result is confirmed with the bank: `3d` and `3d_host` only authenticate the card and
   charge it with the XML API, `3d_pay` / `3d_pay_hosting` are checked with an order
@@ -164,7 +168,7 @@ this id to `refund`, `cancel` and `getPayment`.
   `/api/pay/paytr/callback`; the handler verifies the notification and replies
   `OK`.
 
-Pre-authorization (block now, charge later) works on iyzico, Parampos and Akbank:
+Pre-authorization (block now, charge later) works on iyzico, Parampos, Sipay and Akbank:
 `authorize()` / `initThreeDSAuthorize()`, then `capture({ paymentId, amount, ip })` or
 `voidAuthorization({ paymentId, ip })`. See the
 [pre-authorization guide](https://better-payment.czaylabs.com/docs/payments/pre-authorization).
