@@ -69,21 +69,10 @@ export const MOCK_CARDS = {
 } as const;
 
 export type MockOperation =
-  | 'payment'
-  | 'threeDSInit'
-  | 'threeDSComplete'
-  | 'refund'
-  | 'cancel'
-  | 'capture'
-  | 'void';
+  'payment' | 'threeDSInit' | 'threeDSComplete' | 'refund' | 'cancel' | 'capture' | 'void';
 
 export type MockPaymentState =
-  | 'pending_3ds'
-  | 'succeeded'
-  | 'authorized'
-  | 'failed'
-  | 'cancelled'
-  | 'voided';
+  'pending_3ds' | 'succeeded' | 'authorized' | 'failed' | 'cancelled' | 'voided';
 
 /** A payment as the mock bank sees it (returned by `getRecord()` and in `rawResponse`) */
 export interface MockPaymentRecord {
