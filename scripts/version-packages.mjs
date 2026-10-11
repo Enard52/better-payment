@@ -3,9 +3,8 @@
 // Run by the "Release PR" workflow (changesets/action) and by `pnpm version-packages`.
 //
 // 1. `changeset version` consumes .changeset/*.md into package.json and CHANGELOG.md.
-// 2. CHANGELOG.md: changesets inserts the new section right after the first line, above the
-//    intro. Move it below the intro (before the latest release) and name its headings like
-//    the rest of the file: Added / Changed (breaking) / Fixed.
+// 2. CHANGELOG.md: changesets inserts the new section above the latest release. Name its
+//    headings like the rest of the file: Added / Changed (breaking) / Fixed.
 // 3. src/version.ts and the VERSION example in the installation docs (en/tr) get the new version.
 // 4. The docs changelog (apps/web/content/docs/reference/changelog*.mdx) gets the new version's
 //    section, from the `<!-- docs -->` block of each changeset (scripts/docs-changelog.mjs).
@@ -27,6 +26,11 @@ const before = version();
 const changelogBefore = read(changelogPath);
 // `changeset version` deletes the changesets, so read their docs entries first
 const changesets = readChangesets(`${root}.changeset`).filter((changeset) => changeset.bump);
+// changesets 3 exits with code 1 when there is nothing to version
+if (!changesets.length) {
+  console.log(`No changesets for better-payment; version stays ${before}.`);
+  process.exit(0);
+}
 
 execFileSync('pnpm', ['exec', 'changeset', 'version'], { cwd: root, stdio: 'inherit' });
 
@@ -45,11 +49,9 @@ const HEADINGS = {
 const changelogAfter = read(changelogPath);
 const sectionStart = changelogAfter.indexOf(`\n## ${next}\n`);
 if (sectionStart === -1) throw new Error(`CHANGELOG.md has no "## ${next}" section`);
-// Everything after the title line of the old file follows the inserted section
-const sectionEnd = changelogAfter.lastIndexOf(
-  changelogBefore.slice(changelogBefore.indexOf('\n') + 1)
-);
-if (sectionEnd <= sectionStart) throw new Error('Could not find the new section in CHANGELOG.md');
+// changesets 3 inserts the section above the latest release, so it ends where that one starts
+const nextRelease = changelogAfter.indexOf('\n## ', sectionStart + 1);
+const sectionEnd = nextRelease === -1 ? changelogAfter.length : nextRelease + 1;
 const section = changelogAfter
   .slice(sectionStart + 1, sectionEnd)
   .replace(/^### (.+)$/gm, (line, name) => (HEADINGS[name] ? `### ${HEADINGS[name]}` : line))
