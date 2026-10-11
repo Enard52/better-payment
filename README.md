@@ -2,7 +2,8 @@
 
 > Unified, type-safe payment gateway for Node.js & TypeScript.
 
-One API for Turkish payment providers — iyzico, PayTR, Parampos, Sipay, Akbank and Kuveyt Türk.
+One API for Turkish payment providers — iyzico, PayTR, Parampos, Sipay, Akbank, Kuveyt Türk and the EST banks
+(İş Bankası, Ziraat, Halkbank, TEB, Şekerbank).
 
 [![npm](https://img.shields.io/npm/v/better-payment)](https://www.npmjs.com/package/better-payment)
 [![license](https://img.shields.io/npm/l/better-payment)](./LICENSE)
@@ -127,7 +128,7 @@ list and suggested customer messages.
 if (result.code === PaymentErrorCode.INSUFFICIENT_FUNDS) askForAnotherCard();
 ```
 
-For PayTR, Parampos, Sipay, Akbank and Kuveyt Türk, `paymentId` is your **order id**: the
+For PayTR, Parampos, Sipay, Akbank, Kuveyt Türk and EST, `paymentId` is your **order id**: the
 `conversationId` you pass in, or an alphanumeric id generated for you. Pass
 this id to `refund`, `cancel` and `getPayment`.
 
@@ -141,6 +142,9 @@ this id to `refund`, `cancel` and `getPayment`.
 | Sipay       | ✓ (needs non-3D approval) | ✓ paySmart3D                |   ✓    | ✓ (refund)      |   ✓    |  ✓  | ✓ (account rates) |
 | Akbank      | ✓                         | ✓ 3D_PAY                    |   ✓    | ✓               |   ✓    |  —  | —                 |
 | Kuveyt Türk | —                         | ✓ KT Pay Gate               |   ✓    | ✓ (same day)    |   ✓    |  —  | —                 |
+| EST ¹       | ✓                         | ✓ 3D / 3D Pay / 3D Host     |   ✓    | ✓               |   ✓    |  —  | —                 |
+
+¹ İş Bankası, Ziraat Bankası, Halkbank, TEB and Şekerbank, with `est({ bank })`.
 
 ### 3D Secure completion
 
@@ -155,6 +159,10 @@ this id to `refund`, `cancel` and `getPayment`.
 - **Sipay:** Sipay POSTs to your `callbackUrl` (or `failUrl`). The callback's
   `hash_key` is decrypted with your app secret; its signed status, invoice id and
   order id decide the result, and the other fields are not trusted.
+- **EST:** the bank POSTs to your `callbackUrl`. The hash (ver3) is verified, then the
+  result is confirmed with the bank: `3d` and `3d_host` only authenticate the card and
+  charge it with the XML API, `3d_pay` / `3d_pay_hosting` are checked with an order
+  status query.
 - **PayTR:** `callbackUrl` is only where the customer's browser returns. The
   result is sent to the **notification URL** set in the PayTR panel. Point it at
   `/api/pay/paytr/callback`; the handler verifies the notification and replies

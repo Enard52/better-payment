@@ -420,10 +420,11 @@ IYZICO_SANDBOX_API_KEY=... IYZICO_SANDBOX_SECRET_KEY=... pnpm test:sandbox
 | Parampos  | `PARAMPOS_SANDBOX_CLIENT_CODE`, `PARAMPOS_SANDBOX_CLIENT_USERNAME`, `PARAMPOS_SANDBOX_CLIENT_PASSWORD`, `PARAMPOS_SANDBOX_GUID` | `PARAMPOS_SANDBOX_BASE_URL`, `PARAMPOS_SANDBOX_CARD_*` |
 | Akbank    | `AKBANK_SANDBOX_MERCHANT_SAFE_ID`, `AKBANK_SANDBOX_TERMINAL_SAFE_ID`, `AKBANK_SANDBOX_SECRET_KEY` | `AKBANK_SANDBOX_CARD_*` |
 | Sipay     | `SIPAY_SANDBOX_APP_ID`, `SIPAY_SANDBOX_APP_SECRET`, `SIPAY_SANDBOX_MERCHANT_KEY` (Sipay dokümanındaki ortak test üye işyeri kullanılabilir) | `SIPAY_SANDBOX_CARD_*` (varsayılan: Sipay test kartı `4508034508034509`) |
+| EST       | `EST_SANDBOX_CLIENT_ID`, `EST_SANDBOX_USERNAME`, `EST_SANDBOX_PASSWORD`, `EST_SANDBOX_STORE_KEY` | `EST_SANDBOX_BANK` (varsayılan `isbank`), `EST_SANDBOX_CARD_*` |
 
 Kart değişkenleri: `<PREFIX>_CARD_NUMBER`, `<PREFIX>_CARD_EXPIRE_MONTH`,
 `<PREFIX>_CARD_EXPIRE_YEAR`, `<PREFIX>_CARD_CVC`, `<PREFIX>_CARD_HOLDER`
-(örnek: `AKBANK_SANDBOX_CARD_NUMBER`). Parampos ve Akbank'ta ödeme/iptal/iade
+(örnek: `AKBANK_SANDBOX_CARD_NUMBER`). Parampos, Akbank ve EST'te ödeme/iptal/iade
 testleri yalnızca test kartı tanımlıysa çalışır. Test kartları test hesabıyla
 birlikte verilir.
 
