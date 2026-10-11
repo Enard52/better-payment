@@ -321,6 +321,104 @@ describe('Garanti BBVA provider', () => {
     });
   });
 
+  describe('GarantiPay (GARANTI_PAY)', () => {
+    beforeEach(() => {
+      provider = create({ securityLevel: 'GARANTI_PAY', companyName: 'Test Shop' });
+    });
+
+    it('returns a signed gpdatarequest form without card fields', async () => {
+      const { paymentCard: _card, ...withoutCard } = mockThreeDSPaymentRequest;
+      const result = await provider.initThreeDSPayment({
+        ...withoutCard,
+        conversationId: 'ORDERGP',
+      } as any);
+
+      expect(result.status).toBe(PaymentStatus.PENDING);
+      const fields = formFields(result.threeDSHtmlContent!);
+      expect(fields).toMatchObject({
+        secure3dsecuritylevel: 'CUSTOM_PAY',
+        txntype: 'gpdatarequest',
+        txnsubtype: 'sales',
+        garantipay: 'Y',
+        bnsuseflag: 'Y',
+        fbbuseflag: 'Y',
+        chequeuseflag: 'Y',
+        mileuseflag: 'Y',
+        companyname: 'Test Shop',
+        lang: 'tr',
+        orderid: 'ORDERGP',
+        txnamount: '120',
+      });
+      expect(fields.txntimestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      expect(fields).not.toHaveProperty('cardnumber');
+      expect(fields).not.toHaveProperty('cardcvv2');
+      expect(fields.secure3dhash).toBe(
+        await createGaranti3DHash({
+          terminalId: GARANTI_TEST.terminalId,
+          orderId: 'ORDERGP',
+          amount: '120',
+          currencyCode: '949',
+          successUrl: 'https://example.com/callback',
+          errorUrl: 'https://example.com/callback',
+          type: 'gpdatarequest',
+          installment: '',
+          storeKey: GARANTI_TEST.storeKey,
+          securityData: GARANTI_SECURITY_DATA,
+        })
+      );
+    });
+
+    it('confirms an approved callback with an order inquiry', async () => {
+      post.mockResolvedValue({ data: garantiInquiryXml() });
+      const result = await provider.completeThreeDSPayment(GARANTI_3DPAY_CALLBACK);
+      expect(leaf(sent(), 'Type')).toBe('orderinq');
+      expect(result.status).toBe(PaymentStatus.SUCCESS);
+      expect(result.paymentId).toBe('ORDERPAY');
+    });
+
+    it('rejects an approved callback the bank does not confirm', async () => {
+      post.mockResolvedValue({ data: garantiInquiryXml({ Status: 'DECLINED' }) });
+      const result = await provider.completeThreeDSPayment(GARANTI_3DPAY_CALLBACK);
+      expect(result.errorCode).toBe('INVALID_HASH');
+      expectNoIds(result);
+    });
+
+    // Shaped like the test environment's answer when the GarantiPay page timed out:
+    // the request fields echoed back with an error, and no hash
+    const TIMED_OUT = {
+      mdstatus: '7',
+      procreturncode: '92',
+      response: 'Error',
+      errmsg: 'İşlem kullanıcıya verilen sürede tamamlanamadı.',
+      txntype: 'gpdatarequest',
+      secure3dsecuritylevel: 'CUSTOM_PAY',
+      terminalid: '30691297',
+      orderid: 'ORDERGP',
+      oid: 'ORDERGP',
+      txnamount: '100',
+    };
+
+    it('reports an unsigned timeout callback as a failure with its code, without ids', async () => {
+      const result = await provider.completeThreeDSPayment(TIMED_OUT);
+      expect(post).not.toHaveBeenCalled();
+      expect(result.status).toBe(PaymentStatus.FAILURE);
+      expect(result.errorCode).toBe('92');
+      expect(result.errorMessage).toBe('İşlem kullanıcıya verilen sürede tamamlanamadı.');
+      expectNoIds(result);
+    });
+
+    it('rejects an unsigned callback that claims approval', async () => {
+      const result = await provider.completeThreeDSPayment({
+        ...TIMED_OUT,
+        procreturncode: '00',
+        response: 'Approved',
+      });
+      expect(post).not.toHaveBeenCalled();
+      expect(result.errorCode).toBe('INVALID_HASH');
+      expectNoIds(result);
+    });
+  });
+
   describe('completeThreeDSPayment (3D_PAY)', () => {
     beforeEach(() => {
       provider = create({ securityLevel: '3D_PAY' });

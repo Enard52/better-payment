@@ -25,7 +25,7 @@ const payment = betterPayment({
       password: process.env.GARANTI_PROVAUT_PASSWORD!,
       storeKey: process.env.GARANTI_STORE_KEY!,
       // refundPassword?: string (PROVRFN password, when it differs)
-      // securityLevel?: '3D' | '3D_PAY' (default '3D')
+      // securityLevel?: '3D' | '3D_PAY' | 'GARANTI_PAY' (default '3D')
       // provUserId / refundUserId: default PROVAUT / PROVRFN
       // testMode: defaults to mode === 'sandbox' (Mode TEST)
       // baseUrl: defaults from mode (sanalposprovtest.garantibbva.com.tr / sanalposprov.garanti.com.tr)
@@ -83,6 +83,43 @@ or its bank is not enrolled in 3D Secure, or only an attempt was made. In the `3
 is provisioned by default; any other value fails with `MD_STATUS_<value>`. To provision
 half-secure payments too, list them in `acceptedMdStatuses` (for example `['1', '2', '3', '4']`).
 Chargeback liability can then stay with you. In `3D_PAY` the bank decides.
+
+## GarantiPay
+
+GarantiPay lets the customer pay with the Garanti BBVA Mobile or BonusFlaş app instead of
+entering a card. With `securityLevel: 'GARANTI_PAY'`, `initThreeDSPayment()` needs no
+`paymentCard`: its form (`txntype` `gpdatarequest`, security level `CUSTOM_PAY`) opens Garanti's
+GarantiPay page, where the customer continues with a phone number or Turkish ID number and approves
+the payment in the app. The customer can also use Bonus, cheque and mile points there. Use a separate
+provider key next to your card provider, with the same terminal:
+
+```typescript
+const payment = betterPayment({
+  providers: {
+    garantipay: garanti({
+      merchantId: process.env.GARANTI_MERCHANT_ID!,
+      terminalId: process.env.GARANTI_TERMINAL_ID!,
+      password: process.env.GARANTI_PROVAUT_PASSWORD!,
+      storeKey: process.env.GARANTI_STORE_KEY!,
+      securityLevel: 'GARANTI_PAY',
+      companyName: 'My Shop', // shown on the GarantiPay page
+    }),
+  },
+});
+
+const init = await payment.garantipay.initThreeDSPayment({
+  ...paymentRequest, // no paymentCard
+  conversationId: 'ORDER123',
+  callbackUrl: 'https://yoursite.com/api/pay/garantipay/payment/complete-3ds',
+});
+```
+
+The bank charges the payment itself, so the callback is completed like `3D_PAY`: the hash is
+checked, and an approved callback is confirmed with an order inquiry.
+
+<Callout type="warn">
+  On the test terminal the GarantiPay form and its hash were accepted and the GarantiPay page opened, but a payment could not be completed: that needs a test customer approving in the app. When the page timed out, the bank posted back an unsigned error (`procreturncode` `92`), which is returned as a failure without ids. GarantiPay must be enabled for your terminal by Garanti BBVA. Try a small amount before going live.
+</Callout>
 
 ## Refund, Cancel & Status
 

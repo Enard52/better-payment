@@ -12,8 +12,14 @@ export const GARANTI_ENDPOINTS = {
   GATE: '/servlet/gt3dengine',
 } as const;
 
-/** `secure3dsecuritylevel`: 3D (you provision after the callback) or 3D_PAY (the bank charges) */
-export const GARANTI_SECURITY_LEVELS = ['3D', '3D_PAY'] as const;
+/**
+ * Payment models:
+ * - `3D`: the bank verifies the card, you provision after the callback
+ * - `3D_PAY`: the bank verifies and charges the card
+ * - `GARANTI_PAY`: GarantiPay (`secure3dsecuritylevel` CUSTOM_PAY); the customer pays on
+ *   Garanti's page with the Garanti BBVA Mobile or BonusFlaş app, without card details
+ */
+export const GARANTI_SECURITY_LEVELS = ['3D', '3D_PAY', 'GARANTI_PAY'] as const;
 
 export type GarantiSecurityLevel = (typeof GARANTI_SECURITY_LEVELS)[number];
 

@@ -23,7 +23,7 @@ const payment = betterPayment({
       password: process.env.GARANTI_PROVAUT_PASSWORD!,
       storeKey: process.env.GARANTI_STORE_KEY!,
       // refundPassword?: string (PROVRFN password, when it differs)
-      // securityLevel?: '3D' | '3D_PAY' (default '3D')
+      // securityLevel?: '3D' | '3D_PAY' | 'GARANTI_PAY' (default '3D')
       // provUserId / refundUserId: default PROVAUT / PROVRFN
       // testMode: defaults to mode === 'sandbox' (Mode TEST)
       // baseUrl: defaults from mode (sanalposprovtest.garantibbva.com.tr / sanalposprov.garanti.com.tr)
@@ -71,6 +71,37 @@ Callback `hash` değeri `hashparams` içinde adı geçen alanlardan yeniden olu�
 ### mdstatus [#mdstatus]
 
 `mdstatus` `1`, kartın tam olarak doğrulandığı anlamına gelir. `2`, `3` ve `4` yarım güvenlidir: kart ya da bankası 3D Secure'a kayıtlı değildir veya yalnızca bir deneme yapılmıştır. `3D` modelinde varsayılan olarak yalnızca `1` provizyona gönderilir; diğer değerler `MD_STATUS_<değer>` ile başarısız olur. Yarım güvenli ödemeleri de provizyona göndermek için bunları `acceptedMdStatuses` içinde listeleyin (örneğin `['1', '2', '3', '4']`). Bu durumda ters ibraz (chargeback) sorumluluğu sizde kalabilir. `3D_PAY` modelinde kararı banka verir.
+
+## GarantiPay [#garantipay]
+
+GarantiPay, müşterinin kart bilgisi girmek yerine Garanti BBVA Mobil veya BonusFlaş uygulamasıyla ödemesini sağlar. `securityLevel: 'GARANTI_PAY'` ile `initThreeDSPayment()` için `paymentCard` gerekmez: formu (`txntype` `gpdatarequest`, güvenlik seviyesi `CUSTOM_PAY`) Garanti'nin GarantiPay sayfasını açar; müşteri telefon numarası veya TC kimlik numarasıyla devam eder ve ödemeyi uygulamada onaylar. Müşteri orada Bonus, çek ve mil puanlarını da kullanabilir. Kart sağlayıcınızın yanında, aynı terminalle ayrı bir sağlayıcı anahtarı kullanın:
+
+```typescript
+const payment = betterPayment({
+  providers: {
+    garantipay: garanti({
+      merchantId: process.env.GARANTI_MERCHANT_ID!,
+      terminalId: process.env.GARANTI_TERMINAL_ID!,
+      password: process.env.GARANTI_PROVAUT_PASSWORD!,
+      storeKey: process.env.GARANTI_STORE_KEY!,
+      securityLevel: 'GARANTI_PAY',
+      companyName: 'My Shop', // shown on the GarantiPay page
+    }),
+  },
+});
+
+const init = await payment.garantipay.initThreeDSPayment({
+  ...paymentRequest, // no paymentCard
+  conversationId: 'ORDER123',
+  callbackUrl: 'https://yoursite.com/api/pay/garantipay/payment/complete-3ds',
+});
+```
+
+Ödemeyi banka kendisi çektiği için callback `3D_PAY` gibi tamamlanır: hash kontrol edilir ve onaylı bir callback sipariş sorgusuyla doğrulanır.
+
+<Callout type="warn">
+  Test terminalinde GarantiPay formu ve hash'i kabul edildi ve GarantiPay sayfası açıldı, ancak bir ödeme tamamlanamadı: bunun için uygulamada onay veren bir test müşterisi gerekir. Sayfanın süresi dolduğunda banka imzasız bir hata gönderdi (`procreturncode` `92`); bu, numara taşımayan bir başarısızlık olarak döner. GarantiPay'in terminaliniz için Garanti BBVA tarafından açılması gerekir. Canlıya geçmeden önce küçük bir tutarla deneyin.
+</Callout>
 
 ## İade, iptal ve durum sorgusu [#refund-cancel--status]
 

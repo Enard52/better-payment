@@ -66,9 +66,11 @@ interface ApiRequest {
  * Garanti BBVA virtual POS (GVP, XML API version 512)
  *
  * - createPayment():          XML `sales` (non-3D)
- * - initThreeDSPayment():     auto-submitting form to the 3D engine (3D or 3D_PAY)
+ * - initThreeDSPayment():     auto-submitting form to the 3D engine (3D, 3D_PAY, or
+ *                             GARANTI_PAY for GarantiPay without card details)
  * - completeThreeDSPayment(): verifies the callback hash; 3D provisions with XML
- *                             `sales`, 3D_PAY is confirmed with an order inquiry
+ *                             `sales`, 3D_PAY and GARANTI_PAY are confirmed with an
+ *                             order inquiry
  * - refund() `refund`, cancel() `void` (PROVRFN user), getPayment() `orderinq`
  *
  * `paymentId` is your order id: the `conversationId` you pass, or a generated one.
@@ -242,29 +244,29 @@ export class Garanti extends PaymentProvider<GarantiConfig> {
 
   /**
    * 3D Secure payment: an auto-submitting form to the Garanti BBVA 3D engine,
-   * signed with secure3dhash.
+   * signed with secure3dhash. With GARANTI_PAY the form opens the GarantiPay
+   * page instead (`gpdatarequest`), and the request needs no card.
    */
   async initThreeDSPayment(
     request: ThreeDSPaymentRequest & { failUrl?: string }
   ): Promise<ThreeDSInitResponse> {
     const orderId = request.conversationId || generateOrderId();
     try {
-      this.validatePayment(request, { card: true, required: ['buyer.ip'] });
-      const card = this.cardOf(request);
+      const garantiPay = this.securityLevel === 'GARANTI_PAY';
+      this.validatePayment(request, { card: !garantiPay, required: ['buyer.ip'] });
       if (!request.callbackUrl) {
         throw new ValidationError('callbackUrl is required for 3D Secure payments');
       }
-      const expiry = formatGarantiExpiry(card.expireMonth, card.expireYear);
 
       const fields: Record<string, string> = {
-        secure3dsecuritylevel: this.securityLevel,
+        secure3dsecuritylevel: garantiPay ? 'CUSTOM_PAY' : this.securityLevel,
         mode: this.mode,
         apiversion: GARANTI_API_VERSION,
         terminalprovuserid: this.provUserId,
         terminaluserid: this.provUserId,
         terminalmerchantid: this.config.merchantId,
         terminalid: this.config.terminalId,
-        txntype: 'sales',
+        txntype: garantiPay ? 'gpdatarequest' : 'sales',
         txnamount: formatGarantiAmount(request.paidPrice ?? request.price),
         txncurrencycode: getGarantiCurrencyCode(request.currency),
         txninstallmentcount: formatGarantiInstallment(request.installment),
@@ -273,11 +275,30 @@ export class Garanti extends PaymentProvider<GarantiConfig> {
         errorurl: request.failUrl || request.callbackUrl,
         customeripaddress: request.buyer.ip,
         customeremailaddress: request.buyer.email ?? '',
-        cardnumber: card.cardNumber.replace(/\s/g, ''),
-        cardexpiredatemonth: expiry.month,
-        cardexpiredateyear: expiry.year,
-        cardcvv2: card.cvc,
       };
+      if (garantiPay) {
+        Object.assign(fields, {
+          txnsubtype: 'sales',
+          garantipay: 'Y',
+          // Let the customer use Bonus, partner (FBB), cheque and mile points
+          bnsuseflag: 'Y',
+          fbbuseflag: 'Y',
+          chequeuseflag: 'Y',
+          mileuseflag: 'Y',
+          companyname: this.config.companyName ?? '',
+          lang: (this.config.locale || 'tr').toLowerCase().startsWith('en') ? 'en' : 'tr',
+          txntimestamp: new Date().toISOString(),
+        });
+      } else {
+        const card = this.cardOf(request);
+        const expiry = formatGarantiExpiry(card.expireMonth, card.expireYear);
+        Object.assign(fields, {
+          cardnumber: card.cardNumber.replace(/\s/g, ''),
+          cardexpiredatemonth: expiry.month,
+          cardexpiredateyear: expiry.year,
+          cardcvv2: card.cvc,
+        });
+      }
       fields.secure3dhash = await createGaranti3DHash({
         terminalId: this.config.terminalId,
         orderId,
@@ -341,6 +362,22 @@ export class Garanti extends PaymentProvider<GarantiConfig> {
         rawResponse,
       });
 
+    // Error callbacks can come unsigned (a timed-out GarantiPay page posts no hash). A
+    // failure that claims nothing is reported with its code; ids are never taken from it.
+    if (
+      !callbackData?.hash &&
+      !callbackData?.hashparams &&
+      callbackData?.procreturncode !== '00' &&
+      callbackData?.response !== 'Approved'
+    ) {
+      return this.withErrorCode({
+        status: PaymentStatus.FAILURE,
+        errorCode: callbackData?.procreturncode || `MD_STATUS_${callbackData?.mdstatus ?? ''}`,
+        errorMessage:
+          callbackData?.errmsg || callbackData?.mderrormessage || '3D Secure payment failed',
+        rawResponse: callbackData,
+      });
+    }
     if (!(await verifyGarantiCallback(callbackData ?? {}, this.config.storeKey))) {
       return untrusted('Invalid 3D Secure callback hash', callbackData);
     }
@@ -403,7 +440,7 @@ export class Garanti extends PaymentProvider<GarantiConfig> {
         });
       }
 
-      // 3D_PAY: the bank already charged the card
+      // 3D_PAY and GARANTI_PAY: the bank already charged
       if (callbackData.procreturncode !== '00') {
         return this.withErrorCode({
           status: PaymentStatus.FAILURE,

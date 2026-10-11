@@ -21,8 +21,10 @@ export interface GarantiConfig extends PaymentProviderConfig {
   refundUserId?: string;
   /** Password of the cancel/refund user. Default: `password` */
   refundPassword?: string;
-  /** 3D model. Default: '3D' */
+  /** Payment model: '3D', '3D_PAY' or 'GARANTI_PAY' (GarantiPay). Default: '3D' */
   securityLevel?: GarantiSecurityLevel;
+  /** Company name shown on the GarantiPay page (`companyname`), for 'GARANTI_PAY' */
+  companyName?: string;
   /**
    * `mdstatus` values that are provisioned in the 3D model. Default: ['1'] (full
    * 3D Secure authentication). 2, 3 and 4 are half-secure (the card or its bank is

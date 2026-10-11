@@ -142,7 +142,7 @@ this id to `refund`, `cancel` and `getPayment`.
 | Sipay        | ✓ (needs non-3D approval) | ✓ paySmart3D                |   ✓    | ✓ (refund)      |   ✓    |  ✓  | ✓ (account rates) |
 | Akbank       | ✓                         | ✓ 3D_PAY                    |   ✓    | ✓               |   ✓    |  —  | —                 |
 | Kuveyt Türk  | —                         | ✓ KT Pay Gate               |   ✓    | ✓ (same day)    |   ✓    |  —  | —                 |
-| Garanti BBVA | ✓                         | ✓ 3D / 3D_PAY               |   ✓    | ✓ (same day)    |   ✓    |  —  | —                 |
+| Garanti BBVA | ✓                         | ✓ 3D / 3D_PAY / GarantiPay  |   ✓    | ✓ (same day)    |   ✓    |  —  | —                 |
 | EST ¹        | ✓                         | ✓ 3D / 3D Pay / 3D Host     |   ✓    | ✓               |   ✓    |  —  | —                 |
 
 ¹ İş Bankası, Ziraat Bankası, Halkbank, TEB and Şekerbank, with `est({ bank })`.
@@ -166,7 +166,8 @@ this id to `refund`, `cancel` and `getPayment`.
   status query.
 - **Garanti BBVA:** the bank POSTs to your `callbackUrl`. The hash is rebuilt from the
   fields in `hashparams`, then the result is confirmed with the bank: `3D` provisions
-  with the XML API, `3D_PAY` is checked with an order inquiry.
+  with the XML API, `3D_PAY` and GarantiPay are checked with an order inquiry.
+  An unsigned callback is only ever a failure, without ids.
 - **PayTR:** `callbackUrl` is only where the customer's browser returns. The
   result is sent to the **notification URL** set in the PayTR panel. Point it at
   `/api/pay/paytr/callback`; the handler verifies the notification and replies
