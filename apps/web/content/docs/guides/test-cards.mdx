@@ -102,3 +102,20 @@ Akbank provides test cards and credentials with your test merchant account; ask 
 - **Documentation**: [Param Developer Documentation](https://dev.param.com.tr/)
 
 Parampos provides test cards, test credentials (Client Code, Username, Password, and GUID) and SOAP endpoints with your test merchant account; ask your Param contact.
+
+---
+
+## Sipay Sandbox
+
+- **Sandbox Endpoint**: `https://provisioning.sipay.com.tr`
+- **Documentation**: [Sipay API Documentation](https://apidocs.sipay.com.tr/)
+
+Sipay's documentation lists a shared test merchant (app id, app secret and merchant key) and these test cards:
+
+| Card | Number | Expiry | CVV | 3D Secure code |
+| ---- | ------ | ------ | --- | -------------- |
+| Visa | `4508034508034509` | 12/30 | `000` | `000000` |
+| Mastercard | `5406675406675403` | 12/30 | `000` | `000000` |
+| Troy | `6501700139082826` | 12/30 | `000` | `000000` |
+
+Other CVV values simulate bank errors: `510` insufficient funds, `050` do not honour, `330` expired card, `820` invalid CVV.

@@ -1,0 +1,105 @@
+---
+title: Sipay
+description: Sipay ödeme entegrasyonu referansı.
+---
+
+Sipay'in `ccpayment` API'sini kullanır. İstekler bir Bearer token taşır; sağlayıcı bu token'ı app id ve secret ile alır ve süresi dolana kadar yeniden kullanır. Ödeme, durum, iade ve onay istekleri ayrıca bir `hash_key` taşır: istek alanları, app secret'tan türetilen bir anahtarla AES-256-CBC ile şifrelenir.
+
+Ödeme, 3D Secure (callback kontrolü dahil), iade, iptal, ön provizyon ve taksit sorgusu Sipay test ortamında uçtan uca doğrulandı.
+
+## Yapılandırma [#configuration]
+
+```typescript
+import { betterPayment, sipay } from 'better-payment';
+
+const payment = betterPayment({
+  providers: {
+    sipay: sipay({
+      appId: process.env.SIPAY_APP_ID!,
+      appSecret: process.env.SIPAY_APP_SECRET!,
+      merchantKey: process.env.SIPAY_MERCHANT_KEY!,
+      // saleWebhookKey?: string (sale_web_hook_key, see Webhooks)
+      // baseUrl: defaults from mode (provisioning.sipay.com.tr / app.sipay.com.tr)
+    }),
+  },
+});
+```
+
+Kimlik bilgileri Sipay üye işyeri panelinde **Ayarlar → Entegrasyon ve API** altındadır. İlk denemeler için Sipay dokümanında ortak bir test üye işyeri vardır; `mode: 'sandbox'` ile kullanın.
+
+`paymentId`, Sipay'deki fatura numarasıdır (`invoice_id`): verdiğiniz `conversationId` ya da üretilen bir numara. Sipay daha önce kullanılmış bir fatura numarasını reddeder (`DUPLICATE_ORDER`).
+
+İstekte `buyer.name`, `buyer.surname`, `buyer.email`, `buyer.gsmNumber`, `buyer.ip` (IPv4) ve `billingAddress.address` olmalıdır. Çekilen tutar `paidPrice`'tır. Sepet kalemleri, fiyatları toplamı `paidPrice`'a eşitse gönderilir; değilse siparişin tamamı için tek kalem gönderilir, çünkü Sipay toplamı tutmayan kalemleri reddeder. Para birimleri: TRY, USD, EUR ve GBP (hesabınıza bağlı); taksit: 1 ile 12 arası.
+
+## 3D'siz ödeme [#non-3d-payment]
+
+```typescript
+const result = await payment.sipay.createPayment({
+  ...paymentRequest,
+  conversationId: 'ORDER123',
+});
+```
+
+3D'siz ödemeyi Sipay üye işyeri bazında açar; hesabınızda açık olup olmadığını Sipay'e sorun.
+
+## 3D Secure [#3d-secure]
+
+```typescript
+const init = await payment.sipay.initThreeDSPayment({
+  ...paymentRequest,
+  conversationId: 'ORDER123',
+  callbackUrl: 'https://yoursite.com/api/pay/sipay/payment/complete-3ds',
+  // failUrl?: string (cancel_url, defaults to callbackUrl)
+});
+// init.threeDSHtmlContent is Sipay's page that sends the card to 3D Secure
+```
+
+Callback alan adlarının Sipay panelinde izinli listeye eklenmesi gerekir; aksi halde Sipay 1049 koduyla yanıt verir. 3D Secure sonrası Sipay sonucu başarılıysa `callbackUrl`, başarısızsa `failUrl` adresine POST eder:
+
+```typescript
+const result = await payment.sipay.completeThreeDSPayment(callbackBody);
+```
+
+Callback'te yalnızca `hash_key` alanına güvenilir. App secret ile çözülür ve içeriği (`status|total|invoice_id|order_id|currency`) sonucu belirler:
+
+- geçerli bir `hash_key` içermeyen ya da `invoice_id` veya `order_id` değeri hash ile uyuşmayan callback `INVALID_HASH` olarak reddedilir ve `paymentId` taşımaz;
+- ödeme yalnızca imzalı durum `1` ise `success` olur; diğer alanların ne dediği önemli değildir;
+- doğrulanan değerler `rawResponse.verified` içindedir. Siparişi göndermeden önce `total` ve `currency` değerlerini siparişinizle karşılaştırın.
+
+Ödemeyi tamamlamak için API çağrısı yapılmaz: kartı Sipay kendisi çeker.
+
+## İade, iptal ve durum [#refund-cancel--status]
+
+```typescript
+await payment.sipay.refund({ paymentId: 'ORDER123', price: '50.00', currency: 'TRY', ip: '1.2.3.4' });
+await payment.sipay.cancel({ paymentId: 'ORDER123', ip: '1.2.3.4' });
+const status = await payment.sipay.getPayment('ORDER123'); // checkstatus
+// status: 'success' (also after a partial refund), 'cancelled' (fully refunded or voided), 'failure', 'pending'
+```
+
+Sipay'de ayrı bir iptal (void) çağrısı yoktur: ödemeyle aynı gün yapılan iade iptal olarak işlenir. `cancel()` ödemenin kalan tutarını iade eder; açık bir ön provizyonsa onu serbest bırakır. Sipay aynı ödemenin iki iadesi arasında 30 saniye beklenmesini ister.
+
+## Ön provizyon [#pre-authorization]
+
+```typescript
+const auth = await payment.sipay.authorize({ ...paymentRequest, conversationId: 'ORDER123' });
+// or initThreeDSAuthorize() + completeThreeDSPayment() for 3D Secure
+await payment.sipay.capture({ paymentId: 'ORDER123', amount: '80.00', ip: '1.2.3.4' }); // all or part
+await payment.sipay.voidAuthorization({ paymentId: 'ORDER123', ip: '1.2.3.4' });
+```
+
+`capture()` ve `voidAuthorization()` Sipay'in `confirmPayment` çağrısını kullanır. Kapatılmayan ön provizyon yaklaşık 20 gün sonra banka tarafından iptal edilir.
+
+## BIN ve taksit [#bin--installments]
+
+```typescript
+const bin = await payment.sipay.binCheck('540667');
+const options = await payment.sipay.installmentInfo({ binNumber: '540667', price: '100.00' });
+// options.installmentDetails[0].installmentPrices: the amount to charge for each count
+```
+
+İkisi de Sipay'in `getpos` çağrısını kullanır. Toplamlar Sipay'in hesabınız için hesapladığı tutarlardır; seçilen toplamı `paidPrice`, taksit sayısını `installment` olarak gönderin.
+
+## Webhook'lar [#webhooks]
+
+`saleWebhookKey` verirseniz Sipay, panelde bu anahtar için tanımladığınız satış webhook'una bildirim gönderir. Webhook'lar bu sağlayıcı tarafından henüz doğrulanmıyor: bir webhook'a göre işlem yapmadan önce `getPayment()` ile ödemeyi kontrol edin.

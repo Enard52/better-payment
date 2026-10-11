@@ -21,7 +21,7 @@ type RouteItem = {
   issue?: number;
 };
 
-// Akbank and Kuveyt Türk are live; the rest are tracked in issues (logo sources: public/brand/banks/SOURCES.md)
+// Akbank, Kuveyt Türk and Sipay are live; the rest are tracked in issues (logo sources: public/brand/banks/SOURCES.md)
 const banks: RouteItem[] = [
   { name: "Akbank", logo: "/akbank.svg", w: 75, h: 38, live: true },
   { name: "Kuveyt Türk", logo: "/brand/banks/kuveyt-turk.svg", w: 227, h: 41, live: true },
@@ -37,7 +37,7 @@ const banks: RouteItem[] = [
 ];
 
 const institutions: RouteItem[] = [
-  { name: "Sipay", logo: "/brand/institutions/sipay.svg", w: 140, h: 68, issue: 40 },
+  { name: "Sipay", logo: "/brand/institutions/sipay.svg", w: 140, h: 68, live: true },
   { name: "Moka United", logo: "/brand/institutions/moka-united.svg", w: 196, h: 80, tall: true, issue: 40 },
   { name: "Papara", logo: "/brand/institutions/papara.png", w: 1280, h: 354, issue: 40 },
   { name: "Lidio", logo: "/brand/institutions/lidio.svg", w: 197, h: 91, tall: true, issue: 40 },

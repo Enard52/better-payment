@@ -15,6 +15,7 @@ export enum ProviderType {
   AKBANK = 'akbank',
   PARAMPOS = 'parampos',
   KUVEYTTURK = 'kuveytturk',
+  SIPAY = 'sipay',
   /** In-memory provider for tests, from `better-payment/testing` */
   MOCK = 'mock',
 }
@@ -124,6 +125,10 @@ export const PROVIDER_DEFAULT_URLS: Record<
   [ProviderType.KUVEYTTURK]: {
     sandbox: 'https://boatest.kuveytturk.com.tr/boa.virtualpos.services',
     production: 'https://sanalpos.kuveytturk.com.tr/ServiceGateWay',
+  },
+  [ProviderType.SIPAY]: {
+    sandbox: 'https://provisioning.sipay.com.tr',
+    production: 'https://app.sipay.com.tr',
   },
 };
 

@@ -7,9 +7,9 @@ const budgets = [
   // 27 kB since the plugin system (hooks, events, plugin endpoints), 28 kB since
   // buildBasket() (ESM bundlers drop it when it is not imported), 29 kB since the
   // 0.8.1 security fixes (Akbank order check, body limits, response filtering),
-  // 31 kB since the Kuveyt Türk provider
-  { file: 'dist/index.mjs', maxGzipKb: 31 },
-  { file: 'dist/index.js', maxGzipKb: 31 },
+  // 31 kB since the Kuveyt Türk provider, 35 kB since the Sipay provider
+  { file: 'dist/index.mjs', maxGzipKb: 35 },
+  { file: 'dist/index.js', maxGzipKb: 35 },
   { file: 'dist/client/index.mjs', maxGzipKb: 2 },
   { file: 'dist/client/index.js', maxGzipKb: 2 },
   { file: 'dist/testing/index.mjs', maxGzipKb: 8 },

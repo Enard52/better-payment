@@ -37,12 +37,17 @@ export function toBase64(data: string | Uint8Array): string {
   return btoa(binary);
 }
 
-/** Decodes base64 to a UTF-8 string */
-export function fromBase64(value: string): string {
+/** Decodes base64 to bytes */
+export function base64ToBytes(value: string): Uint8Array {
   const binary = atob(value.replace(/\s/g, ''));
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return new TextDecoder().decode(bytes);
+  return bytes;
+}
+
+/** Decodes base64 to a UTF-8 string */
+export function fromBase64(value: string): string {
+  return new TextDecoder().decode(base64ToBytes(value));
 }
 
 export function toHex(bytes: Uint8Array): string {
@@ -72,6 +77,34 @@ export async function hmac(
     ['sign']
   );
   return new Uint8Array(await subtle.sign('HMAC', cryptoKey, bytesOf(data)));
+}
+
+async function aesCbcKey(key: string | Uint8Array, usage: KeyUsage): Promise<CryptoKey> {
+  return webCrypto().subtle.importKey('raw', bytesOf(key), { name: 'AES-CBC' }, false, [usage]);
+}
+
+/** AES-CBC with PKCS#7 padding; the key length (16, 24 or 32 bytes) selects AES-128/192/256 */
+export async function aesCbcEncrypt(
+  key: string | Uint8Array,
+  iv: string | Uint8Array,
+  data: string | Uint8Array
+): Promise<Uint8Array> {
+  const cryptoKey = await aesCbcKey(key, 'encrypt');
+  return new Uint8Array(
+    await webCrypto().subtle.encrypt({ name: 'AES-CBC', iv: bytesOf(iv) }, cryptoKey, bytesOf(data))
+  );
+}
+
+/** Reverses aesCbcEncrypt. Throws when the key, IV or padding is wrong. */
+export async function aesCbcDecrypt(
+  key: string | Uint8Array,
+  iv: string | Uint8Array,
+  data: Uint8Array
+): Promise<Uint8Array> {
+  const cryptoKey = await aesCbcKey(key, 'decrypt');
+  return new Uint8Array(
+    await webCrypto().subtle.decrypt({ name: 'AES-CBC', iv: bytesOf(iv) }, cryptoKey, bytesOf(data))
+  );
 }
 
 /** Cryptographically random bytes as lowercase hex */
