@@ -7,6 +7,15 @@ description: Release history and breaking changes for better-payment.
   The version history was reset. `0.0.1` is the first release of the reworked package. Releases `1.x`–`3.x` had incorrect provider integrations and callback checks that could be bypassed. Do not use them. See [What's New in 0.0.1](/docs/whats-new) for the reasoning and a step-by-step migration guide.
 </Callout>
 
+## 0.11.0
+
+### Added
+
+- **[`chaos` plugin](/docs/plugins/chaos):** injects declines, lost responses (`NETWORK_ERROR`) and delays into operations, so you can test how your application handles them. It refuses to run in `production` mode unless `allowProduction` is set.
+- **[EST provider](/docs/banks/est):** İş Bankası, Ziraat Bankası, Halkbank, TEB and Şekerbank through one provider. Supports non-3D and 3D Secure payments (3D, 3D Pay, 3D Host) with hash ver3, plus refund, void and order status. 3D callbacks are confirmed with the bank.
+- **[`notifications` plugin](/docs/plugins/notifications):** sends sales, refunds and failed payments to Slack, Discord, Telegram or your own channel, in the background and without card data. A failing channel never affects the payment.
+- **[Sipay provider](/docs/providers/sipay):** non-3D and 3D Secure payments, 3D callbacks verified with Sipay's encrypted `hash_key`, full and partial refunds, cancel, status queries, pre-authorization, and BIN and installment queries. Verified end to end against the Sipay test environment.
+
 ## 0.10.0
 
 ### Added
