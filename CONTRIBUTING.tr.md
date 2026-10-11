@@ -16,6 +16,7 @@ better-payment projesine katkıda bulunmayı düşündüğünüz için teşekkü
 - [Test Yazma](#test-yazma)
 - [Dokümantasyon Çevirileri](#dokümantasyon-çevirileri)
 - [Sürüm ve Yayın](#sürüm-ve-yayın)
+- [Beta Sürümler](#beta-sürümler)
 
 ## Davranış Kuralları
 
@@ -104,6 +105,8 @@ git checkout -b feature/amazing-feature
 # veya
 git checkout -b fix/bug-description
 ```
+
+Branch'i güncel `main`'den açın; yeni bir özellik için `beta`'dan açın (bkz. [Beta Sürümler](#beta-sürümler)).
 
 Branch isimlendirme kuralları:
 - `feature/` - Yeni özellikler için
@@ -480,7 +483,8 @@ Proje [Changesets](https://github.com/changesets/changesets) kullanır.
    etiketinde yayınlar; npm token gerekmez ve paket provenance kaydıyla yayınlanır. GitHub
    release'i `CHANGELOG.md` bölümünden oluşturulur. Workflow durduysa (örneğin doküman
    changelog'unda bölüm eksikse) sorunu `main`'de düzeltin, sonraki push yayınlar. Dry run veya
-   başka bir `npm_tag` için workflow'u elle çalıştırın.
+   başka bir `npm_tag` için workflow'u elle çalıştırın. `beta`'dan çıkan prerelease'ler aynı şekilde
+   `beta` etiketinde yayınlanır (bkz. [Beta Sürümler](#beta-sürümler)).
 
 Release PR'ı varsayılan `GITHUB_TOKEN` ile açıldığı için, `RELEASE_PR_TOKEN` secret'ı (Contents ve
 Pull requests yazma izni olan fine-grained bir token) tanımlanmadıkça üzerinde CI çalışmaz.
@@ -488,6 +492,58 @@ Depo ayarlarında *Allow GitHub Actions to create and approve pull requests* aç
 
 Sürüm geçmişi `0.0.1` ile sıfırlandı; `0.x` boyunca kırıcı değişiklikler minor
 sürümle yayınlanır ve changelog'da geçiş notuyla belirtilir.
+
+## Beta Sürümler
+
+Yeni özellikler, provider'lar ve plugin'ler önce beta olarak (`0.12.0-beta.0`, `0.12.0-beta.1` ...)
+npm `beta` etiketinde yayınlanır, hazır olunca stabil sürüm olur. `main` bu süre boyunca stabil
+kalır; düzeltmeler oradan yayınlanmaya devam eder.
+
+| Branch | npm etiketi | Sürümler | Pull request'ler |
+| ------ | ----------- | -------- | ---------------- |
+| `main` | `latest` (`npm i better-payment`) | `0.11.0`, `0.11.1` | düzeltmeler, güvenlik, doküman (`patch` changeset) |
+| `beta` | `beta` (`npm i better-payment@beta`) | `0.12.0-beta.0` | yeni özellikler, provider'lar, plugin'ler (`minor` changeset) |
+
+PR'ın nereye gideceğinden emin değilseniz `main`'e açın; bir maintainer hedefini değiştirir.
+
+- `beta` Changesets pre mode'dadır (`.changeset/pre.json`). `beta`'ya giren changeset'ler
+  `chore(release): version packages (beta)` PR'ını açar; birleştirilince prerelease `beta`
+  etiketinde ve GitHub prerelease olarak yayınlanır. Her beta yalnızca bir öncekinden sonra eklenen
+  changeset'leri listeler.
+- `main`'e yapılan her push'tan sonra **Sync beta** workflow'u, `beta` geride ise
+  `chore: merge main into beta` PR'ını açar. Merge commit ile birleştirin (squash veya rebase
+  yok). Stabil bir sürümden sonra sürüm çakışmalarını `beta` lehine çözün.
+
+**Beta turu başlatma** (maintainer'lar), güncel `main`'den:
+
+```bash
+git checkout -B beta origin/main
+pnpm changeset pre enter beta
+git commit -am "chore: enter beta prerelease mode" && git push -u origin beta
+```
+
+**Betayı stabil sürüme alma:**
+
+1. `beta`'da `pnpm changeset pre exit` çalıştırın ve bir PR ile `beta`'ya birleştirin.
+2. `beta`'dan `main`'e PR açıp merge commit ile birleştirin. `.changeset/pre.json` hâlâ pre
+   mode'daysa CI bu PR'ı reddeder.
+3. `main`'deki release PR'ı tüm beta changeset'lerinden stabil sürümü (`0.12.0`) üretir ve iki
+   changelog'daki `-beta.N` bölümlerini onunla değiştirir. Birleştirilince `latest`'te yayınlanır.
+4. Yeni bir şey olduğunda sonraki beta turunu yukarıdaki gibi başlatın.
+
+**Bir özelliği stabil sürüme almadan bırakma:** `beta`, `main`'e bir bütün olarak girer; hazır
+olmayanı yukarıdaki 1. adımdan önce çıkarın. Her özellik `beta`'ya kendi changeset'iyle tek bir
+squash PR olarak girdiği için bu temiz çalışır.
+
+1. `beta`'da özelliğin commit'ini geri alan bir PR açın (`git revert <sha>`). Özellik daha önce bir
+   beta sürümde yayınlandıysa Changesets changeset'ini `.changeset/pre/` klasörüne taşımıştır; onu
+   da orada silin, yoksa stabil changelog özelliği listeler.
+2. Kalanları yukarıdaki gibi stabil sürüme alın.
+3. Sonraki beta turunda o revert'ü geri alan bir PR'ı yeni bir changeset'le `beta`'ya açarak
+   özelliği geri getirin.
+
+Hazır özellikleri `beta`'dan `main`'e cherry-pick etmeyin: changeset'leri ve changelog maddeleri iki
+branch'te birden olur ve sonraki main → beta senkronu çakışır.
 
 ## Sorular ve Destek
 

@@ -15,6 +15,7 @@ Thanks for helping! This guide gets you from clone to a merged pull request.
 - [Tests](#tests)
 - [Translations](#translations)
 - [Releases](#releases)
+- [Beta releases](#beta-releases)
 - [Labels](#labels)
 
 ## Ways to contribute
@@ -79,7 +80,7 @@ apps/web/                       website and docs (Next.js + fumadocs)
 
 ## Making a change
 
-1. Create a branch from an up-to-date `main`: `feature/…`, `fix/…`, `docs/…`, `refactor/…`, `test/…` or `chore/…`.
+1. Create a branch from an up-to-date `main` (or `beta` for a new feature, see [Beta releases](#beta-releases)): `feature/…`, `fix/…`, `docs/…`, `refactor/…`, `test/…` or `chore/…`.
 2. Make the change, with tests.
 3. Run the checks from [Setup](#setup). For formatting, run `pnpm --filter better-payment format`.
 4. Add a changeset for anything users notice: `pnpm changeset`. Pick `patch` for fixes, `minor` for features. Breaking changes are `minor` while the version is 0.x, and the changeset explains how to migrate. Below the summary, add the docs changelog entry in English and Turkish, with links to the docs (CI checks it):
@@ -179,9 +180,46 @@ Maintainers release with [Changesets](https://github.com/changesets/changesets).
 3. Before merging it, edit the release PR (push to its `changeset-release/main` branch):
    - `CHANGELOG.md`: the new section lists each changeset summary under `Added` (minor), `Fixed` (patch) or `Changed (breaking)` (major). Reword it for users, move entries to `Changed` where that fits, and credit contributors, like the earlier releases.
    - The docs changelog (`apps/web/content/docs/reference/changelog.mdx` and `changelog.tr.mdx`) gets the new version's section from the changesets. Add a one-line intro for a large release if you like. **Publish to NPM** stops if it has no section for the new version.
-4. Merging the release PR publishes the release: the **Publish to NPM** workflow runs on every push to `main` and publishes when the package version has no GitHub release yet. It runs lint, typecheck and tests, publishes on the `latest` tag with npm trusted publishing (provenance, no tokens) and creates the GitHub release from the `CHANGELOG.md` section. If it stopped (for example, the docs changelog section was missing), fix it on `main` and the next push publishes. Run the workflow by hand for a dry run or another `npm_tag`.
+4. Merging the release PR publishes the release: the **Publish to NPM** workflow runs on every push to `main` and publishes when the package version has no GitHub release yet. It runs lint, typecheck and tests, publishes on the `latest` tag with npm trusted publishing (provenance, no tokens) and creates the GitHub release from the `CHANGELOG.md` section. If it stopped (for example, the docs changelog section was missing), fix it on `main` and the next push publishes. Run the workflow by hand for a dry run or another `npm_tag`. Prereleases from `beta` work the same way on the `beta` tag (see [Beta releases](#beta-releases)).
 
 The release PR is opened with the default `GITHUB_TOKEN`, so CI does not run on it unless a `RELEASE_PR_TOKEN` secret (a fine-grained token with Contents and Pull requests write access) is set. The repository setting *Allow GitHub Actions to create and approve pull requests* must be on.
+
+## Beta releases
+
+New features, providers and plugins ship as a beta first (`0.12.0-beta.0`, `0.12.0-beta.1` ...), on the npm `beta` tag, and become a stable release when they are ready. `main` stays stable the whole time: fixes keep shipping from it.
+
+| Branch | npm tag | Versions | Pull requests |
+| ------ | ------- | -------- | ------------- |
+| `main` | `latest` (`npm i better-payment`) | `0.11.0`, `0.11.1` | fixes, security, docs (`patch` changesets) |
+| `beta` | `beta` (`npm i better-payment@beta`) | `0.12.0-beta.0` | new features, providers, plugins (`minor` changesets) |
+
+Not sure where a pull request goes? Open it against `main`; a maintainer retargets it.
+
+- `beta` is in Changesets pre mode (`.changeset/pre.json`). Changesets landing on `beta` open the `chore(release): version packages (beta)` pull request, and merging it publishes the prerelease on the `beta` tag, with a GitHub prerelease. Each beta lists only the changesets added since the previous one.
+- After every push to `main`, the **Sync beta** workflow opens a `chore: merge main into beta` pull request when `beta` is behind. Merge it with a merge commit (never squash or rebase). After a stable release, resolve the version conflicts in favour of `beta`.
+
+**Starting a beta round** (maintainers), from an up-to-date `main`:
+
+```bash
+git checkout -B beta origin/main
+pnpm changeset pre enter beta
+git commit -am "chore: enter beta prerelease mode" && git push -u origin beta
+```
+
+**Promoting a beta to stable:**
+
+1. On `beta`, run `pnpm changeset pre exit` and merge it into `beta` in a pull request.
+2. Open a pull request from `beta` into `main` and merge it with a merge commit. CI refuses it while `.changeset/pre.json` is still in pre mode.
+3. The release PR on `main` makes the stable version (`0.12.0`) from all the beta changesets and replaces the `-beta.N` sections of both changelogs with it. Merging it publishes on `latest`.
+4. Start the next beta round as above when there is something new for it.
+
+**Leaving a feature out of a promotion:** `beta` reaches `main` as a whole, so take out what is not ready before step 1 above. This works cleanly because every feature lands on `beta` as one squash-merged pull request with its own changeset.
+
+1. On `beta`, open a pull request that reverts the feature's commit (`git revert <sha>`). If the feature was already in a beta release, Changesets has moved its changeset to `.changeset/pre/`: delete it there too, or the stable changelog lists the feature.
+2. Promote the rest as above.
+3. In the next beta round, bring the feature back by reverting that revert in a pull request to `beta`, with a new changeset.
+
+Don't cherry-pick ready features from `beta` into `main`: their changesets and changelog entries end up on both branches, and the next main → beta sync conflicts.
 
 ## Labels
 

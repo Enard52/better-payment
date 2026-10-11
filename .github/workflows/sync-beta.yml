@@ -1,0 +1,52 @@
+name: Sync beta
+
+# Keeps the beta branch up to date with main: after every push to main (fixes, stable releases),
+# opens a "chore: merge main into beta" pull request when beta is behind. Merge it with a merge
+# commit, never squash or rebase, so the next sync only brings the new commits. Conflicts (for
+# example package.json and CHANGELOG.md after a stable release) are resolved on that PR's branch.
+#
+# Like the release PR, it is opened with RELEASE_PR_TOKEN when set, so CI runs on it.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency: ${{ github.workflow }}
+
+jobs:
+  sync:
+    name: Open the main → beta pull request
+    if: github.repository == 'czaydev/better-payment'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Open the pull request when beta is behind main
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PR_TOKEN || github.token }}
+        run: |
+          if ! git rev-parse --verify --quiet origin/beta > /dev/null; then
+            echo "There is no beta branch; nothing to sync"
+            exit 0
+          fi
+          BEHIND=$(git rev-list --count origin/beta..origin/main)
+          if [ "$BEHIND" = "0" ]; then
+            echo "beta already has every commit of main"
+            exit 0
+          fi
+          if [ -n "$(gh pr list --base beta --head main --state open --json number --jq '.[].number')" ]; then
+            echo "The main → beta pull request is already open; it now has $BEHIND commit(s)"
+            exit 0
+          fi
+          gh pr create --base beta --head main \
+            --title 'chore: merge main into beta' \
+            --body "Brings the $BEHIND new commit(s) of \`main\` into \`beta\`. Merge with a merge commit (not squash or rebase). See CONTRIBUTING.md → Beta releases."

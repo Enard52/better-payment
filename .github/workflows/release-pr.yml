@@ -1,8 +1,9 @@
 name: Release PR
 
 # Opens and updates the "chore(release): version packages" pull request whenever changesets land
-# on main. Merging it publishes the release: publish.yml runs on the push to main (npm trusted
-# publishing).
+# on main or beta. Merging it publishes the release: publish.yml runs on the push (npm trusted
+# publishing). On beta, which is in changesets pre mode, the release is a prerelease
+# (0.12.0-beta.0, ...) published on the npm "beta" tag.
 #
 # Pull requests opened with the default GITHUB_TOKEN do not trigger other workflows, so CI does
 # not run on the release PR. Add a fine-grained token with "Contents" and "Pull requests" write
@@ -10,7 +11,7 @@ name: Release PR
 
 on:
   push:
-    branches: [main]
+    branches: [main, beta]
   workflow_dispatch:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
@@ -22,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write # push the changeset-release/main branch
+      contents: write # push the changeset-release/<branch> branch
       pull-requests: write # open and update the release PR
 
     steps:
@@ -47,7 +48,7 @@ jobs:
         uses: changesets/action@v1
         with:
           version: pnpm version-packages
-          title: 'chore(release): version packages'
-          commit: 'chore(release): version packages'
+          title: "${{ github.ref_name == 'beta' && 'chore(release): version packages (beta)' || 'chore(release): version packages' }}"
+          commit: "${{ github.ref_name == 'beta' && 'chore(release): version packages (beta)' || 'chore(release): version packages' }}"
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PR_TOKEN || github.token }}
