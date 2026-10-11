@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, beta]
   pull_request:
 
 jobs:
@@ -23,6 +23,15 @@ jobs:
 
       - name: Every changeset has a docs changelog entry (en/tr)
         run: node scripts/check-changesets.mjs
+
+      # A beta reaches main only after `changeset pre exit` (CONTRIBUTING.md → Beta releases)
+      - name: main is not in prerelease mode
+        if: github.base_ref == 'main' || github.ref == 'refs/heads/main'
+        run: |
+          if [ "$(node -p "require('fs').existsSync('.changeset/pre.json') && require('./.changeset/pre.json').mode")" = "pre" ]; then
+            echo "::error::.changeset/pre.json is in pre mode; run 'pnpm changeset pre exit' on beta before merging it into main"
+            exit 1
+          fi
 
   package:
     name: better-payment (Node ${{ matrix.node-version }})
