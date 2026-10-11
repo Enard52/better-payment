@@ -1,62 +1,40 @@
-import packageJson from "../../../../packages/better-payment/package.json";
 import type { Locale } from "@/lib/i18n/config";
+import { releaseStatus, type ReleaseStatus } from "@/lib/release";
 
 export interface SinceProps {
   version: string;
   lang?: Locale;
 }
 
-interface ParsedVersion {
-  major: number;
-  minor: number;
-  patch: number;
-  prerelease: boolean;
-}
+const LABELS: Record<ReleaseStatus, Record<Locale, (version: string) => string>> = {
+  stable: { en: (v) => `Added in ${v}`, tr: (v) => `${v} sürümünde eklendi` },
+  beta: { en: (v) => `Beta · ${v}`, tr: (v) => `Beta · ${v}` },
+  unreleased: { en: () => "Not released yet", tr: () => "Henüz yayınlanmadı" },
+};
 
-function parseVersion(version: string): ParsedVersion {
-  const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(version);
-  if (!match) throw new Error(`Invalid release version: ${version}`);
+const TITLES: Partial<Record<ReleaseStatus, Record<Locale, string>>> = {
+  beta: {
+    en: "In the beta release: npm install better-payment@beta",
+    tr: "Beta sürümde: npm install better-payment@beta",
+  },
+};
 
-  return {
-    major: Number(match[1]),
-    minor: Number(match[2]),
-    patch: Number(match[3]),
-    prerelease: match[4] !== undefined,
-  };
-}
-
-export function isReleasedVersion(version: string, currentVersion = packageJson.version): boolean {
-  const target = parseVersion(version);
-  const current = parseVersion(currentVersion);
-
-  for (const key of ["major", "minor", "patch"] as const) {
-    if (target[key] < current[key]) return true;
-    if (target[key] > current[key]) return false;
-  }
-
-  return !current.prerelease;
-}
+const STYLES: Record<ReleaseStatus, string> = {
+  stable: "border-border bg-secondary text-secondary-foreground",
+  beta: "border-primary/30 bg-tint text-accent-text",
+  unreleased: "border-warning/30 bg-warning-soft text-warning",
+};
 
 export function Since({ version, lang = "en" }: SinceProps) {
-  const released = isReleasedVersion(version);
-  const label = released
-    ? lang === "tr"
-      ? `${version} sürümünde eklendi`
-      : `Added in ${version}`
-    : lang === "tr"
-      ? "Henüz yayınlanmadı"
-      : "Not released yet";
+  const status = releaseStatus(version);
 
   return (
     <span
-      className={
-        released
-          ? "not-prose my-2 inline-flex w-fit items-center rounded-full border border-border bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground"
-          : "not-prose my-2 inline-flex w-fit items-center rounded-full border border-warning/30 bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"
-      }
-      data-release-status={released ? "released" : "unreleased"}
+      className={`not-prose my-2 inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-xs font-medium ${STYLES[status]}`}
+      title={TITLES[status]?.[lang]}
+      data-release-status={status}
     >
-      {label}
+      {LABELS[status][lang](version)}
     </span>
   );
 }

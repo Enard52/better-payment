@@ -1,12 +1,14 @@
 name: Publish to NPM
 
-# Runs on every push to main and publishes when packages/better-payment/package.json has a version
-# that has no GitHub release yet (that is, right after the release PR is merged). Other pushes skip
-# the publish job. It can also be run by hand, for a dry run or another npm dist-tag.
+# Runs on every push to main and beta and publishes when packages/better-payment/package.json has a
+# version that has no GitHub release yet (that is, right after the release PR is merged). Other
+# pushes skip the publish job. main publishes on the npm "latest" tag; beta, which is in changesets
+# pre mode, publishes prereleases on the "beta" tag. It can also be run by hand, for a dry run or
+# another npm dist-tag.
 
 on:
   push:
-    branches: [main]
+    branches: [main, beta]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -15,9 +17,9 @@ on:
         default: 'false'
         type: boolean
       npm_tag:
-        description: 'npm dist-tag (an explicit tag is required to publish a version lower than the current latest)'
+        description: 'npm dist-tag (empty: "beta" for a prerelease version, else "latest"; an explicit tag is required to publish a version lower than the current latest)'
         required: false
-        default: 'latest'
+        default: ''
         type: string
 
 concurrency:
@@ -58,9 +60,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # Pushes have no inputs: publish for real on the "latest" tag
+      # Pushes have no inputs: publish for real, on the tag the version picks (see "Read version")
       DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run == true || inputs.dry_run == 'true') }}
-      NPM_TAG: ${{ inputs.npm_tag || 'latest' }}
 
     permissions:
       contents: write # create the version tag and GitHub release
@@ -89,9 +90,14 @@ jobs:
       - name: Read version and release notes
         id: release
         working-directory: packages/better-payment
+        env:
+          NPM_TAG_INPUT: ${{ inputs.npm_tag }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # A prerelease (0.12.0-beta.0) never becomes "latest"
+          case "$VERSION" in *-*) DEFAULT_TAG=beta ;; *) DEFAULT_TAG=latest ;; esac
+          echo "NPM_TAG=${NPM_TAG_INPUT:-$DEFAULT_TAG}" >> "$GITHUB_ENV"
           # The "## <version>" section of CHANGELOG.md becomes the release notes
           awk -v v="## $VERSION" '$0 == v {found=1; next} found && /^## / {exit} found {print}' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
           if [ ! -s "$RUNNER_TEMP/release-notes.md" ]; then

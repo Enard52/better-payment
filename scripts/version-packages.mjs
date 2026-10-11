@@ -9,9 +9,13 @@
 // 4. The docs changelog (apps/web/content/docs/reference/changelog*.mdx) gets the new version's
 //    section, from the `<!-- docs -->` block of each changeset (scripts/docs-changelog.mjs).
 //    A changeset without one falls back to its summary, in English on both pages.
+//
+// Prereleases: the `beta` branch is in changesets pre mode (.changeset/pre.json), so each beta
+// gets only the changesets added since the previous one. After `changeset pre exit`, the stable
+// version gets all of them, and its `-beta.N` sections are removed from both changelogs.
 
 import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { BUMP_SECTIONS, docsSection, readChangesets } from './docs-changelog.mjs';
 
@@ -25,7 +29,14 @@ const version = () => JSON.parse(read(`${pkgDir}package.json`)).version;
 const before = version();
 const changelogBefore = read(changelogPath);
 // `changeset version` deletes the changesets, so read their docs entries first
-const changesets = readChangesets(`${root}.changeset`).filter((changeset) => changeset.bump);
+const prePath = `${root}.changeset/pre.json`;
+const pre = existsSync(prePath) ? JSON.parse(read(prePath)) : null;
+// In pre mode, `changeset version` moves the released changesets to .changeset/pre/. After
+// `changeset pre exit`, the stable version is made of all of them.
+const changesets = [
+  ...readChangesets(`${root}.changeset`),
+  ...(pre?.mode === 'exit' ? readChangesets(`${root}.changeset/pre`) : []),
+].filter((changeset) => changeset.bump);
 // changesets 3 exits with code 1 when there is nothing to version
 if (!changesets.length) {
   console.log(`No changesets for better-payment; version stays ${before}.`);
@@ -39,6 +50,22 @@ if (next === before) {
   console.log(`No changesets for better-payment; version stays ${before}.`);
   process.exit(0);
 }
+
+// The stable version's section replaces its prerelease sections (`## 0.12.0-beta.0` ...)
+const stable = !next.includes('-');
+const withoutPrereleases = (text) => {
+  if (!stable) return text;
+  const heading = `\n## ${next}-`;
+  let start;
+  while ((start = text.indexOf(heading)) !== -1) {
+    const end = text.indexOf('\n## ', start + 1);
+    text =
+      end === -1
+        ? `${text.slice(0, start).trimEnd()}\n`
+        : text.slice(0, start + 1) + text.slice(end + 1);
+  }
+  return text;
+};
 
 // 2. CHANGELOG.md
 const HEADINGS = {
@@ -64,9 +91,11 @@ const section = changelogAfter
 const latest = changelogBefore.indexOf('\n## ');
 writeFileSync(
   changelogPath,
-  latest === -1
-    ? `${changelogBefore.trimEnd()}\n\n${section}\n`
-    : `${changelogBefore.slice(0, latest + 1)}${section}\n\n${changelogBefore.slice(latest + 1)}`
+  withoutPrereleases(
+    latest === -1
+      ? `${changelogBefore.trimEnd()}\n\n${section}\n`
+      : `${changelogBefore.slice(0, latest + 1)}${section}\n\n${changelogBefore.slice(latest + 1)}`
+  )
 );
 
 // 3. src/version.ts and the installation docs
@@ -98,7 +127,7 @@ for (const [file, lang] of [
   ['changelog.tr.mdx', 'tr'],
 ]) {
   const path = `${referenceDir}${file}`;
-  const text = read(path);
+  const text = withoutPrereleases(read(path));
   if (text.split('\n').includes(`## ${next}`)) continue;
   const latest = text.indexOf('\n## ');
   const section = docsSection(next, entries, lang);

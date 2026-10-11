@@ -2,7 +2,8 @@ import { createElement } from "react";
 import { docs, meta } from "@/.source/server";
 import { loader, type LoaderPlugin } from "fumadocs-core/source";
 import { toFumadocsSource } from "fumadocs-mdx/runtime/server";
-import { i18n } from "@/lib/i18n/config";
+import { i18n, type Locale } from "@/lib/i18n/config";
+import { releaseStatus } from "@/lib/release";
 
 /**
  * Sidebar group icons from the brand's frosted-glass set
@@ -29,9 +30,53 @@ function brandIconsPlugin(): LoaderPlugin {
   };
 }
 
+const SIDEBAR_BADGES = {
+  beta: { en: "Beta", tr: "Beta" },
+  unreleased: { en: "Soon", tr: "Yakında" },
+} satisfies Record<string, Record<Locale, string>>;
+
+/**
+ * A "Beta" (or "Soon") badge next to pages whose frontmatter `since` version is not a stable
+ * release yet. It goes away on its own once that version is released.
+ */
+function releaseBadgesPlugin(): LoaderPlugin {
+  return {
+    name: "better-payment:release-badges",
+    transformPageTree: {
+      file(node, filePath) {
+        if (!filePath) return node;
+        const file = this.storage.read(filePath);
+        const since = file?.format === "page" ? (file.data as { since?: unknown }).since : undefined;
+        if (typeof since !== "string") return node;
+        const status = releaseStatus(since);
+        if (status === "stable") return node;
+        const lang = (this.locale ?? i18n.defaultLanguage) as Locale;
+        node.name = createElement(
+          "span",
+          { className: "inline-flex items-center gap-1.5" },
+          node.name,
+          createElement(
+            "span",
+            {
+              key: "badge",
+              "data-release-status": status,
+              className:
+                status === "beta"
+                  ? "rounded-full border border-primary/30 bg-tint px-1.5 text-[10.5px] leading-4 font-semibold text-accent-text"
+                  : "rounded-full border border-warning/30 bg-warning-soft px-1.5 text-[10.5px] leading-4 font-semibold text-warning",
+            },
+            SIDEBAR_BADGES[status][lang],
+          ),
+        );
+        return node;
+      },
+    },
+  };
+}
+
 export const source = loader({
   baseUrl: "/docs",
   i18n,
   source: toFumadocsSource(docs, meta),
-  plugins: [brandIconsPlugin()],
+  plugins: [brandIconsPlugin(), releaseBadgesPlugin()],
 });

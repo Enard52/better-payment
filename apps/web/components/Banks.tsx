@@ -6,6 +6,7 @@ import RoadmapScroller from "@/components/RoadmapScroller";
 import { cn } from "@/lib/utils";
 import type { Dictionary } from "@/lib/i18n/dictionary";
 import { localePath, type Locale } from "@/lib/i18n/config";
+import { releaseStatus } from "@/lib/release";
 
 const highlightIcons = [Lock, CreditCard, Shield, Zap];
 
@@ -18,8 +19,14 @@ type RouteItem = {
   // Stacked or square logos read small at the default height
   tall?: boolean;
   live?: boolean;
+  // The version that adds it: "Beta" until that version is a stable release, then live
+  since?: string;
   issue?: number;
 };
+
+const isLive = (item: RouteItem) =>
+  item.live === true || (item.since !== undefined && releaseStatus(item.since) === "stable");
+const isBeta = (item: RouteItem) => !isLive(item) && item.since !== undefined;
 
 // Akbank, Kuveyt Türk, Sipay and the EST banks are live; the rest are tracked in issues (logo sources: public/brand/banks/SOURCES.md)
 const banks: RouteItem[] = [
@@ -47,7 +54,8 @@ const institutions: RouteItem[] = [
 const ISSUES = "https://github.com/czaydev/better-payment/issues";
 
 function RouteNode({ item, t }: { item: RouteItem; t: Dictionary["banks"] }) {
-  const live = item.live === true;
+  const live = isLive(item);
+  const beta = isBeta(item);
   const body = (
     <>
       <span className="grid h-16 w-[150px] place-items-center rounded-2xl border border-border bg-card px-4 shadow-[0_1px_2px_rgb(19_19_43/0.04)] dark:bg-logo transition-[border-color,box-shadow] duration-(--bp-d-md) group-hover:border-line-strong group-hover:shadow-[0_10px_30px_-14px_var(--bp-shadow)]">
@@ -60,7 +68,7 @@ function RouteNode({ item, t }: { item: RouteItem; t: Dictionary["banks"] }) {
             className={cn(
               "w-auto max-w-full object-contain transition-[filter,opacity] duration-(--bp-d-md)",
               // akbank.svg carries its own padding, so it needs more room to match the others
-              live ? "max-h-12" : cn(item.tall ? "max-h-10" : "max-h-7", "opacity-85 grayscale-[80%] group-hover:opacity-100 group-hover:grayscale-0"),
+              live || beta ? "max-h-12" : cn(item.tall ? "max-h-10" : "max-h-7", "opacity-85 grayscale-[80%] group-hover:opacity-100 group-hover:grayscale-0"),
             )}
           />
         ) : (
@@ -70,16 +78,16 @@ function RouteNode({ item, t }: { item: RouteItem; t: Dictionary["banks"] }) {
       <span
         className={cn(
           "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-semibold",
-          live ? "bg-success-soft text-success" : "bg-muted text-muted-foreground",
+          live ? "bg-success-soft text-success" : beta ? "bg-tint text-accent-text" : "bg-muted text-muted-foreground",
         )}
       >
         <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
-        {live ? t.live : item.issue ? `${t.planned} · #${item.issue}` : t.planned}
+        {live ? t.live : beta ? t.beta : item.issue ? `${t.planned} · #${item.issue}` : t.planned}
       </span>
     </>
   );
   const cls = "group flex flex-col items-center gap-2.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary rounded-2xl";
-  return live || !item.issue ? (
+  return live || beta || !item.issue ? (
     <div className={cls}>{body}</div>
   ) : (
     <a href={`${ISSUES}/${item.issue}`} target="_blank" rel="noopener noreferrer" className={cls}>
@@ -127,7 +135,7 @@ function RouteTrack({ groups, t }: { groups: { title: string; items: RouteItem[]
             <li
               key={"label" in stop ? stop.label : stop.item.name}
               data-route-stop={x[i]}
-              data-live={"item" in stop && stop.item.live ? "" : undefined}
+              data-live={"item" in stop && isLive(stop.item) ? "" : undefined}
               className="bp-route-stop absolute -translate-x-1/2"
               style={{ left: x[i], top: MID - 32 }}
             >
