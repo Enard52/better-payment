@@ -25,15 +25,19 @@ import {
 
 const SECRET = SIPAY_TEST.appSecret;
 
+async function hexDigest(algorithm: string, text: string): Promise<string> {
+  return Buffer.from(await crypto.webcrypto.subtle.digest(algorithm, Buffer.from(text))).toString(
+    'hex'
+  );
+}
+
 /** Sipay's reference decryption (JavaScript sample of the "Hash Validation" page) */
-function referenceDecrypt(hashKey: string, appSecret: string): string {
+async function referenceDecrypt(hashKey: string, appSecret: string): Promise<string> {
   const [iv, salt, encrypted] = decodeURIComponent(hashKey).replace(/__/g, '/').split(':');
-  const password = crypto.createHash('sha1').update(appSecret).digest('hex');
-  const key = crypto
-    .createHash('sha256')
-    .update(password + salt)
-    .digest('hex')
-    .slice(0, 32);
+  const key = (await hexDigest('SHA-256', (await hexDigest('SHA-1', appSecret)) + salt)).slice(
+    0,
+    32
+  );
   const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(key), Buffer.from(iv));
   return decipher.update(encrypted, 'base64', 'utf8') + decipher.final('utf8');
 }
@@ -58,7 +62,7 @@ describe('Sipay hash keys', () => {
     );
     expect(hash).toMatch(/^[0-9a-f]{16}:[0-9a-f]{4}:[A-Za-z0-9+_=]+$/);
     expect(hash).not.toContain('/');
-    expect(referenceDecrypt(hash, SECRET)).toBe(`10.00|1|TRY|${SIPAY_TEST.merchantKey}|INV1`);
+    expect(await referenceDecrypt(hash, SECRET)).toBe(`10.00|1|TRY|${SIPAY_TEST.merchantKey}|INV1`);
   });
 
   it('uses a new IV and salt for every hash key', async () => {

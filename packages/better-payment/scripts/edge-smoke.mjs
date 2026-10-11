@@ -87,19 +87,16 @@ const paytrNotification = (status, total) =>
   }).toString();
 
 const SIPAY = { appId: 'APP', appSecret: 'SECRET', merchantKey: 'MERCHANT' };
-const sipayKey = (salt) => {
-  const password = crypto.createHash('sha1').update(SIPAY.appSecret).digest('hex');
-  return Buffer.from(
-    crypto
-      .createHash('sha256')
-      .update(password + salt)
-      .digest('hex')
-      .slice(0, 32)
+const hexDigest = async (algorithm, text) =>
+  Buffer.from(await crypto.webcrypto.subtle.digest(algorithm, Buffer.from(text))).toString('hex');
+/** Sipay's AES key: sha256hex(sha1hex(app secret) + salt), first 32 characters */
+const sipayKey = async (salt) =>
+  Buffer.from(
+    (await hexDigest('SHA-256', (await hexDigest('SHA-1', SIPAY.appSecret)) + salt)).slice(0, 32)
   );
-};
 /** A hash key encrypted as Sipay does (AES-256-CBC) */
-const sipayEncrypt = (plain, iv = '0123456789abcdef', salt = 'a1b2') => {
-  const cipher = crypto.createCipheriv('aes-256-cbc', sipayKey(salt), Buffer.from(iv));
+const sipayEncrypt = async (plain, iv = '0123456789abcdef', salt = 'a1b2') => {
+  const cipher = crypto.createCipheriv('aes-256-cbc', await sipayKey(salt), Buffer.from(iv));
   const encrypted = cipher.update(plain, 'utf8', 'base64') + cipher.final('base64');
   return `${iv}:${salt}:${encrypted}`.replace(/\//g, '__');
 };
@@ -107,12 +104,12 @@ const SIPAY_CALLBACK = {
   invoice_id: 'BP3D1',
   order_id: 'VP1',
   sipay_status: '1',
-  hash_key: sipayEncrypt('1|10.00|BP3D1|VP1|TRY'),
+  hash_key: await sipayEncrypt('1|10.00|BP3D1|VP1|TRY'),
 };
 /** Sipay's reference hash key decryption ("Hash Validation" page) */
-const sipayDecrypt = (hashKey) => {
+const sipayDecrypt = async (hashKey) => {
   const [iv, salt, encrypted] = hashKey.replace(/__/g, '/').split(':');
-  const decipher = crypto.createDecipheriv('aes-256-cbc', sipayKey(salt), Buffer.from(iv));
+  const decipher = crypto.createDecipheriv('aes-256-cbc', await sipayKey(salt), Buffer.from(iv));
   return decipher.update(encrypted, 'base64', 'utf8') + decipher.final('utf8');
 };
 
@@ -312,7 +309,7 @@ check(
   );
   check(
     'Sipay request hash key (AES-256-CBC)',
-    sipayDecrypt(body.hash_key) === `1000.01|1|TRY|${SIPAY.merchantKey}|S1`
+    (await sipayDecrypt(body.hash_key)) === `1000.01|1|TRY|${SIPAY.merchantKey}|S1`
   );
 }
 
