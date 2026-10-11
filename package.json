@@ -14,7 +14,7 @@
     "version-packages": "node scripts/version-packages.mjs"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.31.0",
+    "@changesets/cli": "^2.31.1",
     "turbo": "^2.11.7"
   },
   "pnpm": {
@@ -22,7 +22,10 @@
       "esbuild",
       "sharp",
       "unrs-resolver"
-    ]
+    ],
+    "overrides": {
+      "minimatch@^9": "^9.0.7"
+    }
   },
   "packageManager": "pnpm@10.33.0"
 }
