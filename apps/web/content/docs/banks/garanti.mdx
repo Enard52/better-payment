@@ -8,7 +8,7 @@ Uses the Garanti BBVA virtual POS XML API (version 512). Every request carries a
 `SecurityData` is `SHA1(password + terminal id padded to 9 digits)`, both uppercase hex over ISO-8859-9.
 
 <Callout type="info">
-  Verified in the Garanti BBVA test environment: non-3D sale, order inquiry, cancel and partial refund, and the 3D form hash. The 3D callback and provisioning could not be run end to end, because the test 3D page asks for an SMS code. Test a 3D payment with a small amount before going live.
+  Verified in the Garanti BBVA test environment: non-3D sale, order inquiry, cancel and partial refund, and 3D Secure end to end in both models (`3D` and `3D_PAY`), including a card that asks for the test SMS code. The test callbacks are signed with SHA-512.
 </Callout>
 
 ## Configuration

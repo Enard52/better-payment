@@ -6,7 +6,7 @@ description: Garanti BBVA sanal POS (GVP) entegrasyon referansı.
 Garanti BBVA sanal POS XML API'sini (sürüm 512) kullanır. Her istek bir `HashData` taşır: `SHA512(OrderID + TerminalID + kart numarası + Amount + CurrencyCode + SecurityData)`; burada `SecurityData`, `SHA1(şifre + 9 haneye tamamlanmış terminal numarası)` değeridir. İkisi de ISO-8859-9 üzerinden büyük harfli hex olarak hesaplanır.
 
 <Callout type="info">
-  Garanti BBVA test ortamında doğrulananlar: 3D'siz satış, sipariş sorgusu, iptal, kısmi iade ve 3D form hash'i. Test 3D sayfası SMS kodu istediği için 3D callback'i ve provizyon uçtan uca denenemedi. Canlıya geçmeden önce küçük bir tutarla 3D ödeme deneyin.
+  Garanti BBVA test ortamında doğrulananlar: 3D'siz satış, sipariş sorgusu, iptal, kısmi iade ve iki modelde de (`3D` ve `3D_PAY`) uçtan uca 3D Secure; test SMS kodu isteyen bir kart da buna dahil. Test callback'leri SHA-512 ile imzalanıyor.
 </Callout>
 
 ## Yapılandırma [#configuration]
