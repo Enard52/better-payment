@@ -1,0 +1,87 @@
+---
+title: Garanti BBVA
+description: Garanti BBVA sanal POS (GVP) entegrasyon referansı.
+---
+
+Garanti BBVA sanal POS XML API'sini (sürüm 512) kullanır. Her istek bir `HashData` taşır: `SHA512(OrderID + TerminalID + kart numarası + Amount + CurrencyCode + SecurityData)`; burada `SecurityData`, `SHA1(şifre + 9 haneye tamamlanmış terminal numarası)` değeridir. İkisi de ISO-8859-9 üzerinden büyük harfli hex olarak hesaplanır.
+
+<Callout type="info">
+  Garanti BBVA test ortamında doğrulananlar: 3D'siz satış, sipariş sorgusu, iptal, kısmi iade ve 3D form hash'i. Test 3D sayfası SMS kodu istediği için 3D callback'i ve provizyon uçtan uca denenemedi. Canlıya geçmeden önce küçük bir tutarla 3D ödeme deneyin.
+</Callout>
+
+## Yapılandırma [#configuration]
+
+```typescript
+import { betterPayment, garanti } from 'better-payment';
+
+const payment = betterPayment({
+  providers: {
+    garanti: garanti({
+      merchantId: process.env.GARANTI_MERCHANT_ID!,
+      terminalId: process.env.GARANTI_TERMINAL_ID!,
+      password: process.env.GARANTI_PROVAUT_PASSWORD!,
+      storeKey: process.env.GARANTI_STORE_KEY!,
+      // refundPassword?: string (PROVRFN password, when it differs)
+      // securityLevel?: '3D' | '3D_PAY' (default '3D')
+      // provUserId / refundUserId: default PROVAUT / PROVRFN
+      // testMode: defaults to mode === 'sandbox' (Mode TEST)
+      // baseUrl: defaults from mode (sanalposprovtest.garantibbva.com.tr / sanalposprov.garanti.com.tr)
+    }),
+  },
+});
+```
+
+`password` PROVAUT (provizyon) kullanıcısının şifresi, `storeKey` ise 3D Secure mağaza anahtarıdır; ikisi de Garanti BBVA sanal POS panelinde tanımlanır. İptal ve iadeler PROVRFN kullanıcısıyla yapılır; `refundPassword` verilmişse onunla imzalanır.
+
+`paymentId` sipariş numaranızdır: verdiğiniz `conversationId` ya da üretilen bir numara.
+
+## Doğrudan ödeme (3D'siz) [#direct-payment-non-3d]
+
+```typescript
+const result = await payment.garanti.createPayment({ ...paymentRequest, conversationId: 'ORDER123' });
+// XML sales; success when the response Code is 00
+```
+
+## 3D Secure [#3d-secure]
+
+```typescript
+const init = await payment.garanti.initThreeDSPayment({
+  ...paymentRequest,
+  conversationId: 'ORDER123',
+  callbackUrl: 'https://yoursite.com/api/pay/garanti/payment/complete-3ds',
+});
+// init.threeDSHtmlContent auto-submits a form signed with secure3dhash to the 3D engine
+```
+
+Garanti BBVA sonucu `callbackUrl` adresine POST eder:
+
+```typescript
+const result = await payment.garanti.completeThreeDSPayment(callbackBody);
+```
+
+Callback `hash` değeri `hashparams` içinde adı geçen alanlardan yeniden oluşturulur (`hashparamsval` hiçbir zaman kullanılmaz) ve sipariş numarasıyla `mdstatus` alanını kapsamalıdır. Değerler ayraçsız birleştirildiği için sonuç ayrıca bankayla doğrulanır:
+
+- hash'i geçersiz, sipariş numarası değiştirilmiş ya da başka bir terminale ait callback `INVALID_HASH` olarak reddedilir;
+- `3D`: `mdstatus` `1` ise ödeme XML `sales` ile provizyona gönderilir ve sonucu bankanın cevabı belirler;
+- `3D_PAY`: onaylı bir callback sipariş sorgusuyla kontrol edilir ve tutar bankadaki kayıtla aynı olmalıdır; bankanın doğrulamadığı bir ödeme `INVALID_HASH` olarak reddedilir.
+
+`paymentId` ve `conversationId` yalnızca bankanın doğruladığı bir ödemede doldurulur; bu yüzden başarısız bir sonuç hiçbir zaman callback'ten alınan bir sipariş numarası taşımaz.
+
+### mdstatus [#mdstatus]
+
+`mdstatus` `1`, kartın tam olarak doğrulandığı anlamına gelir. `2`, `3` ve `4` yarım güvenlidir: kart ya da bankası 3D Secure'a kayıtlı değildir veya yalnızca bir deneme yapılmıştır. `3D` modelinde varsayılan olarak yalnızca `1` provizyona gönderilir; diğer değerler `MD_STATUS_<değer>` ile başarısız olur. Yarım güvenli ödemeleri de provizyona göndermek için bunları `acceptedMdStatuses` içinde listeleyin (örneğin `['1', '2', '3', '4']`). Bu durumda ters ibraz (chargeback) sorumluluğu sizde kalabilir. `3D_PAY` modelinde kararı banka verir.
+
+## İade, iptal ve durum sorgusu [#refund-cancel--status]
+
+```typescript
+await payment.garanti.refund({ paymentId: 'ORDER123', price: '50.00', currency: 'TRY', ip: '1.2.3.4' }); // refund
+await payment.garanti.cancel({ paymentId: 'ORDER123', ip: '1.2.3.4' });                               // void
+const status = await payment.garanti.getPayment('ORDER123');                                          // orderinq
+// status: 'success' (APPROVED), 'cancelled' (VOID / REFUND), 'failure' (DECLINED)
+```
+
+Satış tutarından düşük bir iade kısmi iadedir. `cancel()` satışı aynı gün iptal eder; siparişte daha önce iade yapılmışsa Garanti BBVA asıl işlemin numarasını ister, bu durumda `refund()` kullanın.
+
+<Callout type="info">
+  Garanti BBVA için BIN ve taksit sorgusu desteklenmez: `binCheck()` ve `installmentInfo()` `NOT_SUPPORTED` fırlatır. Ödeme isteğinde `installment` gönderin ve `paidPrice` değerini anlaşmalı oranlarınızdan hesaplayın.
+</Callout>

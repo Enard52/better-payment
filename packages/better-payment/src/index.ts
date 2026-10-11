@@ -166,6 +166,9 @@ export type { SipayConfig, Sipay3DCallbackData } from './providers/sipay/types';
 export { Est, est } from './providers/est';
 export type { EstConfig, Est3DCallbackData } from './providers/est/types';
 export type { EstBank, EstStoreType } from './providers/est/utils';
+export { Garanti, garanti } from './providers/garanti';
+export type { GarantiConfig, Garanti3DCallbackData } from './providers/garanti/types';
+export type { GarantiSecurityLevel } from './providers/garanti/utils';
 
 export { BetterPaymentClient, createBetterPaymentClient } from './client';
 export type { BetterPaymentClientConfig } from './client';
