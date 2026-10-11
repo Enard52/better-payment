@@ -12,7 +12,8 @@ import { GitHubIcon } from "@/components/icons";
 import ThemeToggle from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
 import type { Dictionary } from "@/lib/i18n/dictionary";
-import { LOCALE_NAMES, localePath, stripLocale, type Locale } from "@/lib/i18n/config";
+import { LOCALE_NAMES, localePath, type Locale } from "@/lib/i18n/config";
+import { switchLocale, switchLocalePath } from "@/lib/i18n/switch";
 
 // Homepage sections are reached by scrolling, without a #hash in the address bar
 export const SCROLL_TARGET_KEY = "bp-scroll-to";
@@ -30,13 +31,17 @@ function navLinks(t: Dictionary["nav"]) {
 function LanguageSwitch({ lang, label }: { lang: Locale; label: string }) {
   const pathname = usePathname();
   const other: Locale = lang === "tr" ? "en" : "tr";
-  const path = stripLocale(pathname || "/");
-  // "/en/..." makes the proxy remember English and redirect to the unprefixed URL
-  const href = other === "en" ? `/en${path === "/" ? "" : path}` : localePath("tr", path);
   return (
     <Link
-      href={href}
+      href={switchLocalePath(other, pathname)}
       hrefLang={other}
+      // Not prefetched: the other language is opened with a full load (see switchLocale)
+      prefetch={false}
+      onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+        event.preventDefault();
+        switchLocale(other, pathname);
+      }}
       aria-label={`${label}: ${LOCALE_NAMES[other]}`}
       className={cn(
         buttonVariants({ variant: "ghost", size: "sm" }),

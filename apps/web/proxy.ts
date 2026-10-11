@@ -21,7 +21,18 @@ function prefersTurkish(header: string | null): boolean {
   return tr > 0 && tr > en;
 }
 
-function remember(response: NextResponse, locale: "en" | "tr"): NextResponse {
+/**
+ * Client-side navigations and link prefetches fetch RSC payloads. They must not change
+ * the remembered language: a prefetch of the language switch link would flip it without
+ * a click, and the router cache would keep pages of the old language under unprefixed
+ * URLs. The cookie only changes on full page loads (the language switch does one).
+ */
+function isRouterRequest(request: NextRequest): boolean {
+  return request.headers.has("rsc") || request.headers.has("next-router-prefetch");
+}
+
+function remember(request: NextRequest, response: NextResponse, locale: "en" | "tr"): NextResponse {
+  if (isRouterRequest(request)) return response;
   response.cookies.set(LOCALE_COOKIE, locale, { path: "/", maxAge: ONE_YEAR, sameSite: "lax" });
   return response;
 }
@@ -39,13 +50,13 @@ export function proxy(request: NextRequest) {
 
   if (segment === "tr") {
     const response = NextResponse.next();
-    return cookie === "tr" ? response : remember(response, "tr");
+    return cookie === "tr" ? response : remember(request, response, "tr");
   }
 
   if (segment === "en") {
     const url = request.nextUrl.clone();
     url.pathname = pathname.slice(3) || "/";
-    return remember(NextResponse.redirect(url), "en");
+    return remember(request, NextResponse.redirect(url), "en");
   }
 
   const isBot = BOT.test(request.headers.get("user-agent") ?? "");
@@ -56,13 +67,13 @@ export function proxy(request: NextRequest) {
   if (wantsTurkish) {
     const url = request.nextUrl.clone();
     url.pathname = `/tr${pathname === "/" ? "" : pathname}`;
-    return remember(NextResponse.redirect(url), "tr");
+    return remember(request, NextResponse.redirect(url), "tr");
   }
 
   const url = request.nextUrl.clone();
   url.pathname = `/en${pathname === "/" ? "" : pathname}`;
   const response = NextResponse.rewrite(url);
-  return cookie || isBot ? response : remember(response, "en");
+  return cookie || isBot ? response : remember(request, response, "en");
 }
 
 export const config = {
