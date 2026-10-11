@@ -158,7 +158,7 @@ The website and docs are published in English (`/docs/...`) and Turkish (`/tr/do
 - Translate prose only. Code blocks stay byte-for-byte identical to the English page.
 - Keep the headings. Every Turkish heading keeps the English heading's id: `## Taksit [#installments]`.
 - Update both languages in the same pull request.
-- Mark new user-facing features with `<Since version="x.y.z" />` in both languages. Until `packages/better-payment/package.json` reaches that version, the badge automatically says that the feature is not released yet.
+- Mark new user-facing features with `<Since version="x.y.z" />` in both languages. A page for a new provider or plugin also gets `since: x.y.z` in its frontmatter, which puts the same badge under the title and a "Beta" badge in the sidebar. The badge follows `packages/better-payment/package.json`: "Not released yet" while the version is lower, "Beta" while it is a prerelease of that version (`x.y.z-beta.N`, on the `beta` branch), and "Added in x.y.z" once it is released. Nothing has to be removed by hand after a beta becomes stable. On the homepage roadmap (`apps/web/components/Banks.tsx`), give a new provider `since: "x.y.z"` instead of `live: true`.
 
 Rules and glossary: [apps/web/TRANSLATIONS.md](apps/web/TRANSLATIONS.md). CI runs:
 

@@ -154,6 +154,7 @@ const en = {
     roadmapBanks: "Bank virtual POS",
     roadmapInstitutions: "Payment institutions",
     live: "Live",
+    beta: "Beta",
     planned: "Planned",
   },
   contributors: {
@@ -209,6 +210,12 @@ const en = {
   docs: {
     fallbackNotice:
       "This page has not been translated into English yet, so it is shown in Turkish.",
+    betaNotice: {
+      before: "You are reading the docs of the beta release (",
+      middle: "). Install it with ",
+      after: ". ",
+      link: "Docs of the stable release",
+    },
   },
   fumadocs: {
     displayName: "English",
@@ -371,6 +378,7 @@ const tr: Dictionary = {
     roadmapBanks: "Banka sanal POS'ları",
     roadmapInstitutions: "Ödeme kuruluşları",
     live: "Canlı",
+    beta: "Beta",
     planned: "Planlanıyor",
   },
   contributors: {
@@ -425,6 +433,12 @@ const tr: Dictionary = {
   },
   docs: {
     fallbackNotice: "Bu sayfa henüz Türkçeye çevrilmedi; İngilizce hâli gösteriliyor.",
+    betaNotice: {
+      before: "Beta sürümün dokümanını okuyorsunuz (",
+      middle: "). Kurmak için: ",
+      after: ". ",
+      link: "Stabil sürümün dokümanı",
+    },
   },
   fumadocs: {
     displayName: "Türkçe",

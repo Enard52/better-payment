@@ -37,6 +37,35 @@ description: Install Better Payment and set up your environment.
   </Tab>
 </Tabs>
 
+### Beta release
+
+New providers, plugins and features come out as a beta first (for example `0.12.0-beta.1`), on the npm `beta` tag. Pages marked **Beta** describe them. To try them, install the beta:
+
+<Tabs items={["npm", "pnpm", "yarn", "bun"]}>
+  <Tab value="npm">
+    ```bash
+    npm install better-payment@beta
+    ```
+  </Tab>
+  <Tab value="pnpm">
+    ```bash
+    pnpm add better-payment@beta
+    ```
+  </Tab>
+  <Tab value="yarn">
+    ```bash
+    yarn add better-payment@beta
+    ```
+  </Tab>
+  <Tab value="bun">
+    ```bash
+    bun add better-payment@beta
+    ```
+  </Tab>
+</Tabs>
+
+The beta can change before its stable release. Pin the exact version in production, and see the [changelog](/docs/reference/changelog) before updating.
+
 ## Environment Variables
 
 Create a `.env.local` file (or `.env`) with your provider credentials:

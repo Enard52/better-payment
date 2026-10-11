@@ -1,7 +1,15 @@
-import { defineDocs, defineConfig } from 'fumadocs-mdx/config';
+import { defineDocs, defineConfig, frontmatterSchema } from 'fumadocs-mdx/config';
+import { z } from 'zod';
 
 export const { docs, meta } = defineDocs({
   dir: 'content/docs',
+  docs: {
+    schema: frontmatterSchema.extend({
+      // The version that added the page's provider, plugin or feature: a beta or "not released
+      // yet" badge on the page and in the sidebar until that version is a stable release
+      since: z.string().optional(),
+    }),
+  },
 });
 
 // Minimal hast shapes, enough for the checkmark plugin below
