@@ -213,6 +213,14 @@ git commit -am "chore: enter beta prerelease mode" && git push -u origin beta
 3. The release PR on `main` makes the stable version (`0.12.0`) from all the beta changesets and replaces the `-beta.N` sections of both changelogs with it. Merging it publishes on `latest`.
 4. Start the next beta round as above when there is something new for it.
 
+**Leaving a feature out of a promotion:** `beta` reaches `main` as a whole, so take out what is not ready before step 1 above. This works cleanly because every feature lands on `beta` as one squash-merged pull request with its own changeset.
+
+1. On `beta`, open a pull request that reverts the feature's commit (`git revert <sha>`). If the feature was already in a beta release, Changesets has moved its changeset to `.changeset/pre/`: delete it there too, or the stable changelog lists the feature.
+2. Promote the rest as above.
+3. In the next beta round, bring the feature back by reverting that revert in a pull request to `beta`, with a new changeset.
+
+Don't cherry-pick ready features from `beta` into `main`: their changesets and changelog entries end up on both branches, and the next main → beta sync conflicts.
+
 ## Labels
 
 | Label | Meaning |

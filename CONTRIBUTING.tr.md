@@ -531,6 +531,20 @@ git commit -am "chore: enter beta prerelease mode" && git push -u origin beta
    changelog'daki `-beta.N` bölümlerini onunla değiştirir. Birleştirilince `latest`'te yayınlanır.
 4. Yeni bir şey olduğunda sonraki beta turunu yukarıdaki gibi başlatın.
 
+**Bir özelliği stabil sürüme almadan bırakma:** `beta`, `main`'e bir bütün olarak girer; hazır
+olmayanı yukarıdaki 1. adımdan önce çıkarın. Her özellik `beta`'ya kendi changeset'iyle tek bir
+squash PR olarak girdiği için bu temiz çalışır.
+
+1. `beta`'da özelliğin commit'ini geri alan bir PR açın (`git revert <sha>`). Özellik daha önce bir
+   beta sürümde yayınlandıysa Changesets changeset'ini `.changeset/pre/` klasörüne taşımıştır; onu
+   da orada silin, yoksa stabil changelog özelliği listeler.
+2. Kalanları yukarıdaki gibi stabil sürüme alın.
+3. Sonraki beta turunda o revert'ü geri alan bir PR'ı yeni bir changeset'le `beta`'ya açarak
+   özelliği geri getirin.
+
+Hazır özellikleri `beta`'dan `main`'e cherry-pick etmeyin: changeset'leri ve changelog maddeleri iki
+branch'te birden olur ve sonraki main → beta senkronu çakışır.
+
 ## Sorular ve Destek
 
 - 📖 [Dokümantasyon](https://better-payment.czaylabs.com)
