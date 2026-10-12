@@ -23,7 +23,9 @@ const movedDocs: Record<string, string> = {
  * live on one domain and the docs version picker switches between them.
  */
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || undefined;
-const betaOrigin = process.env.BETA_ORIGIN?.replace(/\/$/, "");
+// "better-payment-beta.vercel.app" works too: rewrites need the scheme, so https:// is added
+const betaOriginEnv = process.env.BETA_ORIGIN?.trim().replace(/\/+$/, "");
+const betaOrigin = betaOriginEnv ? betaOriginEnv.replace(/^(?!https?:\/\/)/, "https://") : undefined;
 
 const nextConfig: NextConfig = {
   basePath,
