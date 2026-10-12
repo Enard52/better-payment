@@ -42,13 +42,15 @@ const nextConfig: NextConfig = {
     };
   },
   async redirects() {
-    return Object.entries(movedDocs).flatMap(([from, to]) =>
+    // The proxy does not run for the bare base path ("/beta"), and the beta deployment is for docs
+    const betaRoot = basePath ? [{ source: "/", destination: "/docs", permanent: false }] : [];
+    return [...betaRoot, ...Object.entries(movedDocs).flatMap(([from, to]) =>
       ["", "/tr"].map((prefix) => ({
         source: `${prefix}/docs/${from}`,
         destination: `${prefix}/docs/${to}`,
         permanent: true,
       }))
-    );
+    )];
   },
 };
 
