@@ -211,10 +211,9 @@ const en = {
     fallbackNotice:
       "This page has not been translated into English yet, so it is shown in Turkish.",
     betaNotice: {
-      before: "You are reading the docs of the beta release (",
-      middle: "). Install it with ",
-      after: ". ",
-      link: "Docs of the stable release",
+      title: "You are viewing the beta docs",
+      install: "Install the beta with",
+      link: "Go to the stable docs",
     },
   },
   fumadocs: {
@@ -434,10 +433,9 @@ const tr: Dictionary = {
   docs: {
     fallbackNotice: "Bu sayfa henüz Türkçeye çevrilmedi; İngilizce hâli gösteriliyor.",
     betaNotice: {
-      before: "Beta sürümün dokümanını okuyorsunuz (",
-      middle: "). Kurmak için: ",
-      after: ". ",
-      link: "Stabil sürümün dokümanı",
+      title: "Beta sürümün dokümanını görüntülüyorsunuz",
+      install: "Beta sürümü kurmak için",
+      link: "Stabil dokümana geç",
     },
   },
   fumadocs: {
