@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { Dictionary } from "@/lib/i18n/dictionary";
 import { localePath, type Locale } from "@/lib/i18n/config";
 import { releaseStatus } from "@/lib/release";
+import { withBasePath } from "@/lib/base-path";
 
 const highlightIcons = [Lock, CreditCard, Shield, Zap];
 
@@ -61,7 +62,7 @@ function RouteNode({ item, t }: { item: RouteItem; t: Dictionary["banks"] }) {
       <span className="grid h-16 w-[150px] place-items-center rounded-2xl border border-border bg-card px-4 shadow-[0_1px_2px_rgb(19_19_43/0.04)] dark:bg-logo transition-[border-color,box-shadow] duration-(--bp-d-md) group-hover:border-line-strong group-hover:shadow-[0_10px_30px_-14px_var(--bp-shadow)]">
         {item.logo ? (
           <Image
-            src={item.logo}
+            src={withBasePath(item.logo)}
             alt={item.name}
             width={item.w}
             height={item.h}
@@ -165,7 +166,7 @@ export default function Banks({ lang, t }: { lang: Locale; t: Dictionary["banks"
           <div className="grid gap-x-10 gap-y-4 rounded-2xl border border-border bg-card p-6 sm:p-7 lg:grid-cols-[1fr_1.2fr] lg:items-center">
             <div className="flex items-center gap-3">
               <span className="grid size-12 place-items-center rounded-xl border border-border bg-background dark:bg-logo">
-                <Image src="/akbank.svg" alt="" width={75} height={38} className="h-6 w-10 object-contain" />
+                <Image src={withBasePath("/akbank.svg")} alt="" width={75} height={38} className="h-6 w-10 object-contain" />
               </span>
               <div className="min-w-0">
                 <h3 className="flex items-center gap-2 text-lg leading-tight font-bold text-foreground">

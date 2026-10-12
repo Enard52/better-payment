@@ -449,6 +449,7 @@ Web sitesi ve dokümantasyon İngilizce (varsayılan, `/docs/...`) ve Türkçe (
 - Başlık yapısı aynı kalır ve her Türkçe başlık İngilizce başlığın id'sini taşır (`## Taksit [#installments]`).
 - Bir İngilizce sayfayı değiştirdiğinizde Türkçesini aynı PR'da güncelleyin.
 - Kullanıcıya yönelik yeni özellikleri iki dilde de `<Since version="x.y.z" />` ile işaretleyin. Yeni bir provider veya plugin sayfasının frontmatter'ına da `since: x.y.z` ekleyin; aynı rozet başlığın altında, "Beta" rozeti de kenar çubuğunda görünür. Rozet `packages/better-payment/package.json`'u izler: sürüm daha düşükken "Henüz yayınlanmadı", o sürümün prerelease'iyken (`x.y.z-beta.N`, `beta` branch'inde) "Beta", yayınlanınca "x.y.z sürümünde eklendi". Beta stabil olunca elle bir şey silmek gerekmez. Ana sayfadaki yol haritasında (`apps/web/components/Banks.tsx`) yeni provider'a `live: true` yerine `since: "x.y.z"` verin.
+- Beta dokümanı, sitenin `beta`'dan `NEXT_PUBLIC_BASE_PATH=/beta` ile build edilen ikinci bir deployment'ıdır. Ana deployment'ta `BETA_ORIGIN` ayarlıysa aynı alan adında `/beta` altında sunulur (`apps/web/next.config.ts`). Doküman kenar çubuğundaki Stabil / Beta seçicisi ikisi arasında geçiş yapar. `next/link` base path'i kendisi ekler; `public/` içindeki dosyaların yollarını (görseller, videolar) `apps/web/lib/base-path.ts`'teki `withBasePath()` ile sarın.
 - Terimler için sözlüğe uyun (ön provizyon, taksit, sanal POS, …).
 
 Kurallar ve terim sözlüğü: [apps/web/TRANSLATIONS.md](apps/web/TRANSLATIONS.md). CI şu kontrolü çalıştırır:
