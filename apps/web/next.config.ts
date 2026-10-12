@@ -17,9 +17,30 @@ const movedDocs: Record<string, string> = {
   "guides/changelog": "reference/changelog",
 };
 
+/**
+ * Beta docs: the `beta` branch is a second Vercel project, built with NEXT_PUBLIC_BASE_PATH=/beta.
+ * This site serves it under /beta when BETA_ORIGIN (that project's URL) is set, so both versions
+ * live on one domain and the docs version picker switches between them.
+ */
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || undefined;
+const betaOrigin = process.env.BETA_ORIGIN?.replace(/\/$/, "");
+
 const nextConfig: NextConfig = {
+  basePath,
+  env: { NEXT_PUBLIC_BETA_DOCS: betaOrigin ? "1" : "" },
   // 90 keeps the soft gradients in the hero artwork free of banding
   images: { qualities: [75, 90] },
+  async rewrites() {
+    if (basePath || !betaOrigin) return [];
+    return {
+      beforeFiles: [
+        { source: "/beta", destination: `${betaOrigin}/beta` },
+        { source: "/beta/:path*", destination: `${betaOrigin}/beta/:path*` },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
   async redirects() {
     return Object.entries(movedDocs).flatMap(([from, to]) =>
       ["", "/tr"].map((prefix) => ({
