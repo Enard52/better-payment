@@ -80,7 +80,7 @@ There are two separate settings in [next.config.ts](next.config.ts):
 
 Production beta is built from the `beta` branch. For a local standalone base-path check, stop any web server using this checkout and run one of the following from the repository root. These commands reuse `.next`, so stable and beta builds must not run simultaneously in the same checkout.
 
-POSIX shell:
+POSIX shell (macOS/Linux):
 
 ```sh
 export NEXT_PUBLIC_BASE_PATH=/beta
@@ -91,6 +91,8 @@ corepack pnpm --filter web start --hostname localhost --port 3001
 # After stopping the server with Ctrl+C:
 unset NEXT_PUBLIC_BASE_PATH
 ```
+
+On Windows Git Bash, first run `export MSYS2_ENV_CONV_EXCL=NEXT_PUBLIC_BASE_PATH` in that shell to stop MSYS from converting `/beta` into a Windows filesystem path. Alternatively, use PowerShell below.
 
 PowerShell:
 
