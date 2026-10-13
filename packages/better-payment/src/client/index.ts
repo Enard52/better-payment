@@ -32,7 +32,7 @@ export interface BetterPaymentClientConfig {
   baseUrl: string;
 
   /**
-   * Custom fetch implementation (opsiyonel)
+   * Custom fetch implementation (optional)
    * @default globalThis.fetch
    */
   fetch?: typeof fetch;
@@ -246,8 +246,8 @@ class ProviderClient {
 /**
  * BetterPay client for frontend applications
  *
- * Better-auth tarzı client library. Frontend'den otomatik olarak API endpoint'lerini
- * çağırmak için kullanılır.
+ * A better-auth-style client library that calls API endpoints
+ * from frontend applications.
  *
  * @example
  * ```typescript
@@ -257,7 +257,7 @@ class ProviderClient {
  *   baseUrl: '/api/pay',
  * });
  *
- * // İyzico ile ödeme oluştur
+ * // Create a payment with iyzico
  * const result = await client.iyzico.createPayment({
  *   price: '100.00',
  *   paidPrice: '100.00',
@@ -305,7 +305,7 @@ class ProviderClient {
  *   ],
  * });
  *
- * // PayTR ile 3DS ödeme başlat
+ * // Initialize a 3D Secure payment with PayTR
  * const threeds = await client.paytr.initThreeDSPayment({
  *   price: '100.00',
  *   paidPrice: '100.00',
@@ -314,7 +314,7 @@ class ProviderClient {
  *   // ... other fields
  * });
  *
- * // 3DS HTML'i render et
+ * // Render the 3DS HTML
  * document.getElementById('payment-iframe').innerHTML = threeds.threeDSHtmlContent;
  * ```
  */

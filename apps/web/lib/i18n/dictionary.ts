@@ -1,6 +1,12 @@
 import type { Locale } from "./config";
 
 const en = {
+  notFound: {
+    title: "This page is out of reach.",
+    description: "The link may have changed, or the page may no longer exist. Let's get you back on track.",
+    home: "Back to home",
+    docs: "Explore the docs",
+  },
   meta: {
     title: "Better Payment — Unified Payment Gateway for Node.js",
     description:
@@ -224,6 +230,12 @@ const en = {
 export type Dictionary = typeof en;
 
 const tr: Dictionary = {
+  notFound: {
+    title: "Bu sayfaya ulaşamadık.",
+    description: "Bağlantı değişmiş veya sayfa kaldırılmış olabilir. Aradığınız yere başka bir yoldan ulaşalım.",
+    home: "Ana sayfaya dön",
+    docs: "Dokümantasyona göz at",
+  },
   meta: {
     title: "Better Payment — Node.js için birleşik ödeme altyapısı",
     description:

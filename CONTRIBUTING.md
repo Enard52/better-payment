@@ -170,6 +170,16 @@ node scripts/check-translations.mjs        # missing pages, different code block
 node scripts/check-translations.mjs --fix  # adds heading ids
 ```
 
+**Generated documentation:** the web `dev` and `build` commands generate the TypeDoc API reference and the `llms.txt` / `llms-full.txt` files. Edit source comments or MDX, never the generated files in `apps/web/public/api-reference` and `apps/web/public/llms`. TypeDoc covers the public package entries, not every internal source file. Its HTML is shared by both locales. CI checks the stable and `/beta` outputs.
+
+```bash
+pnpm --filter web docs:test       # MDX conversion and route tests
+pnpm --filter web docs:generate   # TypeDoc + Markdown, without a Next.js build
+pnpm --filter web docs:check      # generated pages and public API destinations
+```
+
+Generation rejects unknown MDX components or executable expressions instead of dropping content. Add an explicit conversion and a test in `apps/web/scripts/docs-content.mjs` when introducing a docs component. Code blocks are kept as code, never evaluated.
+
 **Error message languages** (`localizedErrors`) are one file per language in `packages/better-payment/src/plugins/localized-errors/`. Write messages that read naturally for customers. Never shorten them to fit the bundle size check (`pnpm --filter better-payment size`): if a new language goes over the budget, say so in the pull request and a maintainer raises it.
 
 ## Releases

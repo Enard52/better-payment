@@ -198,7 +198,7 @@ export function formatPayTRAmount(amount: string | number): string {
 }
 
 /**
- * Kuruş -> TL ("1001" -> "10.01")
+ * Minor units (kuruş) -> TL ("1001" -> "10.01")
  */
 export function convertFromKurus(kurus: string | number): string {
   const value = typeof kurus === 'number' ? kurus : parseInt(kurus, 10);
