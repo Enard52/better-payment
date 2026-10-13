@@ -79,7 +79,7 @@ const PAYTR_ORDER_RULES: PaymentValidationRules = {
 };
 
 /**
- * PayTR ödeme sağlayıcısı
+ * PayTR payment provider
  *
  * - initThreeDSPayment(): iFrame API. The payment result is delivered to the
  *   notification (Bildirim) URL configured in the PayTR panel; pass that POST
