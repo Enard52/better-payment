@@ -170,8 +170,14 @@ export type {
   AlbarakaCompleteRequest,
 } from './providers/albaraka/types';
 export { Est, est } from './providers/est';
-export type { EstConfig, Est3DCallbackData } from './providers/est/types';
-export type { EstBank, EstStoreType } from './providers/est/utils';
+export type {
+  EstConfig,
+  Est3DCallbackData,
+  EstCompleteContext,
+  EstGirogateRequest,
+} from './providers/est/types';
+export type { EstBank, EstStoreType, EstGirogateMethod } from './providers/est/utils';
+export { EST_GIROGATE_METHODS } from './providers/est/utils';
 export { Denizbank, denizbank } from './providers/denizbank';
 export type { DenizbankConfig, Denizbank3DCallbackData } from './providers/denizbank/types';
 export { VakifBank, vakifbank } from './providers/vakifbank';
