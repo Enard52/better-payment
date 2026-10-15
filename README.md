@@ -2,7 +2,7 @@
 
 > Unified, type-safe payment gateway for Node.js & TypeScript.
 
-One API for Turkish payment providers — iyzico, PayTR, Parampos, Sipay, Akbank, Kuveyt Türk, Yapı Kredi, QNB, VakıfBank, Albaraka Türk and the EST banks
+One API for Turkish payment providers — iyzico, PayTR, Parampos, Sipay, Akbank, Kuveyt Türk, Yapı Kredi, QNB, VakıfBank, Albaraka Türk, Denizbank and the EST banks
 (İş Bankası, Ziraat, Halkbank, TEB, Şekerbank).
 
 [![npm](https://img.shields.io/npm/v/better-payment)](https://www.npmjs.com/package/better-payment)
@@ -128,7 +128,7 @@ list and suggested customer messages.
 if (result.code === PaymentErrorCode.INSUFFICIENT_FUNDS) askForAnotherCard();
 ```
 
-For PayTR, Parampos, Sipay, Akbank, Kuveyt Türk, EST, QNB and VakıfBank, `paymentId` is your **order id**: the
+For PayTR, Parampos, Sipay, Akbank, Kuveyt Türk, EST, QNB, VakıfBank and Denizbank, `paymentId` is your **order id**: the
 `conversationId` you pass in, or an alphanumeric id generated for you. Pass
 this id to `refund`, `cancel` and `getPayment`.
 
@@ -143,6 +143,7 @@ this id to `refund`, `cancel` and `getPayment`.
 | Akbank      | ✓                         | ✓ 3D_PAY                    |   ✓    | ✓               |   ✓    |  —  | —                 |
 | Kuveyt Türk | —                         | ✓ KT Pay Gate               |   ✓    | ✓ (same day)    |   ✓    |  —  | —                 |
 | EST ¹       | ✓                         | ✓ 3D / 3D Pay / 3D Host     |   ✓    | ✓               |   ✓    |  —  | —                 |
+| Denizbank   | ✓                         | ✓ 3D Model                  |   ✓    | ✓ (same day)    |   —    |  —  | —                 |
 | Albaraka ²  | ✓                         | ✓ 3D                        |   ✓    | ✓ (same day)    |  ✓ ²   |  —  | —                 |
 | VakıfBank   | ✓                         | ✓ MPI + VPOS (3DS)          |   ✓    | ✓ (same day)    |   —    |  —  | —                 |
 | Yapı Kredi  | ✓                         | ✓ Posnet OOS                |   ✓    | ✓ (same day)    |   ✓    |  —  | —                 |
@@ -168,6 +169,9 @@ this id to `refund`, `cancel` and `getPayment`.
   result is confirmed with the bank: `3d` and `3d_host` only authenticate the card and
   charge it with the XML API, `3d_pay` / `3d_pay_hosting` are checked with an order
   status query.
+- **Denizbank:** the bank POSTs to your `callbackUrl`. The `HASH` is rebuilt from the
+  fields in `HASHPARAMS`, then the card is charged with the callback's 3D Secure data
+  and the bank's answer decides.
 - **Albaraka Türk:** the bank POSTs to your `callbackUrl`, unsigned. Call
   `completeThreeDSPayment({ ...callbackBody, orderId, amount, currency })` with the order
   from your records: the card is charged with the 3D data and the bank's answer decides.

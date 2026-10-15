@@ -23,6 +23,7 @@ export enum ProviderType {
   HALKBANK = 'halkbank',
   TEB = 'teb',
   SEKERBANK = 'sekerbank',
+  DENIZBANK = 'denizbank',
   VAKIFBANK = 'vakifbank',
   YAPIKREDI = 'yapikredi',
   QNB = 'qnb',
@@ -164,6 +165,10 @@ export const PROVIDER_DEFAULT_URLS: Record<
   [ProviderType.SEKERBANK]: {
     sandbox: 'https://entegrasyon.asseco-see.com.tr',
     production: 'https://sanalpos.sekerbank.com.tr',
+  },
+  [ProviderType.DENIZBANK]: {
+    sandbox: 'https://test.inter-vpos.com.tr',
+    production: 'https://inter-vpos.com.tr',
   },
   [ProviderType.VAKIFBANK]: {
     sandbox: 'https://onlineodemetest.vakifbank.com.tr:4443',

@@ -328,6 +328,7 @@ export class BetterPaymentClient {
   readonly parampos: ProviderClient;
   readonly kuveytturk: ProviderClient;
   readonly sipay: ProviderClient;
+  readonly denizbank: ProviderClient;
   readonly albaraka: ProviderClient;
   readonly vakifbank: ProviderClient;
   readonly yapikredi: ProviderClient;
@@ -342,6 +343,7 @@ export class BetterPaymentClient {
     this.parampos = new ProviderClient(ProviderType.PARAMPOS, config);
     this.kuveytturk = new ProviderClient(ProviderType.KUVEYTTURK, config);
     this.sipay = new ProviderClient(ProviderType.SIPAY, config);
+    this.denizbank = new ProviderClient(ProviderType.DENIZBANK, config);
     this.albaraka = new ProviderClient(ProviderType.ALBARAKA, config);
     this.vakifbank = new ProviderClient(ProviderType.VAKIFBANK, config);
     this.yapikredi = new ProviderClient(ProviderType.YAPIKREDI, config);

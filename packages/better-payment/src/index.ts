@@ -172,6 +172,8 @@ export type {
 export { Est, est } from './providers/est';
 export type { EstConfig, Est3DCallbackData } from './providers/est/types';
 export type { EstBank, EstStoreType } from './providers/est/utils';
+export { Denizbank, denizbank } from './providers/denizbank';
+export type { DenizbankConfig, Denizbank3DCallbackData } from './providers/denizbank/types';
 export { VakifBank, vakifbank } from './providers/vakifbank';
 export type { VakifBankConfig, VakifBank3DCallbackData } from './providers/vakifbank/types';
 export { YapiKredi, yapikredi } from './providers/yapikredi';
