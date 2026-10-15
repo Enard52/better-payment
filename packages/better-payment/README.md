@@ -2,7 +2,7 @@
 
 > Unified, type-safe payment gateway for Node.js & TypeScript.
 
-One API for Turkish payment providers — iyzico, PayTR, Parampos, Sipay, Akbank, Kuveyt Türk, Garanti BBVA and the EST banks
+One API for Turkish payment providers — iyzico, PayTR, Parampos, Sipay, Akbank, Kuveyt Türk, Garanti BBVA, Yapı Kredi, QNB, VakıfBank, Albaraka Türk, Denizbank and the EST banks
 (İş Bankası, Ziraat, Halkbank, TEB, Şekerbank).
 
 [![npm](https://img.shields.io/npm/v/better-payment)](https://www.npmjs.com/package/better-payment)
@@ -128,7 +128,7 @@ list and suggested customer messages.
 if (result.code === PaymentErrorCode.INSUFFICIENT_FUNDS) askForAnotherCard();
 ```
 
-For PayTR, Parampos, Sipay, Akbank, Kuveyt Türk, Garanti BBVA and EST, `paymentId` is your **order id**: the
+For PayTR, Parampos, Sipay, Akbank, Kuveyt Türk, Garanti BBVA, EST, QNB, VakıfBank and Denizbank, `paymentId` is your **order id**: the
 `conversationId` you pass in, or an alphanumeric id generated for you. Pass
 this id to `refund`, `cancel` and `getPayment`.
 
@@ -137,15 +137,22 @@ this id to `refund`, `cancel` and `getPayment`.
 | Provider     | Non-3D                    | 3D Secure                   | Refund | Cancel          | Status | BIN | Installments      |
 | ------------ | ------------------------- | --------------------------- | :----: | --------------- | :----: | :-: | ----------------- |
 | iyzico       | ✓                         | ✓                           |   ✓    | ✓               |   ✓    |  ✓  | ✓                 |
-| PayTR        | ✓ (needs non-3D approval) | ✓ iFrame                    |   ✓    | ✓ (full refund) |   ✓    |  ✓  | ✓ (account rates) |
+| PayTR        | ✓ (needs non-3D approval) | ✓ iFrame / Direct API       |   ✓    | ✓ (full refund) |   ✓    |  ✓  | ✓ (account rates) |
 | Parampos     | ✓ (TRY)                   | ✓ `TP_WMD_UCD`/`TP_WMD_Pay` |   ✓    | ✓               |   ✓    |  ✓  | ✓ (account rates) |
 | Sipay        | ✓ (needs non-3D approval) | ✓ paySmart3D                |   ✓    | ✓ (refund)      |   ✓    |  ✓  | ✓ (account rates) |
 | Akbank       | ✓                         | ✓ 3D_PAY                    |   ✓    | ✓               |   ✓    |  —  | —                 |
 | Kuveyt Türk  | —                         | ✓ KT Pay Gate               |   ✓    | ✓ (same day)    |   ✓    |  —  | —                 |
 | Garanti BBVA | ✓                         | ✓ 3D / 3D_PAY / GarantiPay  |   ✓    | ✓ (same day)    |   ✓    |  —  | —                 |
 | EST ¹        | ✓                         | ✓ 3D / 3D Pay / 3D Host     |   ✓    | ✓               |   ✓    |  —  | —                 |
+| Denizbank    | ✓                         | ✓ 3D Model                  |   ✓    | ✓ (same day)    |   —    |  —  | —                 |
+| Albaraka ²   | ✓                         | ✓ 3D                        |   ✓    | ✓ (same day)    |  ✓ ²   |  —  | —                 |
+| VakıfBank    | ✓                         | ✓ MPI + VPOS (3DS)          |   ✓    | ✓ (same day)    |   —    |  —  | —                 |
+| Yapı Kredi   | ✓                         | ✓ Posnet OOS                |   ✓    | ✓ (same day)    |   ✓    |  —  | —                 |
+| QNB          | ✓                         | ✓ 3D Model / 3D Pay         |   ✓    | ✓ (next day)    |   ✓    |  —  | —                 |
 
-¹ İş Bankası, Ziraat Bankası, Halkbank, TEB and Şekerbank, with `est({ bank })`.
+¹ İş Bankası, Ziraat Bankası, Halkbank, TEB, Şekerbank, Akbank's older virtual POS and
+Halkbank Macedonia, with `est({ bank })`.
+² Albaraka Türk. `paymentId` is the bank's ReferenceCode; the 3D completion needs the order id, amount and currency from your records. `getPayment()` takes the order id.
 
 ### 3D Secure completion
 
@@ -164,6 +171,22 @@ this id to `refund`, `cancel` and `getPayment`.
   result is confirmed with the bank: `3d` and `3d_host` only authenticate the card and
   charge it with the XML API, `3d_pay` / `3d_pay_hosting` are checked with an order
   status query.
+- **Denizbank:** the bank POSTs to your `callbackUrl`. The `HASH` is rebuilt from the
+  fields in `HASHPARAMS`, then the card is charged with the callback's 3D Secure data
+  and the bank's answer decides.
+- **Albaraka Türk:** the bank POSTs to your `callbackUrl`, unsigned. Call
+  `completeThreeDSPayment({ ...callbackBody, orderId, amount, currency })` with the order
+  from your records: the card is charged with the 3D data and the bank's answer decides.
+- **VakıfBank:** the MPI POSTs the 3D result to your `callbackUrl`, unsigned. The payment
+  is authorized on VPOS with `MpiTransactionId` only, so VPOS takes the card and amount
+  from its own 3D Secure record; callback values are never used for the charge.
+- **Yapı Kredi:** the bank POSTs encrypted packets to your `callbackUrl`. Complete them in
+  your own route with the order from your records:
+  `completeThreeDSPayment({ ...body, orderId, amount, currency })`. The bank resolves the
+  packets, and the resolved order must match yours before the card is charged.
+- **QNB:** the bank POSTs to your `callbackUrl`. The `ResponseHash` is verified, then the
+  result is confirmed with the bank: `3DModel` charges with `3DModelPayment`, `3DPay` is
+  checked with an order inquiry.
 - **Garanti BBVA:** the bank POSTs to your `callbackUrl`. The hash is rebuilt from the
   fields in `hashparams`, then the result is confirmed with the bank: `3D` provisions
   with the XML API, `3D_PAY` and GarantiPay are checked with an order inquiry.
@@ -173,7 +196,7 @@ this id to `refund`, `cancel` and `getPayment`.
   `/api/pay/paytr/callback`; the handler verifies the notification and replies
   `OK`.
 
-Pre-authorization (block now, charge later) works on iyzico, Parampos, Sipay and Akbank:
+Pre-authorization (block now, charge later) works on iyzico, Parampos, Sipay, Akbank and Albaraka Türk:
 `authorize()` / `initThreeDSAuthorize()`, then `capture({ paymentId, amount, ip })` or
 `voidAuthorization({ paymentId, ip })`. See the
 [pre-authorization guide](https://better-payment.czaylabs.com/docs/payments/pre-authorization).
