@@ -149,7 +149,8 @@ this id to `refund`, `cancel` and `getPayment`.
 | Yapı Kredi  | ✓                         | ✓ Posnet OOS                |   ✓    | ✓ (same day)    |   ✓    |  —  | —                 |
 | QNB         | ✓                         | ✓ 3D Model / 3D Pay         |   ✓    | ✓ (next day)    |   ✓    |  —  | —                 |
 
-¹ İş Bankası, Ziraat Bankası, Halkbank, TEB and Şekerbank, with `est({ bank })`.
+¹ İş Bankası, Ziraat Bankası, Halkbank, TEB, Şekerbank, Akbank's older virtual POS and
+Halkbank Macedonia, with `est({ bank })`.
 ² Albaraka Türk. `paymentId` is the bank's ReferenceCode; the 3D completion needs the order id, amount and currency from your records. `getPayment()` takes the order id.
 
 ### 3D Secure completion
