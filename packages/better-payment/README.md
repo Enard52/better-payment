@@ -2,7 +2,7 @@
 
 > Unified, type-safe payment gateway for Node.js & TypeScript.
 
-One API for Turkish payment providers — iyzico, PayTR, Parampos, Sipay, Akbank, Kuveyt Türk, QNB and the EST banks
+One API for Turkish payment providers — iyzico, PayTR, Parampos, Sipay, Akbank, Kuveyt Türk, Yapı Kredi, QNB and the EST banks
 (İş Bankası, Ziraat, Halkbank, TEB, Şekerbank).
 
 [![npm](https://img.shields.io/npm/v/better-payment)](https://www.npmjs.com/package/better-payment)
@@ -143,6 +143,7 @@ this id to `refund`, `cancel` and `getPayment`.
 | Akbank      | ✓                         | ✓ 3D_PAY                    |   ✓    | ✓               |   ✓    |  —  | —                 |
 | Kuveyt Türk | —                         | ✓ KT Pay Gate               |   ✓    | ✓ (same day)    |   ✓    |  —  | —                 |
 | EST ¹       | ✓                         | ✓ 3D / 3D Pay / 3D Host     |   ✓    | ✓               |   ✓    |  —  | —                 |
+| Yapı Kredi  | ✓                         | ✓ Posnet OOS                |   ✓    | ✓ (same day)    |   ✓    |  —  | —                 |
 | QNB         | ✓                         | ✓ 3D Model / 3D Pay         |   ✓    | ✓ (next day)    |   ✓    |  —  | —                 |
 
 ¹ İş Bankası, Ziraat Bankası, Halkbank, TEB and Şekerbank, with `est({ bank })`.
@@ -164,6 +165,10 @@ this id to `refund`, `cancel` and `getPayment`.
   result is confirmed with the bank: `3d` and `3d_host` only authenticate the card and
   charge it with the XML API, `3d_pay` / `3d_pay_hosting` are checked with an order
   status query.
+- **Yapı Kredi:** the bank POSTs encrypted packets to your `callbackUrl`. Complete them in
+  your own route with the order from your records:
+  `completeThreeDSPayment({ ...body, orderId, amount, currency })`. The bank resolves the
+  packets, and the resolved order must match yours before the card is charged.
 - **QNB:** the bank POSTs to your `callbackUrl`. The `ResponseHash` is verified, then the
   result is confirmed with the bank: `3DModel` charges with `3DModelPayment`, `3DPay` is
   checked with an order inquiry.
