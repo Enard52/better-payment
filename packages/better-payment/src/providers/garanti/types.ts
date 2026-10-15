@@ -69,3 +69,19 @@ export interface Garanti3DCallbackData {
   hashparamsval?: string;
   [key: string]: string | undefined;
 }
+
+/**
+ * The order from your own records for `completeThreeDSPayment`, passed as a
+ * separate second argument and never read from the callback body: the
+ * callback's hash does not pin each value to its field.
+ */
+export interface GarantiCompleteContext {
+  /** The order id you started; required for the 3D security level */
+  orderId?: string;
+  /** The order amount ("100.00"); required for 3D, checked against the bank for 3D_PAY */
+  amount?: string | number;
+  /** The order currency. Default: TRY */
+  currency?: string;
+  /** The installment count you started. Default: the callback's */
+  installment?: number;
+}

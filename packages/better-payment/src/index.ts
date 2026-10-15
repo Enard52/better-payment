@@ -192,7 +192,11 @@ export { Qnb, qnb } from './providers/qnb';
 export type { QnbConfig, Qnb3DCallbackData } from './providers/qnb/types';
 export type { QnbSecureType } from './providers/qnb/utils';
 export { Garanti, garanti } from './providers/garanti';
-export type { GarantiConfig, Garanti3DCallbackData } from './providers/garanti/types';
+export type {
+  GarantiConfig,
+  Garanti3DCallbackData,
+  GarantiCompleteContext,
+} from './providers/garanti/types';
 export type { GarantiSecurityLevel } from './providers/garanti/utils';
 
 export { BetterPaymentClient, createBetterPaymentClient } from './client';

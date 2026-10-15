@@ -189,8 +189,10 @@ Halkbank Macedonia, with `est({ bank })`.
   checked with an order inquiry.
 - **Garanti BBVA:** the bank POSTs to your `callbackUrl`. The hash is rebuilt from the
   fields in `hashparams`, then the result is confirmed with the bank: `3D` provisions
-  with the XML API, `3D_PAY` and GarantiPay are checked with an order inquiry.
-  An unsigned callback is only ever a failure, without ids.
+  with the XML API for the order from your records,
+  `completeThreeDSPayment(callbackBody, { orderId, amount, currency })`; `3D_PAY` and
+  GarantiPay are checked with an order inquiry. An unsigned callback is only ever a
+  failure, without ids.
 - **PayTR:** `callbackUrl` is only where the customer's browser returns. The
   result is sent to the **notification URL** set in the PayTR panel. Point it at
   `/api/pay/paytr/callback`; the handler verifies the notification and replies

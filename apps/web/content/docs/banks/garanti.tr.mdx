@@ -49,7 +49,7 @@ const result = await payment.garanti.createPayment({ ...paymentRequest, conversa
 const init = await payment.garanti.initThreeDSPayment({
   ...paymentRequest,
   conversationId: 'ORDER123',
-  callbackUrl: 'https://yoursite.com/api/pay/garanti/payment/complete-3ds',
+  callbackUrl: 'https://yoursite.com/checkout/garanti/callback', // your own route
 });
 // init.threeDSHtmlContent auto-submits a form signed with secure3dhash to the 3D engine
 ```
@@ -57,16 +57,17 @@ const init = await payment.garanti.initThreeDSPayment({
 Garanti BBVA sonucu `callbackUrl` adresine POST eder:
 
 ```typescript
-const result = await payment.garanti.completeThreeDSPayment(callbackBody);
+// orderId, amount and currency come from your own records, never from the callback body
+const result = await payment.garanti.completeThreeDSPayment(callbackBody, { orderId, amount, currency });
 ```
 
 Callback `hash` değeri `hashparams` içinde adı geçen alanlardan yeniden oluşturulur (`hashparamsval` hiçbir zaman kullanılmaz) ve sipariş numarasıyla `mdstatus` alanını kapsamalıdır. Değerler ayraçsız birleştirildiği için sonuç ayrıca bankayla doğrulanır:
 
-- hash'i geçersiz, sipariş numarası değiştirilmiş ya da başka bir terminale ait callback `INVALID_HASH` olarak reddedilir;
-- `3D`: `mdstatus` `1` ise ödeme XML `sales` ile provizyona gönderilir ve sonucu bankanın cevabı belirler;
-- `3D_PAY`: onaylı bir callback sipariş sorgusuyla kontrol edilir ve tutar bankadaki kayıtla aynı olmalıdır; bankanın doğrulamadığı bir ödeme `INVALID_HASH` olarak reddedilir.
+- hash'i geçersiz, başka bir terminale ya da verdiğiniz `orderId` dışında bir siparişe ait callback `INVALID_HASH` olarak reddedilir;
+- `3D`: `mdstatus` `1` ise ödeme, kendi kayıtlarınızdaki `orderId`, `amount` ve `currency` ile XML `sales` üzerinden provizyona gönderilir ve sonucu bankanın cevabı belirler. Banka bu istekte yazanı çektiği ve yeniden bölünmüş bir callback başka değerler taşıyabileceği için bu değerler burada zorunludur;
+- `3D_PAY`: onaylı bir callback sipariş sorgusuyla kontrol edilir ve bankadaki tutar sizin `amount` değerinizle (verilmemişse callback'teki tutarla) aynı olmalıdır; bankanın doğrulamadığı bir ödeme `INVALID_HASH` olarak reddedilir.
 
-`paymentId` ve `conversationId` yalnızca bankanın doğruladığı bir ödemede doldurulur; bu yüzden başarısız bir sonuç hiçbir zaman callback'ten alınan bir sipariş numarası taşımaz.
+İkinci argüman callback gövdesinden asla okunmaz. Varsayılan handler rotası yalnızca gövdeyi iletir; bu yüzden `3D` için ödemeyi kendi rotanızda tamamlayın. `paymentId` ve `conversationId` yalnızca bankanın doğruladığı bir ödemede, zaman aşımında ise yalnızca `orderId` verdiyseniz doldurulur; başarısız bir sonuç hiçbir zaman callback'ten alınan bir sipariş numarası taşımaz.
 
 ### mdstatus [#mdstatus]
 

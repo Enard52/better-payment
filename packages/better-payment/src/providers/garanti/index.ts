@@ -40,7 +40,7 @@ import {
   parseGarantiXmlResponse,
   isGarantiApproved,
 } from './utils';
-import type { GarantiConfig, Garanti3DCallbackData } from './types';
+import type { GarantiConfig, Garanti3DCallbackData, GarantiCompleteContext } from './types';
 
 function escapeHtml(value: string): string {
   return value
@@ -344,16 +344,23 @@ export class Garanti extends PaymentProvider<GarantiConfig> {
    *
    * The hash is rebuilt from the fields named in `hashparams`, whose values are
    * joined without a separator, so a valid hash alone does not pin each value.
-   * The result is therefore confirmed with the bank: 3D provisions with XML
-   * `sales` (the bank's answer decides), 3D_PAY is checked with an order
-   * inquiry. A callback that fails the hash, names another terminal, or claims
-   * a payment the bank does not confirm is rejected as INVALID_HASH.
+   * The order therefore comes from your records (`context`, a separate second
+   * argument never read from the callback body) or from the bank: 3D provisions
+   * XML `sales` for `context.orderId` and `context.amount`, which it requires,
+   * and the bank's answer decides; 3D_PAY is checked with an order inquiry,
+   * against `context.amount` when given. A callback that fails the hash, names
+   * another terminal or order, or claims a payment the bank does not confirm is
+   * rejected as INVALID_HASH.
    *
    * `paymentId` and `conversationId` are set only for a payment the bank
-   * confirmed, and on a timeout after the bank was reached for this order;
-   * a failure never carries ids taken from the callback.
+   * confirmed, and on a timeout only when `context.orderId` was given; a
+   * failure never carries ids taken from the callback.
    */
-  async completeThreeDSPayment(callbackData: Garanti3DCallbackData): Promise<PaymentResponse> {
+  async completeThreeDSPayment(
+    callbackData: Garanti3DCallbackData,
+    context: GarantiCompleteContext = {}
+  ): Promise<PaymentResponse> {
+    const expected = context ?? {};
     const untrusted = (errorMessage: string, rawResponse: unknown): PaymentResponse =>
       this.withErrorCode({
         status: PaymentStatus.FAILURE,
@@ -391,6 +398,9 @@ export class Garanti extends PaymentProvider<GarantiConfig> {
     ) {
       return untrusted('Callback belongs to a different terminal or order', callbackData);
     }
+    if (expected.orderId !== undefined && expected.orderId !== orderId) {
+      return untrusted('Callback belongs to another order than yours', callbackData);
+    }
 
     let reached = false;
     try {
@@ -405,15 +415,26 @@ export class Garanti extends PaymentProvider<GarantiConfig> {
           });
         }
 
+        // The bank charges what this request says, so the order and amount must
+        // be yours, not values a re-split callback could carry
+        if (!expected.orderId || expected.amount === undefined) {
+          throw new ValidationError(
+            'completeThreeDSPayment() needs the order from your records: ' +
+              'completeThreeDSPayment(callbackBody, { orderId, amount, currency })'
+          );
+        }
         reached = true;
         const result = await this.api({
           orderId,
-          amount: callbackData.txnamount ?? '',
-          currencyCode: callbackData.txncurrencycode ?? '',
+          amount: formatGarantiAmount(expected.amount),
+          currencyCode: getGarantiCurrencyCode(expected.currency),
           ip: callbackData.customeripaddress ?? '',
           transaction: {
             Type: 'sales',
-            InstallmentCnt: callbackData.txninstallmentcount ?? '',
+            InstallmentCnt:
+              expected.installment !== undefined
+                ? formatGarantiInstallment(expected.installment)
+                : (callbackData.txninstallmentcount ?? ''),
             CardholderPresentCode: '13',
             MotoInd: 'N',
             Secure3D: {
@@ -453,10 +474,13 @@ export class Garanti extends PaymentProvider<GarantiConfig> {
 
       reached = true;
       const inquiry = await this.orderInquiry(orderId, callbackData.customeripaddress);
+      const expectedAmount =
+        expected.amount !== undefined
+          ? formatGarantiAmount(expected.amount)
+          : callbackData.txnamount;
       if (
         !isGarantiCapturedSale(inquiry) ||
-        (callbackData.txnamount !== undefined &&
-          inquiry.orderInquiry.AuthAmount !== callbackData.txnamount)
+        (expectedAmount !== undefined && inquiry.orderInquiry.AuthAmount !== expectedAmount)
       ) {
         return untrusted('3D Secure callback does not match the order at the bank', {
           callback: callbackData,
@@ -472,9 +496,10 @@ export class Garanti extends PaymentProvider<GarantiConfig> {
     } catch (error) {
       const result = this.failure<PaymentResponse>(error, '3D Secure completion failed');
       // A timeout after the bank was asked about this order: the outcome is
-      // unknown, keep the ids so the order can be checked with getPayment()
-      return reached && result.status === PaymentStatus.PENDING
-        ? { ...result, paymentId: orderId, conversationId: orderId }
+      // unknown. The ids are kept only for an order from your records, so it
+      // can be checked with getPayment(); the callback's own order is not trusted
+      return reached && result.status === PaymentStatus.PENDING && expected.orderId
+        ? { ...result, paymentId: expected.orderId, conversationId: expected.orderId }
         : result;
     }
   }

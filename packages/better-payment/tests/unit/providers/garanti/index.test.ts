@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { HttpError } from '../../../../src/core/http';
+import { BetterPaymentHandler } from '../../../../src/core/BetterPaymentHandler';
 import { PaymentErrorCode } from '../../../../src/core/error-codes';
 import { betterPayment } from '../../../../src';
 import {
@@ -205,10 +206,20 @@ describe('Garanti BBVA provider', () => {
   });
 
   describe('completeThreeDSPayment (3D)', () => {
-    it('provisions a verified callback', async () => {
+    const ORDER = { orderId: 'ORDER3D', amount: '1.20' };
+    // The same signed byte sequence, split differently: clientid gives its last
+    // digit to oid, and the hash still verifies
+    const RESPLIT = {
+      ...GARANTI_3D_CALLBACK,
+      clientid: '3069129',
+      oid: '7ORDER3D',
+      orderid: '7ORDER3D',
+    };
+
+    it('provisions a verified callback for the order from your records', async () => {
       post.mockResolvedValue({ data: GARANTI_APPROVED_XML });
 
-      const result = await provider.completeThreeDSPayment(GARANTI_3D_CALLBACK);
+      const result = await provider.completeThreeDSPayment(GARANTI_3D_CALLBACK, ORDER);
 
       const xml = sent();
       expect(leaf(xml, 'OrderID')).toBe('ORDER3D');
@@ -224,6 +235,57 @@ describe('Garanti BBVA provider', () => {
       expect(result.status).toBe(PaymentStatus.SUCCESS);
       expect(result.paymentId).toBe('ORDER3D');
       expect(result.conversationId).toBe('ORDER3D');
+    });
+
+    it('charges the amount and currency from your records, not the callback', async () => {
+      post.mockResolvedValue({ data: GARANTI_APPROVED_XML });
+      await provider.completeThreeDSPayment(
+        { ...GARANTI_3D_CALLBACK, txnamount: '1', txncurrencycode: '840' },
+        { ...ORDER, installment: 3 }
+      );
+      expect(leaf(sent(), 'Amount')).toBe('120');
+      expect(leaf(sent(), 'CurrencyCode')).toBe('949');
+      expect(leaf(sent(), 'InstallmentCnt')).toBe('3');
+    });
+
+    it('needs the order from your records before provisioning', async () => {
+      const result = await provider.completeThreeDSPayment(GARANTI_3D_CALLBACK);
+      expect(post).not.toHaveBeenCalled();
+      expect(result.errorCode).toBe('VALIDATION_ERROR');
+      expectNoIds(result);
+    });
+
+    it('rejects a re-split callback whose hash still verifies', async () => {
+      const result = await provider.completeThreeDSPayment(RESPLIT, ORDER);
+      expect(post).not.toHaveBeenCalled();
+      expect(result.errorCode).toBe('INVALID_HASH');
+      expectNoIds(result);
+    });
+
+    // The default handler passes only the HTTP body: neither a re-split order nor
+    // order values POSTed with it may lead to a provision
+    it('does not provision a re-split callback through the default handler', async () => {
+      const payment = betterPayment({
+        mode: 'sandbox',
+        providers: { garanti: garanti({ ...GARANTI_TEST, baseUrl: GARANTI_BASE_URL }) },
+      });
+      (payment.use('garanti') as any).client.post = post;
+      const onCallback = vi.fn();
+      await new BetterPaymentHandler(payment, { onCallback }).handle({
+        method: 'POST',
+        url: '/api/pay/garanti/callback',
+        headers: { 'content-type': 'application/json' },
+        body: { ...RESPLIT, orderId: '7ORDER3D', amount: '0.01' },
+      });
+      expect(post).not.toHaveBeenCalled();
+      expect(onCallback).not.toHaveBeenCalledWith(
+        expect.objectContaining({ status: PaymentStatus.SUCCESS }),
+        expect.anything()
+      );
+      expect(onCallback).not.toHaveBeenCalledWith(
+        expect.objectContaining({ paymentId: '7ORDER3D' }),
+        expect.anything()
+      );
     });
 
     it('rejects a bad hash as INVALID_HASH', async () => {
@@ -298,7 +360,7 @@ describe('Garanti BBVA provider', () => {
 
       post.mockResolvedValue({ data: GARANTI_APPROVED_XML });
       const lenient = create({ acceptedMdStatuses: ['1', '2', '3', '4'] });
-      const accepted = await lenient.completeThreeDSPayment(halfSecure);
+      const accepted = await lenient.completeThreeDSPayment(halfSecure, ORDER);
       expect(post).toHaveBeenCalledTimes(1);
       expect(accepted.status).toBe(PaymentStatus.SUCCESS);
     });
@@ -307,7 +369,7 @@ describe('Garanti BBVA provider', () => {
       post.mockResolvedValue({
         data: garantiXml({ Code: '05', ReasonCode: '05', Message: 'Declined', ErrorMsg: 'Red' }),
       });
-      const result = await provider.completeThreeDSPayment(GARANTI_3D_CALLBACK);
+      const result = await provider.completeThreeDSPayment(GARANTI_3D_CALLBACK, ORDER);
       expect(result.status).toBe(PaymentStatus.FAILURE);
       expect(result.errorCode).toBe('05');
       expectNoIds(result);
@@ -315,7 +377,7 @@ describe('Garanti BBVA provider', () => {
 
     it('returns pending with the order id when the provision times out', async () => {
       post.mockRejectedValue(timeout());
-      const result = await provider.completeThreeDSPayment(GARANTI_3D_CALLBACK);
+      const result = await provider.completeThreeDSPayment(GARANTI_3D_CALLBACK, ORDER);
       expect(result.status).toBe(PaymentStatus.PENDING);
       expect(result.paymentId).toBe('ORDER3D');
     });
@@ -450,11 +512,38 @@ describe('Garanti BBVA provider', () => {
       expectNoIds(result);
     });
 
-    it('returns pending with the order id when the inquiry times out', async () => {
+    it('checks the bank amount against yours when given', async () => {
+      post.mockResolvedValue({ data: garantiInquiryXml() });
+      const ok = await provider.completeThreeDSPayment(GARANTI_3DPAY_CALLBACK, {
+        orderId: 'ORDERPAY',
+        amount: '1.20',
+      });
+      expect(ok.status).toBe(PaymentStatus.SUCCESS);
+      const wrong = await provider.completeThreeDSPayment(
+        { ...GARANTI_3DPAY_CALLBACK },
+        { orderId: 'ORDERPAY', amount: '99.00' }
+      );
+      expect(wrong.errorCode).toBe('INVALID_HASH');
+      expectNoIds(wrong);
+    });
+
+    it('rejects a callback for another order than yours, without asking the bank', async () => {
+      const result = await provider.completeThreeDSPayment(GARANTI_3DPAY_CALLBACK, {
+        orderId: 'ORDER2',
+      });
+      expect(post).not.toHaveBeenCalled();
+      expect(result.errorCode).toBe('INVALID_HASH');
+    });
+
+    it('returns pending without the callback order id when the inquiry times out', async () => {
       post.mockRejectedValue(timeout());
       const result = await provider.completeThreeDSPayment(GARANTI_3DPAY_CALLBACK);
       expect(result.status).toBe(PaymentStatus.PENDING);
-      expect(result.paymentId).toBe('ORDERPAY');
+      expectNoIds(result);
+      const trusted = await provider.completeThreeDSPayment(GARANTI_3DPAY_CALLBACK, {
+        orderId: 'ORDERPAY',
+      });
+      expect(trusted.paymentId).toBe('ORDERPAY');
     });
   });
 

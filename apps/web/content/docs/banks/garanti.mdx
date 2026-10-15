@@ -53,7 +53,7 @@ const result = await payment.garanti.createPayment({ ...paymentRequest, conversa
 const init = await payment.garanti.initThreeDSPayment({
   ...paymentRequest,
   conversationId: 'ORDER123',
-  callbackUrl: 'https://yoursite.com/api/pay/garanti/payment/complete-3ds',
+  callbackUrl: 'https://yoursite.com/checkout/garanti/callback', // your own route
 });
 // init.threeDSHtmlContent auto-submits a form signed with secure3dhash to the 3D engine
 ```
@@ -61,20 +61,27 @@ const init = await payment.garanti.initThreeDSPayment({
 Garanti BBVA POSTs the result to `callbackUrl`:
 
 ```typescript
-const result = await payment.garanti.completeThreeDSPayment(callbackBody);
+// orderId, amount and currency come from your own records, never from the callback body
+const result = await payment.garanti.completeThreeDSPayment(callbackBody, { orderId, amount, currency });
 ```
 
 The callback `hash` is rebuilt from the fields named in `hashparams` (never from
 `hashparamsval`) and must cover the order id and `mdstatus`. The values are joined without a
 separator, so the result is also confirmed with the bank:
 
-- a callback with an invalid hash, a changed order id or another terminal is rejected as `INVALID_HASH`;
-- `3D`: when `mdstatus` is `1`, the payment is provisioned with XML `sales`, and the bank's answer decides;
-- `3D_PAY`: an approved callback is checked with an order inquiry, and the amount must match the bank's record;
-  a payment the bank does not confirm is rejected as `INVALID_HASH`.
+- a callback with an invalid hash, another terminal, or another order than the `orderId` you pass
+  is rejected as `INVALID_HASH`;
+- `3D`: when `mdstatus` is `1`, the payment is provisioned with XML `sales` for the `orderId`,
+  `amount` and `currency` from your records, and the bank's answer decides. They are required here,
+  because the bank charges what this request says and a re-split callback could carry other values;
+- `3D_PAY`: an approved callback is checked with an order inquiry, and the bank's amount must match
+  your `amount` (or, without it, the callback's); a payment the bank does not confirm is rejected as
+  `INVALID_HASH`.
 
-`paymentId` and `conversationId` are set only for a payment the bank confirmed, so a failure
-never carries an order id taken from the callback.
+The second argument is never read from the callback body. The default handler route passes only
+the body, so for `3D` complete the payment in your own route. `paymentId` and `conversationId` are
+set only for a payment the bank confirmed, and on a timeout only when you passed `orderId`; a
+failure never carries an order id taken from the callback.
 
 ### mdstatus
 
