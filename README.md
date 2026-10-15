@@ -2,7 +2,7 @@
 
 > Unified, type-safe payment gateway for Node.js & TypeScript.
 
-One API for Turkish payment providers — iyzico, PayTR, Parampos, Sipay, Akbank, Kuveyt Türk, Yapı Kredi, QNB and the EST banks
+One API for Turkish payment providers — iyzico, PayTR, Parampos, Sipay, Akbank, Kuveyt Türk, Yapı Kredi, QNB, VakıfBank and the EST banks
 (İş Bankası, Ziraat, Halkbank, TEB, Şekerbank).
 
 [![npm](https://img.shields.io/npm/v/better-payment)](https://www.npmjs.com/package/better-payment)
@@ -128,7 +128,7 @@ list and suggested customer messages.
 if (result.code === PaymentErrorCode.INSUFFICIENT_FUNDS) askForAnotherCard();
 ```
 
-For PayTR, Parampos, Sipay, Akbank, Kuveyt Türk, EST and QNB, `paymentId` is your **order id**: the
+For PayTR, Parampos, Sipay, Akbank, Kuveyt Türk, EST, QNB and VakıfBank, `paymentId` is your **order id**: the
 `conversationId` you pass in, or an alphanumeric id generated for you. Pass
 this id to `refund`, `cancel` and `getPayment`.
 
@@ -143,6 +143,7 @@ this id to `refund`, `cancel` and `getPayment`.
 | Akbank      | ✓                         | ✓ 3D_PAY                    |   ✓    | ✓               |   ✓    |  —  | —                 |
 | Kuveyt Türk | —                         | ✓ KT Pay Gate               |   ✓    | ✓ (same day)    |   ✓    |  —  | —                 |
 | EST ¹       | ✓                         | ✓ 3D / 3D Pay / 3D Host     |   ✓    | ✓               |   ✓    |  —  | —                 |
+| VakıfBank   | ✓                         | ✓ MPI + VPOS (3DS)          |   ✓    | ✓ (same day)    |   —    |  —  | —                 |
 | Yapı Kredi  | ✓                         | ✓ Posnet OOS                |   ✓    | ✓ (same day)    |   ✓    |  —  | —                 |
 | QNB         | ✓                         | ✓ 3D Model / 3D Pay         |   ✓    | ✓ (next day)    |   ✓    |  —  | —                 |
 
@@ -165,6 +166,9 @@ this id to `refund`, `cancel` and `getPayment`.
   result is confirmed with the bank: `3d` and `3d_host` only authenticate the card and
   charge it with the XML API, `3d_pay` / `3d_pay_hosting` are checked with an order
   status query.
+- **VakıfBank:** the MPI POSTs the 3D result to your `callbackUrl`, unsigned. The payment
+  is authorized on VPOS with `MpiTransactionId` only, so VPOS takes the card and amount
+  from its own 3D Secure record; callback values are never used for the charge.
 - **Yapı Kredi:** the bank POSTs encrypted packets to your `callbackUrl`. Complete them in
   your own route with the order from your records:
   `completeThreeDSPayment({ ...body, orderId, amount, currency })`. The bank resolves the
