@@ -5,6 +5,7 @@
   "pages": [
     "localized-errors",
     "chaos",
-    "notifications"
+    "notifications",
+    "failover"
   ]
 }

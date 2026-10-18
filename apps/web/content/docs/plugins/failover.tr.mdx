@@ -1,0 +1,89 @@
+---
+title: Sağlayıcı Yük Devretme (Failover)
+description: Sağlayıcı kesintilerinde devre kesici (circuit breaker) korumasıyla ödemeleri otomatik olarak yedek sağlayıcılara aktarın.
+---
+
+<Since version="0.12.0" />
+
+Birden fazla sanal POS veya ödeme kuruluşu ile çalışan işletmeler, birincil sağlayıcıda geçici bir kesinti veya ağ hatası yaşandığında satış kaybına uğrayabilir. `failover` eklentisi yüksek erişilebilirlik (high availability) sağlar: ödemenin kesinlikle alınamadığı geçici bir hata oluştuğunda, işlemi sıradaki yedek sağlayıcıya yönlendirerek satışı kurtarır.
+
+## Kurulum
+
+```typescript
+import { betterPayment, iyzico, paytr, parampos } from 'better-payment';
+import { failover } from 'better-payment/plugins';
+
+export const payment = betterPayment({
+  providers: {
+    iyzico: iyzico({ /* ... */ }),
+    paytr: paytr({ /* ... */ }),
+    parampos: parampos({ /* ... */ }),
+  },
+  defaultProvider: 'iyzico',
+  plugins: [
+    failover({
+      order: ['iyzico', 'paytr', 'parampos'],
+      on: ['PROVIDER_ERROR', 'PROVIDER_UNAVAILABLE', 'TIMEOUT_BEFORE_SEND'],
+      circuitBreaker: {
+        failures: 5,
+        window: '1m',
+        cooldown: '5m',
+      },
+      onSwitch: async ({ fromProvider, toProvider, error, attempt }) => {
+        console.warn(`Sağlayıcı ${fromProvider} yerine ${toProvider} devraldı:`, error);
+      },
+    }),
+  ],
+});
+```
+
+## Nasıl Çalışır?
+
+1. **Hedef İşlemler:** Failover, ana ödeme nesnesi üzerinden çağrılan (`payment.createPayment()`) ve 3D Secure yönlendirmesi içermeyen `createPayment` ve `authorize` işlemlerinde çalışır. Doğrudan belirli bir sağlayıcı üzerinden çağrılan işlemler (`payment.iyzico.createPayment()`) o sağlayıcıya özeldir ve başka sağlayıcıya aktarılmaz.
+2. **Belirsiz Sonuçlarda Asla Tekrar Denenmez:** Bir sağlayıcı `status: PaymentStatus.PENDING` veya `code: PaymentErrorCode.NETWORK_ERROR` döndürdüğünde (istek gönderilmiş fakat sonucun alınamadığı durumlar), failover **kesinlikle tekrar denemez**. Bu durumda tekrar denemek müşteriden mükerrer (çift) çekim yapılmasına yol açabilir.
+3. **Kart Redlerinde Tekrar Denenmez:** Müşteri/kart kaynaklı hatalar (`INSUFFICIENT_FUNDS`, `CARD_DECLINED`, `EXPIRED_CARD`, `INVALID_CVC` veya `FRAUD_SUSPECTED`) doğrudan döndürülür; çünkü sağlayıcı değiştirmek kartın bakiyesini veya geçerliliğini değiştirmez.
+4. **Devre Kesici (Circuit Breaker):** Bir sağlayıcı belirlenen zaman penceresinde eşik değer kadar geçici hata üretirse devresi `open` (açık) durumuna geçer. Sonraki istekler arızalı sağlayıcıyı tamamen atlayarak doğrudan sağlıklı yedek sağlayıcılara gider, böylece müşteriler bekleme süresi yaşamaz.
+5. **Bekleme Süresi & Yarı Açık (Half-Open) Durumu:** Devre kesici bekleme süresi (`cooldown`) dolduğunda durum `half_open` seviyesine geçer ve bir deneme isteğine izin verilir. Deneme başarılı olursa devre `closed` (kapalı/sağlıklı) durumuna döner; başarısız olursa bir bekleme süresi daha açık kalır.
+
+## Devre Kesici Durumu ve Yönetimi
+
+Eklenti, devre durumlarını sorgulamak ve yönetmek için `payment.failover` alanını sunar:
+
+```typescript
+// Tüm sağlayıcıların devre durumunu kontrol edin
+const status = payment.failover.status();
+console.log(status);
+// {
+//   iyzico: { state: 'closed', failures: 0 },
+//   paytr: { state: 'open', failures: 5, cooldownRemainingMs: 180000 },
+//   parampos: { state: 'closed', failures: 0 }
+// }
+
+// Belirli bir sağlayıcının devresini veya tüm devreleri sıfırlayın
+payment.failover.reset('paytr');
+
+// Bakım amacıyla bir sağlayıcının devresini manuel olarak açın (devre dışı bırakın)
+payment.failover.trip('iyzico');
+
+// Sağlayıcı geçiş olaylarına abone olun
+const unsubscribe = payment.failover.onSwitch((event) => {
+  metrics.increment('payment.failover.switched', { from: event.fromProvider, to: event.toProvider });
+});
+```
+
+## Seçenekler
+
+| Seçenek | Tür | Varsayılan | Açıklama |
+| ------- | --- | ---------- | -------- |
+| `order` | `string[]` | Yapılandırılmış tüm sağlayıcılar | Sırayla denenecek sağlayıcıların öncelik listesi. |
+| `on` | `(PaymentErrorCode \| string)[]` | `['PROVIDER_ERROR', 'PROVIDER_UNAVAILABLE', 'TIMEOUT_BEFORE_SEND']` | Yük devretmeyi tetikleyecek geçici hata kodları. |
+| `circuitBreaker` | `boolean \| CircuitBreakerOptions` | `false` | Devre kesiciyi etkinleştirir ve yapılandırır. |
+| `onSwitch` | `(event: FailoverSwitchEvent) => void \| Promise<void>` | — | Sağlayıcı değiştiğinde tetiklenen geri çağrım. |
+
+### Devre Kesici (Circuit Breaker) Seçenekleri
+
+| Seçenek | Tür | Varsayılan | Açıklama |
+| ------- | --- | ---------- | -------- |
+| `failures` | `number` | `5` | Devreyi açmak için pencere içinde gereken ardışık geçici hata sayısı. |
+| `window` | `number \| string` | `'1m'` | Hataların sayıldığı kayan zaman penceresi (`'30s'`, `'1m'`, `'5m'` veya milisaniye). |
+| `cooldown` | `number \| string` | `'5m'` | Yarı açık (half-open) deneme isteğinden önce beklenecek süre (`'1m'`, `'5m'` vb.). |

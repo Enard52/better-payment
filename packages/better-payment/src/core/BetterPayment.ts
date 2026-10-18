@@ -140,6 +140,7 @@ export class PaymentCore<P extends Record<string, ProviderEntry> = Record<string
       mode,
       logger: options.logger,
       use: (id) => this.use(id),
+      rawProvider: (id) => this.rawProvider(id),
     };
 
     const pluginIds = new Set<string>();

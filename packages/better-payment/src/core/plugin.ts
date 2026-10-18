@@ -139,6 +139,8 @@ export interface PluginContext {
   readonly logger: BetterPaymentLogger | undefined;
   /** A provider by id. Its operations run with hooks and events. */
   use(providerId: string): PaymentProvider;
+  /** A provider by id without hooks or events, for internal orchestration plugins */
+  rawProvider?(providerId: string): PaymentProvider;
 }
 
 export interface EndpointContext extends PluginContext {

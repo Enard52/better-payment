@@ -1,0 +1,89 @@
+---
+title: Provider Failover
+description: Automatically retry failed payments on backup providers with circuit breaker protection.
+---
+
+<Since version="0.12.0" />
+
+Merchants configured with multiple payment providers can lose revenue when a primary provider experiences downtime or transient gateway errors. The `failover` plugin provides high availability: when an operation fails with a transient error where the payment definitely did not go through, it transparently walks through your fallback order to complete the charge.
+
+## Setup
+
+```typescript
+import { betterPayment, iyzico, paytr, parampos } from 'better-payment';
+import { failover } from 'better-payment/plugins';
+
+export const payment = betterPayment({
+  providers: {
+    iyzico: iyzico({ /* ... */ }),
+    paytr: paytr({ /* ... */ }),
+    parampos: parampos({ /* ... */ }),
+  },
+  defaultProvider: 'iyzico',
+  plugins: [
+    failover({
+      order: ['iyzico', 'paytr', 'parampos'],
+      on: ['PROVIDER_ERROR', 'PROVIDER_UNAVAILABLE', 'TIMEOUT_BEFORE_SEND'],
+      circuitBreaker: {
+        failures: 5,
+        window: '1m',
+        cooldown: '5m',
+      },
+      onSwitch: async ({ fromProvider, toProvider, error, attempt }) => {
+        console.warn(`Failover from ${fromProvider} to ${toProvider}:`, error);
+      },
+    }),
+  ],
+});
+```
+
+## How It Works
+
+1. **Target Operations:** Failover applies to non-3DS `createPayment` and `authorize` operations called on the payment object (`payment.createPayment()`). Calls made directly on a specific provider (e.g. `payment.iyzico.createPayment()`) are pinned to that provider and never moved.
+2. **Never Retries Unknown Outcomes:** If a provider returns `status: PaymentStatus.PENDING` or `code: PaymentErrorCode.NETWORK_ERROR` (indicating the request was dispatched and the outcome is unknown), failover **never retries**. Retrying in this state risks charging the customer twice.
+3. **No Retries on Card Declines:** Cardholder errors (such as `INSUFFICIENT_FUNDS`, `CARD_DECLINED`, `EXPIRED_CARD`, `INVALID_CVC`, or `FRAUD_SUSPECTED`) are immediately returned without failover, as switching provider cannot fix card-level issues.
+4. **Circuit Breaker:** When a provider accumulates the configured number of transient failures within the sliding window, its circuit trips to `open`. Subsequent requests skip the unhealthy provider entirely and proceed directly to healthy backups, preventing latency spikes.
+5. **Cooldown & Half-Open Recovery:** After the cooldown period expires, the circuit transitions to `half_open` to allow a trial request. A successful trial closes the circuit; a failure keeps it open for another cooldown cycle.
+
+## Circuit Breaker Status & Management
+
+The plugin adds a `payment.failover` namespace to inspect and manage circuit states:
+
+```typescript
+// Inspect circuit state for all configured providers
+const status = payment.failover.status();
+console.log(status);
+// {
+//   iyzico: { state: 'closed', failures: 0 },
+//   paytr: { state: 'open', failures: 5, cooldownRemainingMs: 180000 },
+//   parampos: { state: 'closed', failures: 0 }
+// }
+
+// Manually reset a provider or all providers
+payment.failover.reset('paytr');
+
+// Manually trip a provider into open state (e.g. for maintenance)
+payment.failover.trip('iyzico');
+
+// Subscribe to failover switch events
+const unsubscribe = payment.failover.onSwitch((event) => {
+  metrics.increment('payment.failover.switched', { from: event.fromProvider, to: event.toProvider });
+});
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `order` | `string[]` | All configured providers | The priority order of providers to try. |
+| `on` | `(PaymentErrorCode \| string)[]` | `['PROVIDER_ERROR', 'PROVIDER_UNAVAILABLE', 'TIMEOUT_BEFORE_SEND']` | Transient error codes that trigger failover. |
+| `circuitBreaker` | `boolean \| CircuitBreakerOptions` | `false` | Enable and configure circuit breaker. |
+| `onSwitch` | `(event: FailoverSwitchEvent) => void \| Promise<void>` | — | Hook called when failover switches provider. |
+
+### Circuit Breaker Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `failures` | `number` | `5` | Consecutive transient failures within the window required to trip the circuit open. |
+| `window` | `number \| string` | `'1m'` | Sliding time window for counting failures (`'30s'`, `'1m'`, `'5m'`, or milliseconds). |
+| `cooldown` | `number \| string` | `'5m'` | Cooldown period before trying a recovery request in half-open state (`'1m'`, `'5m'`, etc.). |
