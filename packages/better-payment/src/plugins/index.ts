@@ -19,3 +19,10 @@ export {
   type NotificationEvent,
   type NotificationLocale,
 } from './notifications';
+export {
+  webhookForwarding,
+  verifyForwardedWebhook,
+  type WebhookForwardingOptions,
+  type WebhookEndpoint,
+  type ForwardedWebhookPayload,
+} from './webhook-forwarding';
