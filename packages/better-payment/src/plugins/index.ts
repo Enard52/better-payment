@@ -19,3 +19,11 @@ export {
   type NotificationEvent,
   type NotificationLocale,
 } from './notifications';
+export {
+  refundApproval,
+  MemoryRefundApprovalStore,
+  type RefundApprovalOptions,
+  type RefundApprovalRequest,
+  type RefundApprovalStore,
+} from './refund-approval';
+

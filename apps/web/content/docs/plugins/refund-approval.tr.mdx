@@ -1,0 +1,72 @@
+---
+title: İade Onay İş Akışı (Refund Approval)
+description: Belirli bir limitin üzerindeki iade ve iptal işlemlerini yetkili yöneticinin onayına sunun.
+---
+
+<Since version="0.12.0" />
+
+İade işlemleri şirketten dışarıya para çıkışı anlamına gelir. Çoğu e-ticaret ve ödeme operasyonunda müşteri temsilcileri yalnızca belirli bir tutara kadar doğrudan iade yapabilmeli, büyük tutarlı iadeler ise muhasebe veya finans yöneticisinin onayından geçmelidir.
+
+`refundApproval` plugin'i, belirlenen limitin üzerindeki tüm iade ve iptal işlemlerini araya girerek durdurur, onay kuyruğuna kaydeder ve yetkili bir ekip arkadaşının onaylamasını bekler. Talep eden kişinin kendi iadesini onaylaması (görevler ayrılığı ilkesi gereğince) kesinlikle engellenir.
+
+## Kurulum
+
+```typescript
+import { betterPayment, iyzico } from 'better-payment';
+import { refundApproval } from 'better-payment/plugins';
+
+const payment = betterPayment({
+  providers: {
+    iyzico: iyzico({ /* ... */ }),
+  },
+  plugins: [
+    refundApproval({
+      threshold: 1000, // 1.000 TL üzerindeki iadeler onay gerektirir
+      approvers: (user) => user.role === 'finance' || user.role === 'manager',
+      notify: async (req) => {
+        await sendSlackAlert(`${req.amount} ${req.currency} tutarındaki iade onay bekliyor: ${req.id}`);
+      },
+    }),
+  ],
+});
+```
+
+## Nasıl Çalışır?
+
+1. **Limitin altı**: Eşik değerin altındaki iadeler doğrudan sağlayıcıya iletilerek tamamlanır.
+2. **Limitin üstü**: `before` hook'u araya girer, `status: 'pending'` ve `REFUND_APPROVAL_REQUIRED` koduyla bir `approvalId` döndürür.
+3. **Onaylama**: Yetkili kişi `payment.refunds.approve(id, { by: user })` çağrısı yapar. İzinler doğrulanır ve iade sağlayıcı üzerinde çalıştırılır.
+4. **Reddetme**: `payment.refunds.reject(id, { by: user, reason })` çağrısı yapıldığında talep sağlayıcıya hiç gitmeden reddedilir.
+
+```typescript
+// Bekleyen iadeleri listele
+const pending = await payment.refunds.list({ status: 'pending' });
+
+// İadeyi onayla (finans yöneticisi tarafından)
+await payment.refunds.approve(approvalId, {
+  by: { id: 'usr_finance_1', role: 'finance' },
+});
+
+// İadeyi reddet
+await payment.refunds.reject(approvalId, {
+  by: { id: 'usr_finance_1', role: 'finance' },
+  reason: 'Ürün iade deposuna ulaşmadı',
+});
+```
+
+## Seçenekler
+
+| Seçenek | Varsayılan | Açıklama |
+| ------- | ---------- | -------- |
+| `threshold` | *(zorunlu)* | Onay gerektiren asgari iade tutarı |
+| `store` | `MemoryRefundApprovalStore` | Bekleyen onay talepleri depolama katmanı (`RefundApprovalStore`) |
+| `approvers` | Talep eden dışındaki herkes | Kullanıcının onay yetkisi olup olmadığını doğrulayan fonksiyon |
+| `notify` | — | Yeni onay talebi oluştuğunda tetiklenen bildirim fonksiyonu |
+
+## HTTP Uç Noktaları
+
+Plugin, yönetim panelleri ve iç araçlar için yetkili uç noktalar sunar:
+
+- `GET /api/pay/refunds/pending`: Bekleyen onay taleplerini listeler.
+- `POST /api/pay/refunds/approve`: Gövde `{ id, by }`.
+- `POST /api/pay/refunds/reject`: Gövde `{ id, by, reason }`.
