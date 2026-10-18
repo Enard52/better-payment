@@ -1,8 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  betterPayment,
-  PaymentStatus,
-} from 'better-payment';
+import { betterPayment, PaymentStatus } from 'better-payment';
 import { MockProvider } from 'better-payment/testing';
 import {
   invoicing,

@@ -48,7 +48,10 @@ export const invoicing = (options: InvoicingOptions) => {
   }
 
   async function handlePaymentSucceeded(event: PaymentEvent<'payment.succeeded'>) {
-    const paymentId = event.paymentId || String(event.result && (event.result as Record<string, unknown>).paymentId) || `pay-${Date.now()}`;
+    const paymentId =
+      event.paymentId ||
+      String(event.result && (event.result as Record<string, unknown>).paymentId) ||
+      `pay-${Date.now()}`;
     const conversationId = event.conversationId;
     const req = (event.request as Record<string, unknown>) || {};
     const buyerRaw = (req.buyer as Record<string, unknown>) || {};
@@ -68,27 +71,32 @@ export const invoicing = (options: InvoicingOptions) => {
         })
       : {};
 
-    const items: InvoiceItem[] = mapped.items || (basketItemsRaw.length > 0
-      ? basketItemsRaw.map((b) => ({
-          name: String(b.name || 'Product'),
-          quantity: 1,
-          unitPrice: b.price !== undefined ? String(b.price) : amount,
-          vatRate: mapped.vatRate ?? defaultVatRate,
-        }))
-      : [
-          {
-            name: mapped.description || 'Payment',
+    const items: InvoiceItem[] =
+      mapped.items ||
+      (basketItemsRaw.length > 0
+        ? basketItemsRaw.map((b) => ({
+            name: String(b.name || 'Product'),
             quantity: 1,
-            unitPrice: amount,
+            unitPrice: b.price !== undefined ? String(b.price) : amount,
             vatRate: mapped.vatRate ?? defaultVatRate,
-          },
-        ]);
+          }))
+        : [
+            {
+              name: mapped.description || 'Payment',
+              quantity: 1,
+              unitPrice: amount,
+              vatRate: mapped.vatRate ?? defaultVatRate,
+            },
+          ]);
 
     const params: CreateInvoiceParams = {
       paymentId,
       conversationId,
       buyer: {
-        name: mapped.buyer?.name || `${buyerRaw.name || ''} ${buyerRaw.surname || ''}`.trim() || 'Valued Customer',
+        name:
+          mapped.buyer?.name ||
+          `${buyerRaw.name || ''} ${buyerRaw.surname || ''}`.trim() ||
+          'Valued Customer',
         taxNumber: mapped.buyer?.taxNumber || String(buyerRaw.identityNumber || ''),
         taxOffice: mapped.buyer?.taxOffice,
         email: mapped.buyer?.email || String(buyerRaw.email || ''),
@@ -144,14 +152,17 @@ export const invoicing = (options: InvoicingOptions) => {
   async function handleRefundSucceeded(event: PaymentEvent<'refund.succeeded'>) {
     if (onRefund === 'none') return;
 
-    const paymentId = event.paymentId || String(event.result && (event.result as Record<string, unknown>).paymentId);
+    const paymentId =
+      event.paymentId ||
+      String(event.result && (event.result as Record<string, unknown>).paymentId);
     if (!paymentId) return;
 
     const record = records.get(paymentId);
     if (!record || !record.invoiceId) return;
 
     const req = (event.request as Record<string, unknown>) || {};
-    const refundAmount = event.amount || String(req.refundPrice || req.price || record.amount || '0');
+    const refundAmount =
+      event.amount || String(req.refundPrice || req.price || record.amount || '0');
 
     try {
       if (onRefund === 'cancel' && adapter.cancelInvoice) {
@@ -179,7 +190,10 @@ export const invoicing = (options: InvoicingOptions) => {
         record.updatedAt = new Date();
       }
     } catch (err) {
-      pluginCtx?.logger?.error(`Refund invoicing action failed for payment ${paymentId}`, err as Error);
+      pluginCtx?.logger?.error(
+        `Refund invoicing action failed for payment ${paymentId}`,
+        err as Error
+      );
     }
   }
 

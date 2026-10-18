@@ -64,20 +64,23 @@ export function parasut(options: ParasutOptions): InvoicingAdapter {
     return tokenCache.accessToken;
   }
 
-interface ParasutInvoiceResponse {
-  data?: {
-    id?: string | number;
-    type?: string;
-    attributes?: {
-      invoice_no?: string;
+  interface ParasutInvoiceResponse {
+    data?: {
+      id?: string | number;
+      type?: string;
+      attributes?: {
+        invoice_no?: string;
+        [key: string]: unknown;
+      };
       [key: string]: unknown;
     };
     [key: string]: unknown;
-  };
-  [key: string]: unknown;
-}
+  }
 
-  async function request(path: string, init: RequestInit = {}): Promise<ParasutInvoiceResponse | null> {
+  async function request(
+    path: string,
+    init: RequestInit = {}
+  ): Promise<ParasutInvoiceResponse | null> {
     const token = await getAccessToken();
     const url = `${baseUrl}/v4/${options.companyId}${path}`;
     const headers = {
@@ -154,7 +157,10 @@ interface ParasutInvoiceResponse {
       });
     },
 
-    async createReturnInvoice(invoiceId: string, params: CreateInvoiceParams): Promise<InvoiceResult> {
+    async createReturnInvoice(
+      invoiceId: string,
+      params: CreateInvoiceParams
+    ): Promise<InvoiceResult> {
       const issueDate = params.issueDate || new Date().toISOString().split('T')[0];
       const currency = params.currency || 'TRL';
 

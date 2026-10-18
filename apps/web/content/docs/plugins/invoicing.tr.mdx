@@ -9,7 +9,7 @@ Türkiye'de her ticari satış için müşteriye e-Fatura veya e-Arşiv faturas�
 
 Fatura oluşturma işlemi ödeme tamamlandıktan sonra arka planda asenkron olarak yürütülür; müşterinin ödeme deneyimini kesinlikle yavaşlatmaz veya bekletmez.
 
-## Kurulum
+## Kurulum [#setup]
 
 ```typescript
 import { betterPayment, iyzico } from 'better-payment';
@@ -28,28 +28,28 @@ export const payment = betterPayment({
         password: process.env.PARASUT_PASSWORD!,
         companyId: process.env.PARASUT_COMPANY_ID!,
       }),
-      // Ödeme ve sepet verilerinden fatura alanlarını özelleştirin
+      // Custom mapping from payment and basket items to invoice fields
       map: (payment) => ({
         buyer: {
           name: `${payment.buyer?.name} ${payment.buyer?.surname}`,
-          taxNumber: payment.buyer?.identityNumber, // TCKN veya VKN
+          taxNumber: payment.buyer?.identityNumber,
         },
-        vatRate: 20, // %20 KDV
+        vatRate: 20, // 20% KDV
       }),
       onRefund: 'return-invoice', // 'return-invoice' | 'cancel' | 'none'
       retry: { attempts: 3, delay: 1000 },
       onInvoiceCreated: (invoice, event) => {
-        console.log(`Fatura kesildi: ${invoice.invoiceNumber} (Ödeme: ${event.paymentId})`);
+        console.log(`Invoice issued: ${invoice.invoiceNumber} for payment ${event.paymentId}`);
       },
       onInvoiceFailed: (error, event) => {
-        console.error(`Fatura oluşturulamadı (Ödeme: ${event.paymentId}):`, error);
+        console.error(`Invoice failed for payment ${event.paymentId}:`, error);
       },
     }),
   ],
 });
 ```
 
-## Özellikler
+## Özellikler [#features]
 
 - **Asenkron Çalışma:** `payment.succeeded` ve `refund.succeeded` olaylarını dinler. Müşteri ödeme onayını anında alır, fatura entegratör üzerinden arka planda kesilir.
 - **Otomatik Yeniden Deneme:** Entegratör API'sinde geçici kesinti veya kota aşımları yaşandığında yapılandırılan aralıklarla otomatik olarak yeniden dener.
@@ -58,32 +58,32 @@ export const payment = betterPayment({
   - `'cancel'`: Entegratör üzerinden orijinal satış faturasını iptal eder.
   - `'none'`: İadelerde herhangi bir fatura işlemi yapmaz.
 - **Manuel Tekrar Deneme:** Başarısız faturalar hafızada saklanır ve `payment.invoicing.retry(paymentId)` ile istenildiği an tekrar denenebilir.
-- **Genişletilebilir Adaptör Mimarisi:** Hazır **Paraşüt** adaptörünün yanı sıra diğer entegratörler (Logo, Uyumsoft, Foriba/Sovos, BirFatura) için `InvoicingAdapter` arayüzü sunar.
+- **Genişletilebilir Adaptör Mimarisi:** Resmi **Paraşüt** adaptörünün yanı sıra Logo, Uyumsoft, Foriba/Sovos, BirFatura gibi sistemler için genişletilebilir `InvoicingAdapter` arayüzü sunar.
 
-## Fatura Yönetim API'si
+## Fatura Yönetim API'si [#invoicing-management-api]
 
 Eklenti, `payment.invoicing` nesnesi üzerinden yönetim fonksiyonları sunar:
 
 ```typescript
-// Ödeme kimliğine göre faturayı sorgulayın
+// Look up an invoice by payment ID
 const invoice = payment.invoicing.get('pay-12345');
 console.log(invoice?.invoiceNumber, invoice?.status);
 
-// Kesilen tüm faturaları listeleyin
+// List all generated invoices
 const allInvoices = payment.invoicing.list();
 
-// Hata alan faturaları listeleyin
+// List invoices that failed after all retry attempts
 const failed = payment.invoicing.getFailed();
 
-// Başarısız faturayı tekrar deneyin
+// Manually retry a failed invoice
 const recovered = await payment.invoicing.retry('pay-12345');
-console.log('Fatura başarıyla oluşturuldu:', recovered.invoiceNumber);
+console.log('Recovered invoice:', recovered.invoiceNumber);
 
-// Faturayı manuel olarak iptal edin
-await payment.invoicing.cancel('pay-12345', 'Müşteri siparişi iptal etti');
+// Manually cancel an invoice
+await payment.invoicing.cancel('pay-12345', 'Customer requested return');
 ```
 
-## Seçenekler
+## Seçenekler [#options]
 
 | Seçenek | Tür | Varsayılan | Açıklama |
 | ------- | --- | ---------- | -------- |

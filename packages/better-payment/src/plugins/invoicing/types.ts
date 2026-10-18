@@ -51,17 +51,15 @@ export interface InvoicingMappedData {
   description?: string;
 }
 
-export type InvoicingMapFn = (
-  payment: {
-    buyer?: Buyer;
-    basketItems?: BasketItem[];
-    amount?: string;
-    currency?: string;
-    paymentId?: string;
-    conversationId?: string;
-    event: PaymentEvent<'payment.succeeded'>;
-  }
-) => InvoicingMappedData | Promise<InvoicingMappedData>;
+export type InvoicingMapFn = (payment: {
+  buyer?: Buyer;
+  basketItems?: BasketItem[];
+  amount?: string;
+  currency?: string;
+  paymentId?: string;
+  conversationId?: string;
+  event: PaymentEvent<'payment.succeeded'>;
+}) => InvoicingMappedData | Promise<InvoicingMappedData>;
 
 export type InvoiceRefundAction = 'return-invoice' | 'cancel' | 'none';
 
@@ -90,9 +88,15 @@ export interface InvoicingOptions {
   /** Default VAT rate percentage (e.g. 20 for 20%). Default: 20 */
   defaultVatRate?: number;
   /** Hook called when an invoice is successfully created */
-  onInvoiceCreated?: (invoice: InvoiceResult, event: PaymentEvent<'payment.succeeded'>) => void | Promise<void>;
+  onInvoiceCreated?: (
+    invoice: InvoiceResult,
+    event: PaymentEvent<'payment.succeeded'>
+  ) => void | Promise<void>;
   /** Hook called when invoice creation fails after retries */
-  onInvoiceFailed?: (error: Error, event: PaymentEvent<'payment.succeeded'>) => void | Promise<void>;
+  onInvoiceFailed?: (
+    error: Error,
+    event: PaymentEvent<'payment.succeeded'>
+  ) => void | Promise<void>;
 }
 
 export interface InvoicingRecord {
