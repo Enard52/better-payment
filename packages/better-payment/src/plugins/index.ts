@@ -19,3 +19,9 @@ export {
   type NotificationEvent,
   type NotificationLocale,
 } from './notifications';
+export {
+  redact,
+  createRedactor,
+  type RedactOptions,
+  type CardMaskingStyle,
+} from './redact';
