@@ -1,8 +1,4 @@
-import {
-  definePlugin,
-  type BetterPaymentPlugin,
-  type PluginContext,
-} from 'better-payment';
+import { definePlugin, type BetterPaymentPlugin, type PluginContext } from 'better-payment';
 
 export interface OpenAPIOptions {
   /**
@@ -48,10 +44,7 @@ function trimSlashes(p: string): string {
  * Builds the OpenAPI 3.1.0 document from the configured providers, core handler routes,
  * and registered plugin endpoints.
  */
-export function buildOpenAPISpec(
-  options: OpenAPIOptions,
-  ctx?: PluginContext
-): OpenAPISpec {
+export function buildOpenAPISpec(options: OpenAPIOptions, ctx?: PluginContext): OpenAPISpec {
   const providerParam = {
     name: 'provider',
     in: 'path',
@@ -69,7 +62,8 @@ export function buildOpenAPISpec(
     '/{provider}/payment': {
       post: {
         summary: 'Create payment',
-        description: 'Initiates and charges a direct (non-3D) payment through the selected provider.',
+        description:
+          'Initiates and charges a direct (non-3D) payment through the selected provider.',
         tags: ['Payments'],
         parameters: [providerParam],
         requestBody: {
@@ -108,7 +102,8 @@ export function buildOpenAPISpec(
     '/{provider}/payment/init-3ds': {
       post: {
         summary: 'Initiate 3D Secure payment',
-        description: 'Initiates a 3D Secure payment session and returns HTML or redirect URL for bank challenge.',
+        description:
+          'Initiates a 3D Secure payment session and returns HTML or redirect URL for bank challenge.',
         tags: ['3D Secure'],
         parameters: [providerParam],
         requestBody: {
@@ -176,7 +171,8 @@ export function buildOpenAPISpec(
     '/{provider}/callback': {
       post: {
         summary: '3D Secure callback',
-        description: 'Receives the bank authorization callback payload for 3D Secure authentication.',
+        description:
+          'Receives the bank authorization callback payload for 3D Secure authentication.',
         tags: ['3D Secure'],
         parameters: [providerParam],
         responses: {
@@ -462,10 +458,16 @@ export function openAPI(options: OpenAPIOptions = {}): BetterPaymentPlugin {
         path: basePath,
         handler: (ctx) => {
           if (options.disabled) {
-            return ctx.json({ status: 'error', errorMessage: 'OpenAPI reference is disabled' }, 404);
+            return ctx.json(
+              { status: 'error', errorMessage: 'OpenAPI reference is disabled' },
+              404
+            );
           }
           const spec = buildOpenAPISpec(options, pluginCtx ?? ctx);
-          const html = renderScalarHtml(spec, options.info?.title ?? 'Better Payment API Reference');
+          const html = renderScalarHtml(
+            spec,
+            options.info?.title ?? 'Better Payment API Reference'
+          );
           if (typeof ctx.html === 'function') {
             return ctx.html(html);
           }
@@ -481,7 +483,10 @@ export function openAPI(options: OpenAPIOptions = {}): BetterPaymentPlugin {
         path: jsonPath,
         handler: (ctx) => {
           if (options.disabled) {
-            return ctx.json({ status: 'error', errorMessage: 'OpenAPI reference is disabled' }, 404);
+            return ctx.json(
+              { status: 'error', errorMessage: 'OpenAPI reference is disabled' },
+              404
+            );
           }
           const spec = buildOpenAPISpec(options, pluginCtx ?? ctx);
           return ctx.json(spec);

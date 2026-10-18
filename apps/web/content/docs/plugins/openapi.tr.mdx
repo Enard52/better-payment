@@ -11,7 +11,7 @@ Frontend geliştiricileri, mobil ekipler ve entegrasyon paydaşları, ödeme ser
 1. `${path}/openapi.json` adresinde geçerli bir **OpenAPI 3.1.0** şema dokümanı.
 2. `${path}` adresinde çalışan hızlı ve etkileşimli bir **Scalar API Reference** dokümantasyon sayfası.
 
-## Kurulum
+## Kurulum [#setup]
 
 ```typescript
 import { betterPayment, iyzico, paytr } from 'better-payment';
@@ -24,11 +24,11 @@ const payment = betterPayment({
   },
   plugins: [
     openAPI({
-      path: '/reference', // /api/pay/reference ve /api/pay/reference/openapi.json rotalarını açar
+      path: '/reference', // serves /api/pay/reference and /api/pay/reference/openapi.json
       info: {
-        title: 'Mağaza Ödeme API Referansı',
+        title: 'Checkout Payment API',
         version: '1.0.0',
-        description: 'Web ve mobil checkout süreçleri için canlı API referansı',
+        description: 'Interactive API reference for web and mobile checkout endpoints',
       },
       disabled: process.env.NODE_ENV === 'production',
     }),
@@ -36,7 +36,7 @@ const payment = betterPayment({
 });
 ```
 
-## Sunulan Rotalar
+## Sunulan Rotalar [#served-routes]
 
 Varsayılan handler taban yolu `/api/pay` olduğunda:
 
@@ -45,7 +45,7 @@ Varsayılan handler taban yolu `/api/pay` olduğunda:
 | `/api/pay/reference` | `GET` | Etkileşimli Scalar API dokümantasyon sayfası |
 | `/api/pay/reference/openapi.json` | `GET` | Ham OpenAPI 3.1.0 JSON spesifikasyonu |
 
-## Dokümante Edilen Çekirdek Uç Noktalar
+## Dokümante Edilen Çekirdek Uç Noktalar [#documented-core-endpoints]
 
 Oluşturulan OpenAPI şeması şu operasyonları içerir:
 - **Ödemeler:** `POST /{provider}/payment`, `POST /{provider}/payment/init-3ds`, `POST /{provider}/payment/complete-3ds`, `GET /{provider}/payment/{paymentId}`
@@ -56,27 +56,27 @@ Oluşturulan OpenAPI şeması şu operasyonları içerir:
 - **Taksit Tablosu:** `POST /{provider}/installment`
 - **Sistem Kontrolü:** `GET /health`
 
-## Özel Eklenti (Plugin) Uç Noktalarını Dokümante Etme
+## Özel Eklenti (Plugin) Uç Noktalarını Dokümante Etme [#documenting-custom-plugin-endpoints]
 
 Tüm resmi veya özel eklentiler kendi endpoint'lerine `openapi` metadatası ekleyebilir:
 
 ```typescript
 import { definePlugin } from 'better-payment';
 
-const stokEklentisi = definePlugin({
-  id: 'stok',
+const inventoryPlugin = definePlugin({
+  id: 'inventory',
   endpoints: {
-    stokSorgula: {
+    checkStock: {
       method: 'GET',
-      path: '/stok/kontrol',
+      path: '/inventory/check',
       privileged: true,
       openapi: {
-        summary: 'Ürün stok kontrolü',
-        description: 'Ödeme başlatılmadan önce depo stok durumunu doğrular',
-        tags: ['Stok'],
+        summary: 'Check product availability',
+        description: 'Queries warehouse stock before initializing checkout',
+        tags: ['Inventory'],
       },
       handler: async (ctx) => {
-        return { stokta: true };
+        return { available: true };
       },
     },
   },
@@ -85,7 +85,7 @@ const stokEklentisi = definePlugin({
 
 Yetkili endpoint'ler (`privileged: true`) otomatik olarak `security: [{ bearerAuth: [] }]` ile işaretlenir.
 
-## Seçenekler
+## Seçenekler [#options]
 
 | Seçenek | Varsayılan | Açıklama |
 | ------- | ---------- | -------- |
