@@ -5,7 +5,7 @@ import {
   type ProviderDefinition,
 } from '../../core/BetterPaymentConfig';
 import type { HttpClient, HttpRequestConfig } from '../../core/http';
-import { fromBase64, randomHex } from '../../core/crypto';
+import { fromBase64, randomHex, hmac, toHex, safeEqual } from '../../core/crypto';
 import { PaymentProvider, PaymentProviderConfig } from '../../core/PaymentProvider';
 import { ConfigurationError } from '../../core/errors';
 import { failureResult, FailureResult } from '../../core/failure';
@@ -79,6 +79,8 @@ import {
   IyzicoCardResponse,
   IyzicoCardListResponse,
   IyzicoResponse,
+  IyzicoWebhookPayload,
+  IyzicoVerifyWebhookResult,
 } from './types';
 
 /**
@@ -509,6 +511,73 @@ export class Iyzico extends PaymentProvider<IyzicoConfig> {
     } catch (error) {
       return this.failure(error, '3DS completion failed');
     }
+  }
+
+  /**
+   * Verifies an incoming iyzico webhook (merchant notification) using the X-IYZ-SIGNATURE-V3 header.
+   */
+  async verifyWebhook(
+    headers: Record<string, string | string[] | undefined> | Headers,
+    body: IyzicoWebhookPayload | string
+  ): Promise<IyzicoVerifyWebhookResult> {
+    const getHeader = (name: string): string | undefined => {
+      if (!headers) return undefined;
+      if (typeof (headers as Headers).get === 'function') {
+        return (
+          (headers as Headers).get(name) ??
+          (headers as Headers).get(name.toLowerCase()) ??
+          undefined
+        );
+      }
+      const record = headers as Record<string, string | string[] | undefined>;
+      const match = Object.keys(record).find((k) => k.toLowerCase() === name.toLowerCase());
+      const val = match ? record[match] : undefined;
+      return Array.isArray(val) ? val[0] : val;
+    };
+
+    const signature = getHeader('x-iyz-signature-v3');
+    if (!signature) {
+      return { valid: false };
+    }
+
+    let payload: IyzicoWebhookPayload;
+    try {
+      payload = typeof body === 'string' ? JSON.parse(body) : body;
+    } catch {
+      return { valid: false };
+    }
+
+    const {
+      iyziEventType = '',
+      paymentId = '',
+      paymentConversationId = '',
+      status = '',
+    } = payload || {};
+
+    const rawData = `${this.config.secretKey}${iyziEventType}${paymentId}${paymentConversationId}${status}`;
+    const expected = toHex(await hmac('SHA-256', this.config.secretKey, rawData));
+
+    if (!safeEqual(expected.toLowerCase(), signature.toLowerCase())) {
+      return { valid: false };
+    }
+
+    const paymentStatus =
+      status.toUpperCase() === 'SUCCESS' ? PaymentStatus.SUCCESS : PaymentStatus.FAILURE;
+
+    const result: PaymentResponse = this.withErrorCode({
+      status: paymentStatus,
+      paymentId: paymentId ? String(paymentId) : undefined,
+      conversationId: paymentConversationId ? String(paymentConversationId) : undefined,
+      errorCode: payload.errorCode,
+      errorMessage: payload.errorMessage,
+      rawResponse: payload,
+    });
+
+    return {
+      valid: true,
+      event: payload,
+      result,
+    };
   }
 
   /**

@@ -129,3 +129,33 @@ await payment.iyzico.cancelSubscription({ subscriptionReferenceCode });
 ```
 
 Abonelik yanıtları iyzico'nun yapısını (`data`, `systemTime`) korur. `status` alanları `success` / `failure` olarak eşlenir; yanıtın tamamı `rawResponse` içindedir.
+
+## Webhook Bildirimleri [#webhook-notifications]
+
+iyzico, asenkron üye işyeri bildirimlerini (ör. `CHECKOUT_FORM_AUTH`, `THREEDS_AUTH`, `PWI_AUTH`, `REFUND`) panelinizde belirlediğiniz webhook URL'ine iletir. Gelen bildirimleri doğrudan doğrulayabilir veya `BetterPaymentHandler` ile otomatik yönetebilirsiniz.
+
+```typescript
+// Manuel doğrulama
+const { valid, event, result } = payment.iyzico.verifyWebhook(
+  req.headers, // x-iyz-signature-v3 başlığını içermelidir
+  req.body     // JSON nesnesi veya gövde metni
+);
+
+if (!valid) {
+  return res.status(401).send('Geçersiz imza');
+}
+
+console.log(event.iyziEventType, result?.status, result?.paymentId);
+```
+
+`BetterPaymentHandler` veya HTTP adaptörleri kullanıldığında `/api/pay/iyzico/webhook` rotası otomatik karşılanır:
+
+```typescript
+const handler = new BetterPaymentHandler(payment, {
+  onWebhook: async ({ provider, valid, event, result }) => {
+    if (!valid) return;
+    // Sipariş durumunu veritabanında güncelle
+    await updateOrder(result.paymentId, result.status);
+  },
+});
+```

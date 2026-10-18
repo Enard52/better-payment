@@ -132,3 +132,33 @@ await payment.iyzico.cancelSubscription({ subscriptionReferenceCode });
 
 Subscription responses keep iyzico's structure (`data`, `systemTime`). Their
 `status` is mapped to `success` / `failure`, and the full response is in `rawResponse`.
+
+## Webhook Notifications
+
+iyzico sends asynchronous merchant notifications (e.g. `CHECKOUT_FORM_AUTH`, `THREEDS_AUTH`, `PWI_AUTH`, `REFUND`) to your configured webhook URL. You can verify and parse notifications directly or handle them via `BetterPaymentHandler`.
+
+```typescript
+// Manual verification
+const { valid, event, result } = payment.iyzico.verifyWebhook(
+  req.headers, // must contain x-iyz-signature-v3
+  req.body     // parsed JSON or string payload
+);
+
+if (!valid) {
+  return res.status(401).send('Invalid signature');
+}
+
+console.log(event.iyziEventType, result?.status, result?.paymentId);
+```
+
+Using `BetterPaymentHandler` automatically handles the `/api/pay/iyzico/webhook` route:
+
+```typescript
+const handler = new BetterPaymentHandler(payment, {
+  onWebhook: async ({ provider, valid, event, result }) => {
+    if (!valid) return;
+    // Update order status in database
+    await updateOrder(result.paymentId, result.status);
+  },
+});
+```
