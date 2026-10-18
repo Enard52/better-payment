@@ -1,0 +1,68 @@
+---
+title: MCP Server
+description: Expose Better Payment as a Model Context Protocol (MCP) server for AI agents.
+---
+
+<Since version="0.12.0" />
+
+The `mcp` plugin exposes Better Payment as a standard Model Context Protocol (MCP) server over HTTP JSON-RPC 2.0. This allows AI assistants and autonomous agents (such as Claude Desktop, Cursor, Copilot, or custom LLM agents) to query payment status, check BINs, retrieve installment options, and initiate refunds or cancellations safely.
+
+## Setup
+
+```typescript
+import { betterPayment, iyzico } from 'better-payment';
+import { mcp } from 'better-payment/plugins';
+
+export const payment = betterPayment({
+  providers: {
+    iyzico: iyzico({ /* ... */ }),
+  },
+  plugins: [
+    mcp({
+      path: '/mcp',
+      readOnly: false,
+      authorize: async (req, toolName) => {
+        // Guard write operations (refund, cancel)
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        return token === process.env.MCP_ADMIN_SECRET;
+      },
+      onToolCall: async ({ tool, params, result, isError }) => {
+        console.log(`MCP Tool invoked: ${tool}`, { params, isError });
+      },
+    }),
+  ],
+});
+```
+
+Mounting `betterPayment` with the HTTP handler (Next.js, Fastify, Express, Hono, Elysia, etc.) automatically registers:
+- `POST /mcp` — JSON-RPC 2.0 protocol endpoint (`initialize`, `notifications/initialized`, `tools/list`, `tools/call`).
+- `GET /mcp/info` — Health and server metadata inspection endpoint.
+
+## Available Tools
+
+The MCP server registers the following tools:
+
+| Tool | Type | Description |
+| ---- | ---- | ----------- |
+| `getPayment` | Read | Fetch payment status and details by provider and payment ID. |
+| `binCheck` | Read | Look up card issuer, brand, card type, and family from first 6-8 digits of a card. |
+| `installmentInfo` | Read | Query available installment options and interest rates for a given BIN and price. |
+| `refund` | Write | Refund an entire payment or specific amount. Protected by authorization check. |
+| `cancel` | Write | Void or cancel a transaction. Protected by authorization check. |
+
+## Safety & Security
+
+- **Card Data Sanitization:** Sensitive payment card data (`cardNumber`, `cvv`, `expiryMonth`, `expiryYear`, `card`) is automatically filtered out from responses to prevent exposing PANs to LLMs.
+- **Write Authorization:** Destructive actions (`refund`, `cancel`) require authorization via the `authorize` callback. If `readOnly: true` is configured, write tools are completely omitted from the tool list.
+- **Audit Logging:** The `onToolCall` hook fires on every tool execution with tool name, arguments, sanitized result, and duration.
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `name` | `string` | `'better-payment-mcp'` | MCP server identifier reported during initialization. |
+| `version` | `string` | `'1.0.0'` | MCP server version reported to the client. |
+| `path` | `string` | `'/mcp'` | Base path for the MCP JSON-RPC endpoint. |
+| `readOnly` | `boolean` | `false` | When `true`, omits write tools (`refund`, `cancel`). |
+| `authorize` | `(req, tool) => boolean \| Promise<boolean>` | — | Authorization callback required for write actions. |
+| `onToolCall` | `(details) => void \| Promise<void>` | — | Audit hook called after each tool invocation. |
