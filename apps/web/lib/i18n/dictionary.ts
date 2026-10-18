@@ -15,6 +15,7 @@ const en = {
     description:
       "A unified, type-safe payment gateway library for Node.js and edge runtimes. Integrate iyzico, PayTR, Parampos and Akbank with a single consistent API and verified callbacks.",
     docsTitleSuffix: "Better Payment docs",
+    socialImageAlt: "Better Payment — One API for Turkish payments.",
   },
   nav: {
     features: "Features",
@@ -247,6 +248,7 @@ const tr: Dictionary = {
     description:
       "Node.js ve edge ortamları için tip güvenli, birleşik ödeme kütüphanesi. iyzico, PayTR, Parampos ve Akbank'ı tek bir tutarlı API ve doğrulanmış callback'lerle entegre edin.",
     docsTitleSuffix: "Better Payment dokümantasyonu",
+    socialImageAlt: "Better Payment — Türk ödeme sistemleri için tek API.",
   },
   nav: {
     features: "Özellikler",
