@@ -30,15 +30,15 @@ const en = {
   hero: {
     titleLine1: "One API for",
     titleLine2: "Turkish payments.",
-    lead: "gives iyzico, PayTR, Parampos and Akbank one type-safe interface, with signature-verified callbacks and a secure-by-default HTTP handler.",
+    lead: "gives iyzico, PayTR, Sipay, Parampos and seven banks one type-safe interface, with signature-verified callbacks and a secure-by-default HTTP handler.",
     getStarted: "Get Started",
     star: "Star on GitHub",
     network: {
       label: "How a payment moves through Better Payment",
       request: "request",
       verified: "verified",
-      all: "4 providers",
-      idle: "One API · 4 providers",
+      all: "11 providers",
+      idle: "One API · 11 providers",
       caps: {
         iyzico: "3D Secure · Non-3D · Refund · Cancel · BIN · Installments",
         paytr: "3D Secure (iFrame) · Non-3D · Refund · BIN · Installments",
@@ -94,6 +94,14 @@ const en = {
     drag: "Drag to compare",
     gateway: "Payment gateway",
     virtualPos: "Virtual POS (SOAP)",
+    summary: "11 banks and payment institutions, one API",
+    pick: "Pick one to compare its API",
+    estBanks: "Same integration for",
+    groups: {
+      gateway: "Payment institutions",
+      virtualPos: "Virtual POS",
+      bankPos: "Bank virtual POS",
+    },
     iyzico: {
       description:
         "IYZWSv2-signed JSON API with non-3D and 3D Secure payments, a hosted checkout form, pay with IBAN (PWI), subscriptions, and BIN and installment queries.",
@@ -142,6 +150,42 @@ const en = {
         "Signature-verified callbacks",
       ],
     },
+    sipay: {
+      description:
+        "Sipay's ccpayment API with a Bearer token and an AES-256-CBC hash_key on every payment. 3D Secure callbacks are trusted only through their signed hash_key.",
+      features: [
+        "Non-3D & 3D Secure",
+        "Pre-authorization & capture",
+        "BIN & installment queries",
+        "Refund & cancel",
+        "Status queries",
+        "TRY, USD, EUR, GBP",
+      ],
+    },
+    kuveytturk: {
+      description:
+        "Kuveyt Türk's KT Pay Gate with an HMAC-SHA512 hashData on every request. The unsigned callback is confirmed at the bank before the card is charged with Provision.",
+      features: [
+        "3D Secure",
+        "Bank-confirmed callbacks",
+        "Charge with Provision",
+        "Cancel & partial refund",
+        "Order status queries",
+        "TRY, USD, EUR",
+      ],
+    },
+    est: {
+      description:
+        "One provider for the EST (Asseco) virtual POS that five banks share: hash version 3 signed forms, all four 3D models, and payments confirmed with the bank.",
+      features: [
+        "3D, 3D Pay, 3D Host, 3D Pay Hosting",
+        "Non-3D payments (XML API)",
+        "Hash v3 verified callbacks",
+        "mdStatus control",
+        "Refund & void",
+        "Order status queries",
+      ],
+    },
   },
   banks: {
     titleLine1: "Bank virtual POS,",
@@ -188,7 +232,7 @@ const en = {
   cta: {
     titleLine1: "Stop rewriting",
     titleLine2: "payment logic.",
-    lead: "One package for iyzico, PayTR, Parampos and Akbank, with full TypeScript support. Upgrading from 3.x? Read",
+    lead: "One package for iyzico, PayTR, Sipay, Parampos and seven banks, with full TypeScript support. Upgrading from 3.x? Read",
     whatsNew: "what's new since the reset",
     readDocs: "Read the Docs",
     github: "View on GitHub",
@@ -263,15 +307,15 @@ const tr: Dictionary = {
   hero: {
     titleLine1: "Türk ödeme sistemleri",
     titleLine2: "için tek API.",
-    lead: "iyzico, PayTR, Parampos ve Akbank'ı tek bir tip güvenli arayüzde toplar; imzası doğrulanan callback'ler ve varsayılan olarak güvenli bir HTTP handler sunar.",
+    lead: "iyzico, PayTR, Sipay, Parampos ve yedi bankayı tek bir tip güvenli arayüzde toplar; imzası doğrulanan callback'ler ve varsayılan olarak güvenli bir HTTP handler sunar.",
     getStarted: "Başlayın",
     star: "GitHub'da yıldızlayın",
     network: {
       label: "Bir ödemenin Better Payment içindeki yolu",
       request: "istek",
       verified: "doğrulandı",
-      all: "4 sağlayıcı",
-      idle: "Tek API · 4 sağlayıcı",
+      all: "11 sağlayıcı",
+      idle: "Tek API · 11 sağlayıcı",
       caps: {
         iyzico: "3D Secure · Non-3D · İade · İptal · BIN · Taksit",
         paytr: "3D Secure (iFrame) · Non-3D · İade · BIN · Taksit",
@@ -327,6 +371,14 @@ const tr: Dictionary = {
     drag: "Karşılaştırmak için sürükleyin",
     gateway: "Ödeme sağlayıcısı",
     virtualPos: "Sanal POS (SOAP)",
+    summary: "11 banka ve ödeme kuruluşu, tek API",
+    pick: "API'sini karşılaştırmak için birini seçin",
+    estBanks: "Aynı entegrasyonla",
+    groups: {
+      gateway: "Ödeme kuruluşları",
+      virtualPos: "Sanal POS",
+      bankPos: "Banka sanal POS'ları",
+    },
     iyzico: {
       description:
         "IYZWSv2 imzalı JSON API: 3D'siz ve 3D Secure ödemeler, hazır ödeme formu, IBAN ile ödeme (PWI), abonelikler, BIN ve taksit sorguları.",
@@ -375,6 +427,42 @@ const tr: Dictionary = {
         "İmzası doğrulanan callback'ler",
       ],
     },
+    sipay: {
+      description:
+        "Sipay ccpayment API'si: her istekte Bearer token, her ödemede AES-256-CBC ile şifrelenmiş hash_key. 3D Secure callback'lerinde yalnızca imzalı hash_key'e güvenilir.",
+      features: [
+        "3D'siz ve 3D Secure",
+        "Ön provizyon ve kapama",
+        "BIN ve taksit sorguları",
+        "İade ve iptal",
+        "Durum sorguları",
+        "TRY, USD, EUR, GBP",
+      ],
+    },
+    kuveytturk: {
+      description:
+        "Kuveyt Türk KT Pay Gate: her istekte HMAC-SHA512 hashData. İmzasız callback, kart Provision ile çekilmeden önce bankada doğrulanır.",
+      features: [
+        "3D Secure",
+        "Bankada doğrulanan callback'ler",
+        "Provision ile tahsilat",
+        "İptal ve kısmi iade",
+        "Sipariş durumu sorgusu",
+        "TRY, USD, EUR",
+      ],
+    },
+    est: {
+      description:
+        "Beş bankanın ortak kullandığı EST (Asseco) sanal POS'u için tek sağlayıcı: hash v3 imzalı formlar, dört 3D modelinin tamamı ve bankayla teyit edilen ödemeler.",
+      features: [
+        "3D, 3D Pay, 3D Host, 3D Pay Hosting",
+        "3D'siz ödemeler (XML API)",
+        "Hash v3 ile doğrulanan callback'ler",
+        "mdStatus kontrolü",
+        "İade ve iptal",
+        "Sipariş durumu sorgusu",
+      ],
+    },
   },
   banks: {
     titleLine1: "Banka sanal POS'u,",
@@ -421,7 +509,7 @@ const tr: Dictionary = {
   cta: {
     titleLine1: "Ödeme kodunu",
     titleLine2: "yeniden yazmayı bırakın.",
-    lead: "iyzico, PayTR, Parampos ve Akbank için tam TypeScript destekli tek paket. 3.x'ten mi geçiyorsunuz? Okuyun:",
+    lead: "iyzico, PayTR, Sipay, Parampos ve yedi banka için tam TypeScript destekli tek paket. 3.x'ten mi geçiyorsunuz? Okuyun:",
     whatsNew: "sıfırlamadan bu yana yenilikler",
     readDocs: "Dokümantasyonu okuyun",
     github: "GitHub'da görün",
