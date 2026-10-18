@@ -139,6 +139,8 @@ export interface PluginContext {
   readonly logger: BetterPaymentLogger | undefined;
   /** A provider by id. Its operations run with hooks and events. */
   use(providerId: string): PaymentProvider;
+  /** All endpoints registered by plugins */
+  readonly endpoints?: readonly (PaymentEndpoint & { pluginId: string; name: string })[];
 }
 
 export interface EndpointContext extends PluginContext {
@@ -148,6 +150,17 @@ export interface EndpointContext extends PluginContext {
   query: URLSearchParams;
   /** Builds a JSON response with a status code other than 200 */
   json(body: unknown, status?: number): BetterPaymentResponse;
+  /** Builds an HTML response */
+  html?(body: string, status?: number): BetterPaymentResponse;
+}
+
+export interface EndpointOpenAPIMetadata {
+  summary?: string;
+  description?: string;
+  tags?: string[];
+  requestBody?: unknown;
+  responses?: Record<string, unknown>;
+  parameters?: unknown[];
 }
 
 /**
@@ -163,6 +176,8 @@ export interface PaymentEndpoint {
    * like refunds. The hook runs for every endpoint that has one.
    */
   privileged?: boolean;
+  /** Optional OpenAPI documentation metadata */
+  openapi?: EndpointOpenAPIMetadata;
   handler: (ctx: EndpointContext) => Awaitable<unknown>;
 }
 

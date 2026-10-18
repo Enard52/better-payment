@@ -1,0 +1,96 @@
+---
+title: OpenAPI & Scalar Reference
+description: OpenAPI 3.1 schema generator and interactive Scalar documentation for payment handler endpoints.
+---
+
+<Since version="0.12.0" />
+
+Frontend developers, mobile engineers and integration teams need to know exactly which routes the payment handler serves, what request bodies they accept, and what responses they return.
+
+The `openAPI` plugin automatically inspects all configured payment providers, core handler routes, and active plugin endpoints to generate:
+1. A valid **OpenAPI 3.1.0** specification document at `${path}/openapi.json`.
+2. A fast, interactive **Scalar API Reference** documentation page at `${path}`.
+
+## Setup
+
+```typescript
+import { betterPayment, iyzico, paytr } from 'better-payment';
+import { openAPI } from 'better-payment/plugins';
+
+const payment = betterPayment({
+  providers: {
+    iyzico: iyzico({ /* ... */ }),
+    paytr: paytr({ /* ... */ }),
+  },
+  plugins: [
+    openAPI({
+      path: '/reference', // serves /api/pay/reference and /api/pay/reference/openapi.json
+      info: {
+        title: 'Checkout Payment API',
+        version: '1.0.0',
+        description: 'Interactive API reference for web and mobile checkout endpoints',
+      },
+      disabled: process.env.NODE_ENV === 'production',
+    }),
+  ],
+});
+```
+
+## Served Routes
+
+When mounted on the default handler base path `/api/pay`:
+
+| Route | Method | Description |
+| ----- | ------ | ----------- |
+| `/api/pay/reference` | `GET` | Interactive Scalar API reference HTML page |
+| `/api/pay/reference/openapi.json` | `GET` | Raw OpenAPI 3.1.0 specification document |
+
+## Documented Core Endpoints
+
+The generated OpenAPI specification includes:
+- **Payments:** `POST /{provider}/payment`, `POST /{provider}/payment/init-3ds`, `POST /{provider}/payment/complete-3ds`, `GET /{provider}/payment/{paymentId}`
+- **Callbacks:** `POST /{provider}/callback`
+- **Refunds & Cancels:** `POST /{provider}/refund`, `POST /{provider}/cancel` (marked with Bearer auth)
+- **Pre-authorization:** `POST /{provider}/authorize`, `POST /{provider}/authorize/init-3ds`, `POST /{provider}/capture`, `POST /{provider}/void`
+- **Cards & BINs:** `POST /{provider}/cards/save`, `POST /{provider}/cards/list`, `POST /{provider}/cards/delete`, `POST /{provider}/bin-check`
+- **Installments:** `POST /{provider}/installment`
+- **Health Check:** `GET /health`
+
+## Documenting Custom Plugin Endpoints
+
+Any official or custom plugin can declare `openapi` metadata on its endpoints:
+
+```typescript
+import { definePlugin } from 'better-payment';
+
+const inventoryPlugin = definePlugin({
+  id: 'inventory',
+  endpoints: {
+    checkStock: {
+      method: 'GET',
+      path: '/inventory/check',
+      privileged: true,
+      openapi: {
+        summary: 'Check product availability',
+        description: 'Queries warehouse stock before initializing checkout',
+        tags: ['Inventory'],
+      },
+      handler: async (ctx) => {
+        return { available: true };
+      },
+    },
+  },
+});
+```
+
+Privileged endpoints (`privileged: true`) are automatically annotated with `security: [{ bearerAuth: [] }]`.
+
+## Options
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `path` | `'/reference'` | Path relative to the handler basePath |
+| `info.title` | `'Better Payment API'` | Title shown in the OpenAPI spec and documentation header |
+| `info.version` | `'1.0.0'` | Semantic API version |
+| `info.description` | — | Summary description for your API reference |
+| `disabled` | `false` | When `true`, endpoints return 404 (recommended for production environments where public documentation is not desired) |

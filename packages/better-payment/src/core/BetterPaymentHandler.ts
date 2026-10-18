@@ -519,6 +519,15 @@ export class BetterPaymentHandler {
         responses.add(response);
         return response;
       },
+      html: (content, status = 200) => {
+        const response: BetterPaymentResponse = {
+          status,
+          headers: { 'Content-Type': 'text/html; charset=utf-8' },
+          body: content,
+        };
+        responses.add(response);
+        return response;
+      },
     };
     const result = await endpoint.handler(endpointContext);
     if (result && typeof result === 'object' && responses.has(result as BetterPaymentResponse)) {

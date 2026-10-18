@@ -133,6 +133,7 @@ export class PaymentCore<P extends Record<string, ProviderEntry> = Record<string
     }
     this.defaultProviderId = options.defaultProvider ?? (ids.length === 1 ? ids[0] : undefined);
 
+    const endpointsRef = this.endpoints;
     this.context = {
       providerIds: ids,
       errorCodes: this.$ERROR_CODES,
@@ -140,6 +141,9 @@ export class PaymentCore<P extends Record<string, ProviderEntry> = Record<string
       mode,
       logger: options.logger,
       use: (id) => this.use(id),
+      get endpoints() {
+        return endpointsRef;
+      },
     };
 
     const pluginIds = new Set<string>();

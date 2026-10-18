@@ -1,0 +1,96 @@
+---
+title: OpenAPI ve Scalar Referansı
+description: Ödeme handler endpoint'leri için OpenAPI 3.1 şema üreticisi ve etkileşimli Scalar API dokümantasyonu.
+---
+
+<Since version="0.12.0" />
+
+Frontend geliştiricileri, mobil ekipler ve entegrasyon paydaşları, ödeme servisinin hangi rotaları sunduğunu, hangi istek gövdelerini kabul ettiğini ve nasıl yanıtlar döndüğünü bilmek ister.
+
+`openAPI` eklentisi; tanımlı tüm sağlayıcıları, çekirdek handler rotalarını ve aktif plugin endpoint'lerini otomatik olarak tarayarak iki şey sunar:
+1. `${path}/openapi.json` adresinde geçerli bir **OpenAPI 3.1.0** şema dokümanı.
+2. `${path}` adresinde çalışan hızlı ve etkileşimli bir **Scalar API Reference** dokümantasyon sayfası.
+
+## Kurulum
+
+```typescript
+import { betterPayment, iyzico, paytr } from 'better-payment';
+import { openAPI } from 'better-payment/plugins';
+
+const payment = betterPayment({
+  providers: {
+    iyzico: iyzico({ /* ... */ }),
+    paytr: paytr({ /* ... */ }),
+  },
+  plugins: [
+    openAPI({
+      path: '/reference', // /api/pay/reference ve /api/pay/reference/openapi.json rotalarını açar
+      info: {
+        title: 'Mağaza Ödeme API Referansı',
+        version: '1.0.0',
+        description: 'Web ve mobil checkout süreçleri için canlı API referansı',
+      },
+      disabled: process.env.NODE_ENV === 'production',
+    }),
+  ],
+});
+```
+
+## Sunulan Rotalar
+
+Varsayılan handler taban yolu `/api/pay` olduğunda:
+
+| Rota | Metot | Açıklama |
+| ---- | ----- | -------- |
+| `/api/pay/reference` | `GET` | Etkileşimli Scalar API dokümantasyon sayfası |
+| `/api/pay/reference/openapi.json` | `GET` | Ham OpenAPI 3.1.0 JSON spesifikasyonu |
+
+## Dokümante Edilen Çekirdek Uç Noktalar
+
+Oluşturulan OpenAPI şeması şu operasyonları içerir:
+- **Ödemeler:** `POST /{provider}/payment`, `POST /{provider}/payment/init-3ds`, `POST /{provider}/payment/complete-3ds`, `GET /{provider}/payment/{paymentId}`
+- **Geri Bildirimler:** `POST /{provider}/callback`
+- **İade ve İptal:** `POST /{provider}/refund`, `POST /{provider}/cancel` (Bearer yetkilendirme işaretli)
+- **Ön Provizyon:** `POST /{provider}/authorize`, `POST /{provider}/authorize/init-3ds`, `POST /{provider}/capture`, `POST /{provider}/void`
+- **Kartlar ve BIN Sorgusu:** `POST /{provider}/cards/save`, `POST /{provider}/cards/list`, `POST /{provider}/cards/delete`, `POST /{provider}/bin-check`
+- **Taksit Tablosu:** `POST /{provider}/installment`
+- **Sistem Kontrolü:** `GET /health`
+
+## Özel Eklenti (Plugin) Uç Noktalarını Dokümante Etme
+
+Tüm resmi veya özel eklentiler kendi endpoint'lerine `openapi` metadatası ekleyebilir:
+
+```typescript
+import { definePlugin } from 'better-payment';
+
+const stokEklentisi = definePlugin({
+  id: 'stok',
+  endpoints: {
+    stokSorgula: {
+      method: 'GET',
+      path: '/stok/kontrol',
+      privileged: true,
+      openapi: {
+        summary: 'Ürün stok kontrolü',
+        description: 'Ödeme başlatılmadan önce depo stok durumunu doğrular',
+        tags: ['Stok'],
+      },
+      handler: async (ctx) => {
+        return { stokta: true };
+      },
+    },
+  },
+});
+```
+
+Yetkili endpoint'ler (`privileged: true`) otomatik olarak `security: [{ bearerAuth: [] }]` ile işaretlenir.
+
+## Seçenekler
+
+| Seçenek | Varsayılan | Açıklama |
+| ------- | ---------- | -------- |
+| `path` | `'/reference'` | Handler taban yoluna göre dokümantasyon yolu |
+| `info.title` | `'Better Payment API'` | OpenAPI şemasında ve sayfa başlığında gösterilecek ad |
+| `info.version` | `'1.0.0'` | API sürüm numarası |
+| `info.description` | — | Dokümantasyon açıklaması |
+| `disabled` | `false` | `true` yapıldığında endpoint'ler 404 döner (canlı ortamda dokümantasyonu gizlemek için önerilir) |
