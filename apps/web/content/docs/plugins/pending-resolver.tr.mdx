@@ -1,0 +1,83 @@
+---
+title: Bekleyen Ödeme Çözümleyici (Pending Resolver)
+description: Zaman aşımına uğrayan ödemeleri (NETWORK_ERROR) sağlayıcıyı belirli aralıklarla sorgulayarak çift çekim riski olmadan çözün.
+---
+
+<Since version="0.12.0" />
+
+Bir ödeme sağlayıcısı yanıt vermediğinde (zaman aşımı veya ağ kopması), better-payment `status: 'pending'` ve `code: 'NETWORK_ERROR'` döndürür. Bu gibi durumlarda paranın bankadan çekilip çekilmediği anlık olarak bilinemez. Durumu manuel olarak takip etmeye çalışmak ya müşteriden mükerrer (çift) ödeme çekilmesine ya da ödenen siparişin kargolanmamasına yol açar.
+
+`pendingResolver` plugin'i, tüm `NETWORK_ERROR` ödemelerini otomatik olarak yakalar, güvenli salt okunur sorgularla (`getPayment`) sağlayıcıya durum sorar ve nihai sonuç olaylarını (`payment.succeeded` veya `payment.failed`) tetikler.
+
+## Kurulum
+
+```typescript
+import { betterPayment, iyzico } from 'better-payment';
+import { pendingResolver } from 'better-payment/plugins';
+
+const payment = betterPayment({
+  providers: {
+    iyzico: iyzico({ /* ... */ }),
+  },
+  plugins: [
+    pendingResolver({
+      schedule: ['30s', '2m', '10m', '1h'],
+      giveUpAfter: '24h',
+    }),
+  ],
+});
+```
+
+## Bekleyen Ödemeleri Çözümleme
+
+Serverless ortamlarda (AWS Lambda, Vercel) arka plan zamanlayıcıları bulunmadığından, `payment.pending.resolve()` fonksiyonunu kendi cron işinizden veya zamanlanmış fonksiyonunuzdan çağırın:
+
+```typescript
+// Cron worker'ınızdan veya zamanlanmış görevden çağırın:
+const summary = await payment.pending.resolve();
+console.log(
+  `Kontrol edilen: ${summary.checked}, Başarılı: ${summary.succeeded}, Başarısız: ${summary.failed}, Çözülemeyen: ${summary.unresolved}`
+);
+```
+
+Bekleyen bir ödeme sonuçlandığında:
+- Başarılıysa `event.resolvedFrom: 'pending'` bilgisiyle normal `payment.succeeded` olayı tetiklenir.
+- Başarısızsa `event.resolvedFrom: 'pending'` bilgisiyle normal `payment.failed` olayı tetiklenir.
+- `giveUpAfter` süresi aşılırsa `payment.unresolved` olayı tetiklenir; böylece destek ekibi manuel inceleme yapabilir.
+
+```typescript
+payment.on('payment.succeeded', async (event) => {
+  if (event.resolvedFrom === 'pending') {
+    console.log(`Ödeme (${event.paymentId}) ilk zaman aşımından sonra başarıyla kurtarıldı!`);
+  }
+  await markOrderPaid(event.conversationId);
+});
+
+payment.on('payment.unresolved', async (event) => {
+  console.warn(`Ödeme (${event.paymentId}) maksimum deneme süresini aştı. Manuel kontrol gerekli.`);
+});
+```
+
+## Seçenekler
+
+| Seçenek | Varsayılan | Açıklama |
+| ------- | ---------- | -------- |
+| `schedule` | `['30s', '2m', '10m', '1h']` | Yeniden sorgulama gecikmeleri takvimi |
+| `giveUpAfter` | `'24h'` | `payment.unresolved` fırlatılmadan önce denemelerin sürdürüleceği azami süre |
+| `store` | `MemoryPendingStore` | Bekleyen ödemelerin saklanacağı depolama katmanı (`PendingStore`) |
+| `endpoint` | `false` | Webhook tabanlı cron'lar için yetkili `POST /pending/resolve` HTTP uç noktası açar |
+
+## Dashboard ve İnceleme Metotları
+
+Plugin, `payment.pending` altında yardımcı yönetim metotları sunar:
+
+```typescript
+// Bekleyen tüm ödemeleri listele
+const pendingList = await payment.pending.list();
+
+// Belirli bir ödemenin detaylarını getir
+const item = await payment.pending.get('PMT-12345');
+
+// Bir ödemeyi bekleyen listesinden manuel sil
+await payment.pending.delete('PMT-12345');
+```

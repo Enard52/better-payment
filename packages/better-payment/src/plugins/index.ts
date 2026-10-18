@@ -19,3 +19,11 @@ export {
   type NotificationEvent,
   type NotificationLocale,
 } from './notifications';
+export {
+  pendingResolver,
+  MemoryPendingStore,
+  type PendingPayment,
+  type PendingStore,
+  type PendingResolverOptions,
+  type ResolveSummary,
+} from './pending-resolver';

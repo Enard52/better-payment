@@ -25,6 +25,7 @@ export type PaymentEventType =
   | 'payment.pending'
   | 'payment.failed'
   | 'payment.cancelled'
+  | 'payment.unresolved'
   | 'refund.succeeded'
   | 'refund.failed';
 
@@ -34,6 +35,7 @@ export const PAYMENT_EVENT_TYPES: readonly PaymentEventType[] = [
   'payment.pending',
   'payment.failed',
   'payment.cancelled',
+  'payment.unresolved',
   'refund.succeeded',
   'refund.failed',
 ];
@@ -56,6 +58,8 @@ export interface PaymentEvent<T extends PaymentEventType = PaymentEventType> {
   result: unknown;
   /** The operation's request (callback data for 3D Secure completions) */
   request: unknown;
+  /** Present when a pending payment was resolved by pendingResolver */
+  resolvedFrom?: 'pending';
 }
 
 /** Listeners by event type; `*` receives every event */
