@@ -1,0 +1,115 @@
+---
+title: Çok Kiracılı Kimlik Bilgileri (Multi-Tenant)
+description: Pazaryerleri ve SaaS platformları için satıcı bazlı dinamik POS kimlik bilgileri yönetimi.
+---
+
+<Since version="0.12.0" />
+
+Pazar yerleri, e-ticaret altyapı sağlayıcıları ve SaaS platformları yüzlerce veya binlerce bağımsız mağaza/satıcı adına ödeme alır. Her satıcının ödeme kuruluşlarıyla (iyzico, PayTR, Akbank, Sipay vb.) kendi özel sözleşmesi ve API anahtarları bulunur.
+
+Her mağaza için ayrı bir `betterPayment()` örneği oluşturup yönetmek yerine, `multiTenant` eklentisi satıcı kimlik bilgilerini her istek için dinamik olarak çözer, sağlayıcı örneklerini önbelleğe alır ve tüm işlem ve olayları ilgili satıcı kimliği (`tenantId`) ile etiketler.
+
+## Kurulum
+
+```typescript
+import { betterPayment, iyzico, paytr } from 'better-payment';
+import { multiTenant } from 'better-payment/plugins';
+
+const payment = betterPayment({
+  providers: {
+    iyzico: iyzico({ apiKey: 'fallback', secretKey: 'fallback' }),
+  },
+  plugins: [
+    multiTenant({
+      // İstek başlığından (x-tenant-id) veya metadatadan kiracı kimliğini çözer
+      tenant: (ctx) => ctx.headers?.['x-tenant-id'] ?? ctx.request?.metadata?.tenantId,
+
+      // Veritabanınızdan ilgili mağazanın API anahtarlarını yükler
+      credentials: async (tenantId, provider) => {
+        const merchant = await db.merchants.findById(tenantId);
+        return {
+          apiKey: merchant.iyzicoApiKey,
+          secretKey: merchant.iyzicoSecretKey,
+        };
+      },
+
+      // Ham anahtarlardan sağlayıcı örneği türeten fabrika fonksiyonları
+      providers: {
+        iyzico: (creds) => iyzico(creds),
+      },
+
+      cache: {
+        ttl: '10m', // 10 dakika önbellekte tut
+        maxSize: 5000,
+      },
+    }),
+  ],
+});
+```
+
+## `forTenant` Kullanımı
+
+Herhangi bir ödeme işlemini doğrudan belirli bir satıcının sözleşmesi üzerinden çalıştırabilirsiniz:
+
+```typescript
+// Tüm işlem shop-42 anahtarlarıyla yürütülür
+const result = await payment.forTenant('shop-42').createPayment({
+  price: '150.00',
+  paidPrice: '150.00',
+  currency: 'TRY',
+  paymentCard: { ... },
+});
+
+console.log(result.status);   // 'success'
+console.log(result.tenantId); // 'shop-42'
+```
+
+Desteklenen `forTenant` metotları:
+- `createPayment`, `initThreeDSPayment`, `completeThreeDSPayment`
+- `authorize`, `initThreeDSAuthorize`, `capture`, `voidAuthorization`
+- `refund`, `cancel`, `getPayment`
+- `saveCard`, `listCards`, `deleteCard`, `binCheck`, `installmentInfo`
+
+## 3D Secure Geri Dönüşleri (Callback)
+
+3D Secure ödemelerinde banka kullanıcının tarayıcısını callback adresinize yönlendirir. Eklenti şu durumlarda mağazayı otomatik tanır:
+1. `conversationId` değeri `tenant:<tenantId>:<orderId>` veya `<tenantId>::<orderId>` biçiminde olduğunda
+2. Özel `tenant` fonksiyonu callback isteğini analiz ettiğinde
+
+```typescript
+const init = await payment.forTenant('shop-42').initThreeDSPayment({
+  price: '150.00',
+  paidPrice: '150.00',
+  callbackUrl: 'https://magazam.com/api/pay/iyzico/callback',
+  conversationId: 'tenant:shop-42:order-987',
+  paymentCard: { ... },
+});
+```
+
+Callback geldiğinde imza doğrulaması ve tamamlama işlemi `shop-42` anahtarlarıyla yapılır ve sonuca `tenantId: 'shop-42'` eklenir.
+
+## Önbellek Yönetimi
+
+Mağaza ayarları güncellendiğinde önbellekteki sağlayıcılar temizlenebilir:
+
+```typescript
+// Belirli bir mağazanın önbelleğini temizle
+payment.tenants.clearCache('shop-42');
+
+// Tüm önbelleği sıfırla
+payment.tenants.clearCache();
+
+// Önbellek istatistiklerini gör
+const stats = payment.tenants.getCacheStats();
+console.log(stats.size, stats.ttl);
+```
+
+## Seçenekler
+
+| Seçenek | Varsayılan | Açıklama |
+| ------- | ---------- | -------- |
+| `credentials` | *zorunlu* | `(tenantId, provider) => Promise<PaymentProvider \| Record<string, unknown>>` |
+| `tenant` | yerleşik resolver | İstekten veya başlıklardan `tenantId` çözen özel fonksiyon |
+| `providers` | — | Sağlayıcı fabrika haritası: `(credentials) => PaymentProvider` |
+| `cache.ttl` | `'5m'` | Önbellekteki sağlayıcı örneklerinin geçerlilik süresi |
+| `cache.maxSize` | `1000` | Önbellekte tutulacak maksimum sağlayıcı sayısı |

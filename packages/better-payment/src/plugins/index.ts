@@ -19,3 +19,11 @@ export {
   type NotificationEvent,
   type NotificationLocale,
 } from './notifications';
+export {
+  multiTenant,
+  type MultiTenantOptions,
+  type TenantContext,
+  type TenantResolver,
+  type TenantCredentialsResolver,
+  type TenantPaymentClient,
+} from './multi-tenant';
