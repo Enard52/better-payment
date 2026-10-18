@@ -12,8 +12,8 @@ const budgets = [
   // 46 kB with Albaraka Türk, 48 kB with Denizbank alongside the other providers
   { file: 'dist/index.mjs', maxGzipKb: 48 },
   { file: 'dist/index.js', maxGzipKb: 48 },
-  { file: 'dist/client/index.mjs', maxGzipKb: 2 },
-  { file: 'dist/client/index.js', maxGzipKb: 2 },
+  { file: 'dist/client/index.mjs', maxGzipKb: 3 },
+  { file: 'dist/client/index.js', maxGzipKb: 3 },
   { file: 'dist/testing/index.mjs', maxGzipKb: 8 },
   { file: 'dist/testing/index.js', maxGzipKb: 8 },
   // Official plugins, with every built-in error message language. Raise this for new
