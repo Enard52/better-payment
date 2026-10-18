@@ -1,0 +1,77 @@
+---
+title: Rate Limiting
+description: Protect HTTP handler endpoints from bot floods, scraping, and card testing.
+---
+
+<Since version="0.12.0" />
+
+The HTTP handler exposes payment, 3D Secure callback, and query endpoints. Without rate limits, automated bots can flood routes or attempt brute-force card testing attacks. The `rateLimit` plugin provides configurable sliding-window request throttling at the HTTP handler layer.
+
+Provider callbacks are excluded by default so bank webhook notifications are never dropped.
+
+## Setup
+
+```typescript
+import { betterPayment, iyzico } from 'better-payment';
+import { rateLimit } from 'better-payment/plugins';
+
+const payment = betterPayment({
+  providers: {
+    iyzico: iyzico({ /* ... */ }),
+  },
+  plugins: [
+    rateLimit({
+      window: '1m',
+      max: 30,
+      rules: {
+        '/payment': { window: '1m', max: 5 },
+        '/callback/*': false, // never limit provider callbacks
+      },
+      key: (req) => req.headers.get?.('x-forwarded-for') ?? req.headers['x-forwarded-for'] ?? 'unknown',
+    }),
+  ],
+});
+```
+
+When a client exceeds the limit, the handler responds with `429 Too Many Requests`, standard rate limit headers (`Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`), and the `RATE_LIMITED` error code (automatically translated if `localizedErrors` is installed).
+
+## Options
+
+| Option | Default | Description |
+| ------ | ------- | ----------- |
+| `window` | `'1m'` | Window duration: milliseconds or string like `'30s'`, `'1m'`, `'1h'` |
+| `max` | `60` | Maximum allowed requests per window |
+| `rules` | `{}` | Per-route rules or exclusions. Set to `false` to exclude a route |
+| `key` | IP extractor | Function extracting client identifier from `BetterPaymentRequest` |
+| `store` | `MemoryRateLimitStore` | Counter storage backend (`RateLimitStore`) |
+| `excludeCallbacks` | `true` | Exclude provider callbacks from rate limiting by default |
+
+## Per-Route Rules
+
+You can assign granular limits to sensitive endpoints or exclude internal routes:
+
+```typescript
+rateLimit({
+  window: '1m',
+  max: 60,
+  rules: {
+    // Stricter limit on card payment attempts to prevent card testing
+    '/payment': { window: '1m', max: 5 },
+    '/payment/init-3ds': { window: '1m', max: 5 },
+    // Never limit callbacks or webhook responses
+    '/callback/*': false,
+  },
+});
+```
+
+## Resetting in Tests
+
+You can reset rate limits programmatically using `payment.rateLimit.reset()`:
+
+```typescript
+// Reset all stored rate limit keys
+payment.rateLimit.reset();
+
+// Or reset a specific client key
+payment.rateLimit.reset('global:127.0.0.1');
+```

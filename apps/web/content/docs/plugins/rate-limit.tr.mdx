@@ -1,0 +1,77 @@
+---
+title: Rate Limiting
+description: HTTP handler uç noktalarını bot saldırılarına, scraping'e ve kart deneme (card testing) girişimlerine karşı koruyun.
+---
+
+<Since version="0.12.0" />
+
+HTTP handler; ödeme, 3D Secure callback ve sorgulama uç noktalarını dış dünyaya açar. Hız sınırlaması (rate limit) olmadığında botlar bu rotaları suistimal edebilir veya kart deneme saldırıları gerçekleştirebilir. `rateLimit` plugin'i, HTTP handler seviyesinde yapılandırılabilir bir istek sınırlaması sağlar.
+
+Banka ve ödeme sağlayıcı bildirimlerinin aksamaması için sağlayıcı callback'leri varsayılan olarak sınırlandırmanın dışında tutulur.
+
+## Kurulum
+
+```typescript
+import { betterPayment, iyzico } from 'better-payment';
+import { rateLimit } from 'better-payment/plugins';
+
+const payment = betterPayment({
+  providers: {
+    iyzico: iyzico({ /* ... */ }),
+  },
+  plugins: [
+    rateLimit({
+      window: '1m',
+      max: 30,
+      rules: {
+        '/payment': { window: '1m', max: 5 },
+        '/callback/*': false, // sağlayıcı callback'lerini asla sınırlama
+      },
+      key: (req) => req.headers.get?.('x-forwarded-for') ?? req.headers['x-forwarded-for'] ?? 'unknown',
+    }),
+  ],
+});
+```
+
+Bir istemci limiti aştığında handler `429 Too Many Requests` yanıtı, standart rate limit başlıkları (`Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`) ve `RATE_LIMITED` hata kodunu döndürür (`localizedErrors` kuruluysa mesaj otomatik olarak yerelleştirilir).
+
+## Seçenekler
+
+| Seçenek | Varsayılan | Açıklama |
+| ------- | ---------- | -------- |
+| `window` | `'1m'` | Zaman penceresi: milisaniye veya `'30s'`, `'1m'`, `'1h'` gibi süre metni |
+| `max` | `60` | Pencere başına izin verilen maksimum istek sayısı |
+| `rules` | `{}` | Rota bazlı özel kurallar veya hariç tutmalar. Hariç tutmak için `false` verin |
+| `key` | IP çıkarıcı | `BetterPaymentRequest` üzerinden istemci tanımlayıcısını çıkaran fonksiyon |
+| `store` | `MemoryRateLimitStore` | Sayaç depolama katmanı (`RateLimitStore`) |
+| `excludeCallbacks` | `true` | Sağlayıcı callback'lerini varsayılan olarak hız sınırının dışında tutar |
+
+## Rota Bazlı Kurallar
+
+Kritik uç noktalara daha katı limitler tanımlayabilir veya belirli rotaları tamamen hariç tutabilirsiniz:
+
+```typescript
+rateLimit({
+  window: '1m',
+  max: 60,
+  rules: {
+    // Kart deneme saldırılarını önlemek için ödeme uç noktalarına daha katı limit
+    '/payment': { window: '1m', max: 5 },
+    '/payment/init-3ds': { window: '1m', max: 5 },
+    // Callback veya webhook bildirimlerini asla sınırlandırma
+    '/callback/*': false,
+  },
+});
+```
+
+## Testlerde Sıfırlama
+
+Testlerinizde sayaçları `payment.rateLimit.reset()` ile programatik olarak sıfırlayabilirsiniz:
+
+```typescript
+// Tüm rate limit kayıtlarını temizle
+payment.rateLimit.reset();
+
+// Veya belirli bir istemci anahtarını sıfırla
+payment.rateLimit.reset('global:127.0.0.1');
+```

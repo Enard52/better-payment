@@ -19,3 +19,11 @@ export {
   type NotificationEvent,
   type NotificationLocale,
 } from './notifications';
+export {
+  rateLimit,
+  MemoryRateLimitStore,
+  parseDuration,
+  type RateLimitOptions,
+  type RateLimitRule,
+  type RateLimitStore,
+} from './rate-limit';

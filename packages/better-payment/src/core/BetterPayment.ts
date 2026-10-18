@@ -9,6 +9,7 @@ import { ProviderNotEnabledError, ConfigurationError } from './errors';
 import {
   BetterPaymentHandler,
   type BetterPaymentHandlerOptions,
+  type BetterPaymentRequest,
   type BetterPaymentResponse,
 } from './BetterPaymentHandler';
 import {
@@ -21,6 +22,7 @@ import {
   type PaymentOperation,
   type PaymentOperations,
   type PluginContext,
+  type RequestContext,
   type ResponseContext,
 } from './plugin';
 import {
@@ -82,6 +84,10 @@ export class PaymentCore<P extends Record<string, ProviderEntry> = Record<string
   private readonly plugins: readonly BetterPaymentPlugin[];
   private readonly beforeHooks: BeforeHook[] = [];
   private readonly afterHooks: AfterHook[] = [];
+  private readonly requestHooks: {
+    pluginId: string;
+    hook: NonNullable<BetterPaymentPlugin['onRequest']>;
+  }[] = [];
   private readonly responseHooks: {
     pluginId: string;
     hook: NonNullable<BetterPaymentPlugin['onResponse']>;
@@ -153,6 +159,7 @@ export class PaymentCore<P extends Record<string, ProviderEntry> = Record<string
       pluginIds.add(plugin.id);
       this.beforeHooks.push(...(plugin.hooks?.before ?? []));
       this.afterHooks.push(...(plugin.hooks?.after ?? []));
+      if (plugin.onRequest) this.requestHooks.push({ pluginId: plugin.id, hook: plugin.onRequest });
       if (plugin.onResponse)
         this.responseHooks.push({ pluginId: plugin.id, hook: plugin.onResponse });
       for (const [type, listener] of Object.entries(plugin.events ?? {})) {
@@ -293,6 +300,25 @@ export class PaymentCore<P extends Record<string, ProviderEntry> = Record<string
         throw new EventListenerError(event, result, cause);
       }
     }
+  }
+
+  /** @internal Runs the plugins' onRequest hooks on an incoming handler request */
+  async interceptRequest(
+    request: BetterPaymentRequest,
+    ctx: RequestContext
+  ): Promise<BetterPaymentResponse | undefined> {
+    for (const { pluginId, hook } of this.requestHooks) {
+      try {
+        const response = await hook(request, ctx);
+        if (response) return response;
+      } catch (error) {
+        this.context.logger?.error(
+          `onRequest of plugin '${pluginId}' failed`,
+          error instanceof Error ? error : new Error(String(error))
+        );
+      }
+    }
+    return undefined;
   }
 
   /** @internal Runs the plugins' onResponse hooks on a handler response */

@@ -166,6 +166,12 @@ export interface PaymentEndpoint {
   handler: (ctx: EndpointContext) => Awaitable<unknown>;
 }
 
+/** What `onRequest` gets besides the request */
+export interface RequestContext {
+  /** Path relative to the handler's basePath, e.g. `/iyzico/payment` */
+  path: string;
+}
+
 /** What `onResponse` gets besides the response */
 export interface ResponseContext {
   request: BetterPaymentRequest;
@@ -205,6 +211,15 @@ export interface BetterPaymentPlugin {
   methods?: (ctx: PluginContext) => Record<string, unknown>;
   /** HTTP routes added to the handler */
   endpoints?: Record<string, PaymentEndpoint>;
+  /**
+   * Runs on every incoming request to the HTTP handler before routing.
+   * Return a response (e.g. 429 Too Many Requests) to short-circuit routing;
+   * that response will still pass through onResponse hooks.
+   */
+  onRequest?: (
+    request: BetterPaymentRequest,
+    ctx: RequestContext
+  ) => Awaitable<BetterPaymentResponse | void>;
   /**
    * Runs on every response of the HTTP handler (also replayed ones) and can
    * return a replacement. If it throws, the error is logged and the response is
