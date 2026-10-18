@@ -1,0 +1,99 @@
+---
+title: Payment links
+description: Create tamper-proof signed payment links for invoices, freelancers, and support teams.
+---
+
+<Since version="0.12.0" />
+
+Freelancers, small shops, and customer support teams often need to send customers a link to pay a fixed amount, without building a custom checkout frontend.
+
+The `paymentLinks` plugin creates cryptographically signed links using HMAC-SHA256, stores their lifecycle status (`open`, `paid`, `expired`, `cancelled`), and serves resolution and payment endpoints directly through the [handler](/docs/concepts/handler).
+
+## Setup
+
+```typescript
+import { betterPayment, iyzico } from 'better-payment';
+import { paymentLinks } from 'better-payment/plugins';
+
+export const payment = betterPayment({
+  providers: {
+    iyzico: iyzico({ /* ... */ }),
+  },
+  plugins: [
+    paymentLinks({
+      secret: process.env.LINK_SECRET!,
+      baseUrl: 'https://shop.example.com/api/pay',
+      defaultExpiresIn: '7d',
+    }),
+  ],
+});
+```
+
+## Creating a link
+
+```typescript
+const link = await payment.links.create({
+  amount: '250.00',
+  currency: 'TRY',
+  description: 'Invoice #42 - Web design',
+  expiresIn: '7d', // e.g. '24h', '7d', or milliseconds
+  singleUse: true, // default: true (marks link 'paid' after first successful charge)
+});
+
+console.log(link.url);
+// → https://shop.example.com/api/pay/links/resolve?id=a1b2c3d4&sig=...
+```
+
+## Handler endpoints
+
+The plugin registers two endpoints on your handler:
+
+### 1. `GET /links/resolve?id=:id`
+Resolves link details, verifies HMAC integrity, and returns link metadata:
+
+```json
+{
+  "id": "a1b2c3d4",
+  "amount": "250.00",
+  "currency": "TRY",
+  "description": "Invoice #42 - Web design",
+  "status": "open",
+  "expiresAt": 1729800000000,
+  "singleUse": true
+}
+```
+
+### 2. `POST /links/pay`
+Collects card and buyer information, validates link status and signature, and charges the customer:
+
+```json
+{
+  "linkId": "a1b2c3d4",
+  "paymentCard": { "cardNumber": "...", "expireMonth": "...", "expireYear": "...", "cvc": "..." },
+  "buyer": { "id": "BY1", "name": "Ali", "surname": "Yılmaz", "email": "ali@example.com", "identityNumber": "...", "ip": "...", "city": "...", "country": "...", "gsmNumber": "...", "registrationAddress": "..." },
+  "shippingAddress": { "contactName": "Ali Yılmaz", "city": "Istanbul", "country": "Turkey", "address": "..." },
+  "billingAddress": { "contactName": "Ali Yılmaz", "city": "Istanbul", "country": "Turkey", "address": "..." }
+}
+```
+
+If the link is `singleUse: true`, a successful payment transitions its status to `paid` and prevents subsequent charges (returning `410 Gone`).
+
+## Link lifecycle & cancellation
+
+```typescript
+// Query link status
+const link = await payment.links.get('a1b2c3d4');
+console.log(link?.status); // 'open' | 'paid' | 'expired' | 'cancelled'
+
+// Cancel a link
+await payment.links.cancel('a1b2c3d4');
+```
+
+## Options
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `secret` | — | Secret string used to compute and verify HMAC-SHA256 signatures |
+| `baseUrl` | — | Base URL of your API handler (e.g. `'https://shop.example.com/api/pay'`) |
+| `defaultExpiresIn` | `'7d'` | Default link duration (`'24h'`, `'7d'`, or ms) |
+| `store` | `MemoryPaymentLinkStore` | Custom storage backend implementing `PaymentLinkStore` |

@@ -1,0 +1,99 @@
+---
+title: Ödeme linkleri
+description: Faturalar, serbest çalışanlar ve destek ekipleri için kurcalamaya karşı korumalı imzalı ödeme linkleri oluşturun.
+---
+
+<Since version="0.12.0" />
+
+Serbest çalışanlar (freelancer), küçük işletmeler ve müşteri destek ekipleri; özel bir e-ticaret ödeme sayfası geliştirmek zorunda kalmadan müşterilerine belirli bir tutar için doğrudan ödeme bağlantısı göndermek ister.
+
+`paymentLinks` eklentisi, HMAC-SHA256 kullanarak şifreli imzalanmış linkler oluşturur, link durumunu (`open`, `paid`, `expired`, `cancelled`) yönetir ve ödeme uç noktalarını doğrudan [handler](/docs/concepts/handler) üzerinden sunar.
+
+## Kurulum [#setup]
+
+```typescript
+import { betterPayment, iyzico } from 'better-payment';
+import { paymentLinks } from 'better-payment/plugins';
+
+export const payment = betterPayment({
+  providers: {
+    iyzico: iyzico({ /* ... */ }),
+  },
+  plugins: [
+    paymentLinks({
+      secret: process.env.LINK_SECRET!,
+      baseUrl: 'https://shop.example.com/api/pay',
+      defaultExpiresIn: '7d',
+    }),
+  ],
+});
+```
+
+## Link Oluşturma [#creating-a-link]
+
+```typescript
+const link = await payment.links.create({
+  amount: '250.00',
+  currency: 'TRY',
+  description: 'Fatura #42 - Web tasarım danışmanlığı',
+  expiresIn: '7d', // örn. '24h', '7d' veya milisaniye
+  singleUse: true, // varsayılan: true (ilk başarılı ödemeden sonra 'paid' durumuna geçer)
+});
+
+console.log(link.url);
+// → https://shop.example.com/api/pay/links/resolve?id=a1b2c3d4&sig=...
+```
+
+## Handler Uç Noktaları [#handler-endpoints]
+
+Eklenti handler üzerinde iki uç nokta tanımlar:
+
+### 1. `GET /links/resolve?id=:id`
+Link bilgilerini çözer, HMAC imzasını doğrular ve geçerli bilgileri döner:
+
+```json
+{
+  "id": "a1b2c3d4",
+  "amount": "250.00",
+  "currency": "TRY",
+  "description": "Fatura #42 - Web tasarım danışmanlığı",
+  "status": "open",
+  "expiresAt": 1729800000000,
+  "singleUse": true
+}
+```
+
+### 2. `POST /links/pay`
+Kart ve müşteri bilgilerini alır, link durumunu ve imzasını denetler ve tahsilatı gerçekleştirir:
+
+```json
+{
+  "linkId": "a1b2c3d4",
+  "paymentCard": { "cardNumber": "...", "expireMonth": "...", "expireYear": "...", "cvc": "..." },
+  "buyer": { "id": "BY1", "name": "Ali", "surname": "Yılmaz", "email": "ali@example.com", "identityNumber": "...", "ip": "...", "city": "...", "country": "...", "gsmNumber": "...", "registrationAddress": "..." },
+  "shippingAddress": { "contactName": "Ali Yılmaz", "city": "Istanbul", "country": "Turkey", "address": "..." },
+  "billingAddress": { "contactName": "Ali Yılmaz", "city": "Istanbul", "country": "Turkey", "address": "..." }
+}
+```
+
+Link `singleUse: true` ise, başarılı ödemenin ardından durumu `paid` yapılır ve mükerrer çekimler engellenir (`410 Gone`).
+
+## Link Durumu ve İptal [#link-lifecycle--cancellation]
+
+```typescript
+// Link durumunu sorgulama
+const link = await payment.links.get('a1b2c3d4');
+console.log(link?.status); // 'open' | 'paid' | 'expired' | 'cancelled'
+
+// Linki iptal etme
+await payment.links.cancel('a1b2c3d4');
+```
+
+## Seçenekler [#options]
+
+| Seçenek | Varsayılan | Açıklama |
+| --- | --- | --- |
+| `secret` | — | HMAC-SHA256 imzası üretmek ve doğrulamak için gizli anahtar |
+| `baseUrl` | — | Handler'ın çalıştığı temel URL (örn. `'https://shop.example.com/api/pay'`) |
+| `defaultExpiresIn` | `'7d'` | Varsayılan link geçerlilik süresi (`'24h'`, `'7d'` veya ms) |
+| `store` | `MemoryPaymentLinkStore` | `PaymentLinkStore` arayüzünü uygulayan özel veritabanı deposu |
