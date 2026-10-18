@@ -19,3 +19,11 @@ export {
   type NotificationEvent,
   type NotificationLocale,
 } from './notifications';
+export {
+  failover,
+  type FailoverOptions,
+  type FailoverEvent,
+  type CircuitBreakerOptions,
+  type CircuitState,
+  type ProviderCircuitStatus,
+} from './failover';
