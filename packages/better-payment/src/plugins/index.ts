@@ -19,3 +19,9 @@ export {
   type NotificationEvent,
   type NotificationLocale,
 } from './notifications';
+export {
+  captcha,
+  type CaptchaOptions,
+  type CaptchaProvider,
+} from './captcha';
+
