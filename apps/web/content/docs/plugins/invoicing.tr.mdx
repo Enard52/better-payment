@@ -1,0 +1,96 @@
+---
+title: Fatura Entegrasyonu (e-Fatura / e-Arşiv)
+description: Başarılı ödemelerin ardından Paraşüt gibi entegratörlerle otomatik olarak e-Fatura ve e-Arşiv faturası oluşturun.
+---
+
+<Since version="0.12.0" />
+
+Türkiye'de her ticari satış için müşteriye e-Fatura veya e-Arşiv faturası düzenlenmesi zorunludur. `invoicing` eklentisi fatura süreçlerini arka planda otomatikleştirir: başarılı bir ödemenin ardından seçtiğiniz entegratör (ör. Paraşüt) üzerinden faturayı düzenler; iade gerçekleştiğinde ise iade faturası keser veya faturayı iptal eder.
+
+Fatura oluşturma işlemi ödeme tamamlandıktan sonra arka planda asenkron olarak yürütülür; müşterinin ödeme deneyimini kesinlikle yavaşlatmaz veya bekletmez.
+
+## Kurulum
+
+```typescript
+import { betterPayment, iyzico } from 'better-payment';
+import { invoicing, parasut } from 'better-payment/plugins';
+
+export const payment = betterPayment({
+  providers: {
+    iyzico: iyzico({ /* ... */ }),
+  },
+  plugins: [
+    invoicing({
+      adapter: parasut({
+        clientId: process.env.PARASUT_CLIENT_ID!,
+        clientSecret: process.env.PARASUT_CLIENT_SECRET!,
+        username: process.env.PARASUT_USERNAME!,
+        password: process.env.PARASUT_PASSWORD!,
+        companyId: process.env.PARASUT_COMPANY_ID!,
+      }),
+      // Ödeme ve sepet verilerinden fatura alanlarını özelleştirin
+      map: (payment) => ({
+        buyer: {
+          name: `${payment.buyer?.name} ${payment.buyer?.surname}`,
+          taxNumber: payment.buyer?.identityNumber, // TCKN veya VKN
+        },
+        vatRate: 20, // %20 KDV
+      }),
+      onRefund: 'return-invoice', // 'return-invoice' | 'cancel' | 'none'
+      retry: { attempts: 3, delay: 1000 },
+      onInvoiceCreated: (invoice, event) => {
+        console.log(`Fatura kesildi: ${invoice.invoiceNumber} (Ödeme: ${event.paymentId})`);
+      },
+      onInvoiceFailed: (error, event) => {
+        console.error(`Fatura oluşturulamadı (Ödeme: ${event.paymentId}):`, error);
+      },
+    }),
+  ],
+});
+```
+
+## Özellikler
+
+- **Asenkron Çalışma:** `payment.succeeded` ve `refund.succeeded` olaylarını dinler. Müşteri ödeme onayını anında alır, fatura entegratör üzerinden arka planda kesilir.
+- **Otomatik Yeniden Deneme:** Entegratör API'sinde geçici kesinti veya kota aşımları yaşandığında yapılandırılan aralıklarla otomatik olarak yeniden dener.
+- **İade Senaryoları (`onRefund`):**
+  - `'return-invoice'` (varsayılan): İade edilen tutar kadar iade faturası oluşturur.
+  - `'cancel'`: Entegratör üzerinden orijinal satış faturasını iptal eder.
+  - `'none'`: İadelerde herhangi bir fatura işlemi yapmaz.
+- **Manuel Tekrar Deneme:** Başarısız faturalar hafızada saklanır ve `payment.invoicing.retry(paymentId)` ile istenildiği an tekrar denenebilir.
+- **Genişletilebilir Adaptör Mimarisi:** Hazır **Paraşüt** adaptörünün yanı sıra diğer entegratörler (Logo, Uyumsoft, Foriba/Sovos, BirFatura) için `InvoicingAdapter` arayüzü sunar.
+
+## Fatura Yönetim API'si
+
+Eklenti, `payment.invoicing` nesnesi üzerinden yönetim fonksiyonları sunar:
+
+```typescript
+// Ödeme kimliğine göre faturayı sorgulayın
+const invoice = payment.invoicing.get('pay-12345');
+console.log(invoice?.invoiceNumber, invoice?.status);
+
+// Kesilen tüm faturaları listeleyin
+const allInvoices = payment.invoicing.list();
+
+// Hata alan faturaları listeleyin
+const failed = payment.invoicing.getFailed();
+
+// Başarısız faturayı tekrar deneyin
+const recovered = await payment.invoicing.retry('pay-12345');
+console.log('Fatura başarıyla oluşturuldu:', recovered.invoiceNumber);
+
+// Faturayı manuel olarak iptal edin
+await payment.invoicing.cancel('pay-12345', 'Müşteri siparişi iptal etti');
+```
+
+## Seçenekler
+
+| Seçenek | Tür | Varsayılan | Açıklama |
+| ------- | --- | ---------- | -------- |
+| `adapter` | `InvoicingAdapter` | *(Zorunlu)* | Fatura entegratör adaptörü (ör. `parasut`). |
+| `map` | `Function` | — | Alıcı bilgileri, kalemler ve KDV oranını özelleştiren eşleme fonksiyonu. |
+| `onRefund` | `'return-invoice' \| 'cancel' \| 'none'` | `'return-invoice'` | İade başarılı olduğunda yapılacak işlem. |
+| `retry` | `{ attempts?: number, delay?: number }` | `{ attempts: 3, delay: 1000 }` | Geçici API hatalarında yeniden deneme politikası. |
+| `defaultVatRate` | `number` | `20` | Varsayılan KDV oranı yüzdesi (%20). |
+| `onInvoiceCreated` | `Function` | — | Fatura başarıyla oluşturulduğunda tetiklenen fonksiyon. |
+| `onInvoiceFailed` | `Function` | — | Yeniden denemeler tükendiğinde tetiklenen fonksiyon. |

@@ -1,0 +1,96 @@
+---
+title: Invoicing (e-Fatura / e-Arşiv)
+description: Automatically issue e-Fatura and e-Arşiv invoices upon successful payments with pluggable integrator adapters (Paraşüt).
+---
+
+<Since version="0.12.0" />
+
+In Turkey, merchants must issue an e-Fatura or e-Arşiv invoice for every commercial sale. The `invoicing` plugin automates invoice generation asynchronously: on a successful payment, it issues an invoice via your chosen invoicing integrator (e.g. Paraşüt); on a refund, it automatically issues a return invoice or cancels the original invoice.
+
+Invoice generation runs asynchronously in the background and never blocks or slows down the customer's checkout flow.
+
+## Setup
+
+```typescript
+import { betterPayment, iyzico } from 'better-payment';
+import { invoicing, parasut } from 'better-payment/plugins';
+
+export const payment = betterPayment({
+  providers: {
+    iyzico: iyzico({ /* ... */ }),
+  },
+  plugins: [
+    invoicing({
+      adapter: parasut({
+        clientId: process.env.PARASUT_CLIENT_ID!,
+        clientSecret: process.env.PARASUT_CLIENT_SECRET!,
+        username: process.env.PARASUT_USERNAME!,
+        password: process.env.PARASUT_PASSWORD!,
+        companyId: process.env.PARASUT_COMPANY_ID!,
+      }),
+      // Custom mapping from payment and basket items to invoice fields
+      map: (payment) => ({
+        buyer: {
+          name: `${payment.buyer?.name} ${payment.buyer?.surname}`,
+          taxNumber: payment.buyer?.identityNumber,
+        },
+        vatRate: 20, // 20% KDV
+      }),
+      onRefund: 'return-invoice', // 'return-invoice' | 'cancel' | 'none'
+      retry: { attempts: 3, delay: 1000 },
+      onInvoiceCreated: (invoice, event) => {
+        console.log(`Invoice issued: ${invoice.invoiceNumber} for payment ${event.paymentId}`);
+      },
+      onInvoiceFailed: (error, event) => {
+        console.error(`Invoice failed for payment ${event.paymentId}:`, error);
+      },
+    }),
+  ],
+});
+```
+
+## Features
+
+- **Asynchronous Execution:** Listens to `payment.succeeded` and `refund.succeeded` events. The customer receives their payment confirmation immediately, while invoices are issued in the background.
+- **Automatic Retries:** If the invoicing provider experiences temporary network glitches or rate limits, the plugin retries automatically with configurable backoff.
+- **Refund Handling (`onRefund`):**
+  - `'return-invoice'` (default): Issues a return / storno invoice matching the refunded amount.
+  - `'cancel'`: Cancels the original sales invoice with the integrator.
+  - `'none'`: Ignores refunds.
+- **Manual Retry API:** Failed invoices are recorded in memory and can be inspected and retried at any time via `payment.invoicing.retry(paymentId)`.
+- **Pluggable Adapter Architecture:** Comes with official support for **Paraşüt**, and an extensible `InvoicingAdapter` interface for adding custom integrators (Logo, Uyumsoft, Foriba/Sovos, BirFatura).
+
+## Invoicing Management API
+
+The plugin adds a `payment.invoicing` namespace:
+
+```typescript
+// Look up an invoice by payment ID
+const invoice = payment.invoicing.get('pay-12345');
+console.log(invoice?.invoiceNumber, invoice?.status);
+
+// List all generated invoices
+const allInvoices = payment.invoicing.list();
+
+// List invoices that failed after all retry attempts
+const failed = payment.invoicing.getFailed();
+
+// Manually retry a failed invoice
+const recovered = await payment.invoicing.retry('pay-12345');
+console.log('Recovered invoice:', recovered.invoiceNumber);
+
+// Manually cancel an invoice
+await payment.invoicing.cancel('pay-12345', 'Customer requested return');
+```
+
+## Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `adapter` | `InvoicingAdapter` | *(Required)* | The invoicing service adapter (e.g. `parasut`). |
+| `map` | `Function` | — | Function to customize invoice buyer, line items, and VAT rate. |
+| `onRefund` | `'return-invoice' \| 'cancel' \| 'none'` | `'return-invoice'` | Action taken when a refund succeeds. |
+| `retry` | `{ attempts?: number, delay?: number }` | `{ attempts: 3, delay: 1000 }` | Retry configuration for transient API failures. |
+| `defaultVatRate` | `number` | `20` | Default VAT (KDV) rate percentage applied to items. |
+| `onInvoiceCreated` | `Function` | — | Callback fired after successful invoice creation. |
+| `onInvoiceFailed` | `Function` | — | Callback fired when invoice creation fails after retries. |
