@@ -8,6 +8,7 @@ One API for Turkish payment providers — iyzico, PayTR, Parampos, Sipay, Akbank
 [![npm](https://img.shields.io/npm/v/better-payment)](https://www.npmjs.com/package/better-payment)
 [![license](https://img.shields.io/npm/l/better-payment)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)](https://www.typescriptlang.org/)
+[![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ea4aaa?style=flat&logo=githubsponsors)](https://github.com/sponsors/Enard52)
 
 > **0.0.1 is a fresh start.** The version history was reset on purpose.
 > Releases `1.x`–`3.x` are deprecated. See [What's new in 0.0.1](#whats-new-in-001).
@@ -361,3 +362,15 @@ pnpm lint
 pnpm typecheck
 pnpm build
 ```
+
+---
+
+## 💖 Sponsors & Support
+
+Developing and maintaining integrations for Turkish payment systems requires continuous testing and maintenance. If `better-payment` helps your project or business, please consider sponsoring:
+
+[![Sponsor](https://img.shields.io/badge/Sponsor%20@Enard52-%E2%9D%A4-ea4aaa?style=for-the-badge&logo=githubsponsors)](https://github.com/sponsors/Enard52)
+
+- **$5 / month**: Official Sponsor badge on your GitHub profile.
+- **$25 / month**: Your name or company logo featured here.
+- **$100 / month**: Priority bug reports & fast-tracked feature triage.
