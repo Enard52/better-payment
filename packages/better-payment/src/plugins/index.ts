@@ -19,3 +19,11 @@ export {
   type NotificationEvent,
   type NotificationLocale,
 } from './notifications';
+export {
+  currencyConversion,
+  type CurrencyConversionOptions,
+  type CurrencyRateSource,
+  type TcmbRateType,
+  type FxQuoteRequest,
+  type FxQuoteResponse,
+} from './currency-conversion';
