@@ -19,3 +19,11 @@ export {
   type NotificationEvent,
   type NotificationLocale,
 } from './notifications';
+export {
+  threeDSTimeout,
+  MemoryThreeDSFlowStore,
+  type ThreeDSTimeoutOptions,
+  type ThreeDSFlowStore,
+  type StartedThreeDSFlow,
+  type ExpireStaleResult,
+} from './three-ds-timeout';
