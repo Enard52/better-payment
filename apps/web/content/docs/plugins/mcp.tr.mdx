@@ -7,7 +7,7 @@ description: Better Payment'ı yapay zekâ ajanları (AI agents) için Model Con
 
 `mcp` eklentisi, Better Payment kütüphanesini HTTP JSON-RPC 2.0 üzerinden standart bir Model Context Protocol (MCP) sunucusuna dönüştürür. Bu sayede yapay zekâ asistanları ve otonom ajanlar (Claude Desktop, Cursor, Copilot veya özel LLM ajanları) ödeme durumunu sorgulayabilir, BIN kontrolü yapabilir, taksit seçeneklerini listeleyebilir ve güvenli bir şekilde iade veya iptal işlemlerini yürütebilir.
 
-## Kurulum
+## Kurulum [#setup]
 
 ```typescript
 import { betterPayment, iyzico } from 'better-payment';
@@ -22,12 +22,12 @@ export const payment = betterPayment({
       path: '/mcp',
       readOnly: false,
       authorize: async (req, toolName) => {
-        // Yazma işlemlerini (iade, iptal) yetkilendirme ile koruyun
+        // Guard write operations (refund, cancel)
         const token = req.headers.authorization?.replace('Bearer ', '');
         return token === process.env.MCP_ADMIN_SECRET;
       },
       onToolCall: async ({ tool, params, result, isError }) => {
-        console.log(`MCP Aracı çalıştırıldı: ${tool}`, { params, isError });
+        console.log(`MCP Tool invoked: ${tool}`, { params, isError });
       },
     }),
   ],
@@ -38,7 +38,7 @@ export const payment = betterPayment({
 - `POST /mcp` — JSON-RPC 2.0 protokol uç noktası (`initialize`, `notifications/initialized`, `tools/list`, `tools/call`).
 - `GET /mcp/info` — Sunucu durumu ve metaveri sorgulama uç noktası.
 
-## Kullanılabilir Araçlar
+## Kullanılabilir Araçlar [#available-tools]
 
 MCP sunucusu aşağıdaki araçları kullanıma sunar:
 
@@ -50,19 +50,18 @@ MCP sunucusu aşağıdaki araçları kullanıma sunar:
 | `refund` | Yazma | Ödemenin tamamını veya bir kısmını iade eder. Yetkilendirme kontrolü gerektirir. |
 | `cancel` | Yazma | İşlemi gün sonu öncesinde iptal eder. Yetkilendirme kontrolü gerektirir. |
 
-## Güvenlik Önlemleri
+## Güvenlik Önlemleri [#safety--security]
 
 - **Kart Verisi Temizliği:** Hassas kart verileri (`cardNumber`, `cvv`, `expiryMonth`, `expiryYear`, `card`) yanıt gövdesinden otomatik olarak temizlenir, böylece PAN verilerinin LLM modellerine sızması önlenir.
 - **Yazma Yetkilendirmesi:** Kritik işlemler (`refund`, `cancel`), `authorize` geri çağrımı ile yetkilendirme doğrulaması gerektirir. `readOnly: true` yapılandırıldığında yazma araçları araç listesinden tamamen çıkarılır.
 - **Denetim Günlüğü:** `onToolCall` kancası, çalıştırılan her aracın adını, parametrelerini, temizlenmiş sonucunu ve çalışma süresini yakalar.
 
-## Seçenekler
+## Seçenekler [#options]
 
 | Seçenek | Tür | Varsayılan | Açıklama |
 | ------- | --- | ---------- | -------- |
-| `name` | `string` | `'better-payment-mcp'` | Başlatma sırasında bildirilen MCP sunucu adı. |
-| `version` | `string` | `'1.0.0'` | İstemciye bildirilen MCP sunucu sürümü. |
-| `path` | `string` | `'/mcp'` | MCP JSON-RPC uç noktası için temel yol. |
-| `readOnly` | `boolean` | `false` | `true` ise yazma araçları (`refund`, `cancel`) hariç tutulur. |
-| `authorize` | `(req, tool) => boolean \| Promise<boolean>` | — | Yazma işlemleri için yetkilendirme doğrulama fonksiyonu. |
-| `onToolCall` | `(details) => void \| Promise<void>` | — | Her araç çağrısından sonra tetiklenen denetim kancası. |
+| `path` | `string` | `'/mcp'` | MCP HTTP JSON-RPC uç noktası yolu. |
+| `readOnly` | `boolean` | `false` | `true` ise yalnızca güvenli okuma araçları sunulur (yazma araçları gizlenir). |
+| `serverInfo` | `{ name?: string, version?: string }` | `{ name: 'better-payment', ... }` | İstemci el sıkışmasında bildirilen MCP sunucu adı ve sürümü. |
+| `authorize` | `(req, toolName) => boolean \| Promise<boolean>` | — | Yazma araçları çağrılmadan önce çalışan yetkilendirme fonksiyonu. |
+| `onToolCall` | `Function` | — | Her araç çağrısından sonra tetiklenen denetim/günlük fonksiyonu. |

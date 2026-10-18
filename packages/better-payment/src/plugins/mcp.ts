@@ -5,12 +5,7 @@ import {
   type PluginContext,
 } from 'better-payment';
 
-export type McpToolName =
-  | 'getPayment'
-  | 'binCheck'
-  | 'installmentInfo'
-  | 'refund'
-  | 'cancel';
+export type McpToolName = 'getPayment' | 'binCheck' | 'installmentInfo' | 'refund' | 'cancel';
 
 export const ALL_MCP_TOOLS: readonly McpToolName[] = [
   'getPayment',
@@ -69,14 +64,21 @@ const TOOL_DEFINITIONS: Record<
     inputSchema: {
       type: 'object',
       properties: {
-        paymentId: { type: 'string', description: 'The provider payment ID returned during checkout' },
-        provider: { type: 'string', description: 'Payment provider ID (e.g. iyzico, paytr). Defaults to default provider' },
+        paymentId: {
+          type: 'string',
+          description: 'The provider payment ID returned during checkout',
+        },
+        provider: {
+          type: 'string',
+          description: 'Payment provider ID (e.g. iyzico, paytr). Defaults to default provider',
+        },
       },
       required: ['paymentId'],
     },
   },
   binCheck: {
-    description: 'Query card issuer bank, card family, card type and brand from first 6-8 digits of a card',
+    description:
+      'Query card issuer bank, card family, card type and brand from first 6-8 digits of a card',
     inputSchema: {
       type: 'object',
       properties: {
@@ -87,7 +89,8 @@ const TOOL_DEFINITIONS: Record<
     },
   },
   installmentInfo: {
-    description: 'Query available installment counts and bank campaign commission rates for card BIN and amount',
+    description:
+      'Query available installment counts and bank campaign commission rates for card BIN and amount',
     inputSchema: {
       type: 'object',
       properties: {
@@ -220,7 +223,8 @@ export function mcp(options: McpOptions = {}): BetterPaymentPlugin {
         path: mcpPath,
         openapi: {
           summary: 'MCP JSON-RPC endpoint',
-          description: 'Handles standard Model Context Protocol JSON-RPC requests (tools/list, tools/call)',
+          description:
+            'Handles standard Model Context Protocol JSON-RPC requests (tools/list, tools/call)',
           tags: ['MCP'],
         },
         handler: async (ctx) => {
