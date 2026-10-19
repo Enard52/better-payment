@@ -28,15 +28,15 @@ export default async function BlogIndex({ params }: PageProps<"/[lang]/blog">) {
   const [featured, ...rest] = getPosts(lang);
 
   return (
-    <section className="px-5 pt-16 pb-24 sm:px-8 md:pt-24 md:pb-28">
+    <section className="px-5 pt-14 pb-24 sm:px-8 md:pt-20 md:pb-28">
       <div className="mx-auto max-w-7xl">
         <SectionHeading line1={t.titleLine1} line2={t.titleLine2} lead={t.lead} />
 
         {!featured ? (
           <p className="text-muted-foreground">{t.empty}</p>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div className="md:col-span-2 lg:col-span-3">
+          <div className={`grid gap-4 md:grid-cols-2 ${rest.length >= 3 ? "lg:grid-cols-3" : ""}`}>
+            <div className="md:col-span-2 lg:col-span-full">
               <PostCard post={featured} lang={lang} t={t} featured />
             </div>
             {rest.map((post) => (

@@ -83,13 +83,13 @@ export default async function BlogPostPage({ params }: PageProps<"/[lang]/blog/[
   };
 
   return (
-    <article className="px-5 pt-12 pb-24 sm:px-8 md:pt-16 md:pb-28">
+    <article className="px-5 pt-14 pb-24 sm:px-8 md:pt-20 md:pb-28">
       <script
         type="application/ld+json"
         // JSON-LD is static data built from the post's frontmatter
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-7xl">
         <Link
           href={localePath(lang, "/blog")}
           className="mb-8 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
@@ -105,10 +105,11 @@ export default async function BlogPostPage({ params }: PageProps<"/[lang]/blog/[
             </li>
           ))}
         </ul>
-        <h1 className="text-[2.25rem] leading-[1.08] font-extrabold tracking-[-0.03em] text-foreground sm:text-[3rem]">
+        <h1 className="max-w-4xl text-[2.25rem] leading-[1.08] font-extrabold tracking-[-0.03em] text-foreground sm:text-[3rem]">
           {post.data.title}
         </h1>
-        <p className="mt-5 text-lg leading-relaxed text-muted-foreground">{post.data.description}</p>
+        <p className="mt-5 max-w-3xl text-lg leading-relaxed text-muted-foreground">{post.data.description}</p>
+
         <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-border pb-8 text-sm text-muted-foreground">
           <div className="flex items-center gap-3">
             <AuthorAvatars authors={postAuthors} size={40} />
@@ -147,27 +148,52 @@ export default async function BlogPostPage({ params }: PageProps<"/[lang]/blog/[
           </p>
         </div>
 
-        <div className="prose mt-10 max-w-none">
-          <MDX components={getMDXComponents(defaultMdxComponents, lang)} />
-        </div>
+        <div className="mt-12 grid gap-12 lg:grid-cols-[minmax(0,1fr)_17rem] lg:gap-16">
+          <div className="min-w-0">
+            <div className="prose max-w-3xl">
+              <MDX components={getMDXComponents(defaultMdxComponents, lang)} />
+            </div>
 
-        <aside className="mt-16 rounded-2xl border border-border bg-tint/60 p-8">
-          <h2 className="text-xl font-bold tracking-[-0.02em] text-foreground">{t.cta.title}</h2>
-          <p className="mt-2 text-muted-foreground">{t.cta.lead}</p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Link href={localePath(lang, "/docs")} className={buttonVariants({ size: "sm" })}>
-              {t.cta.docs}
-            </Link>
-            <a href={REPOSITORY} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "sm" })}>
-              <GitHubIcon data-icon="brand" />
-              {t.cta.github}
-            </a>
+            <aside className="mt-16 max-w-3xl rounded-2xl border border-border bg-tint/60 p-8">
+              <h2 className="text-xl font-bold tracking-[-0.02em] text-foreground">{t.cta.title}</h2>
+              <p className="mt-2 text-muted-foreground">{t.cta.lead}</p>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <Link href={localePath(lang, "/docs")} className={buttonVariants({ size: "sm" })}>
+                  {t.cta.docs}
+                </Link>
+                <a href={REPOSITORY} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                  <GitHubIcon data-icon="brand" />
+                  {t.cta.github}
+                </a>
+              </div>
+            </aside>
           </div>
-        </aside>
+
+          {post.data.toc.length > 0 && (
+            <nav aria-label={t.toc} className="hidden lg:block">
+              <div className="sticky top-24">
+                <p className="mb-3 text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">{t.toc}</p>
+                <ul className="grid gap-0.5 border-l border-border">
+                  {post.data.toc.map((item) => (
+                    <li key={item.url}>
+                      <a
+                        href={item.url}
+                        className="-ml-px block border-l border-transparent py-1.5 text-[13.5px] leading-snug text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+                        style={{ paddingLeft: `${0.875 + (item.depth - 2) * 0.75}rem` }}
+                      >
+                        {item.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </nav>
+          )}
+        </div>
       </div>
 
       {related.length > 0 && (
-        <div className="mx-auto mt-20 max-w-7xl">
+        <div className="mx-auto mt-24 max-w-7xl">
           <h2 className="mb-6 text-2xl font-bold tracking-[-0.02em] text-foreground">{t.moreTitle}</h2>
           <div className="grid gap-4 md:grid-cols-2">
             {related.map((other) => (
