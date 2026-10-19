@@ -6,16 +6,24 @@ import {
   type PaymentEvent,
   type PluginContext,
 } from 'better-payment';
+import { MemoryInvoicingStore } from './invoicing/store';
 import type {
   CreateInvoiceParams,
   InvoiceItem,
-  InvoiceResult,
   InvoicingOptions,
   InvoicingRecord,
 } from './invoicing/types';
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+function datePart(value?: string): string | undefined {
+  return value?.slice(0, 10);
 }
 
 export const invoicing = (options: InvoicingOptions) => {
@@ -28,9 +36,13 @@ export const invoicing = (options: InvoicingOptions) => {
   const delay = options.retry?.delay ?? 1000;
   const defaultVatRate = options.defaultVatRate ?? 20;
   const onRefund = options.onRefund ?? 'return-invoice';
+  const store = options.store ?? new MemoryInvoicingStore();
+  const issuanceMode = options.issuance?.mode ?? 'auto';
+  const pollIntervalMs = options.issuance?.pollIntervalMs ?? 2000;
+  const pollAttempts = options.issuance?.pollAttempts ?? 5;
 
-  const records = new Map<string, InvoicingRecord>();
-  let pluginCtx: PluginContext;
+  let pluginCtx: PluginContext | undefined;
+  const issuanceInFlight = new Set<string>();
 
   async function executeWithRetry<T>(fn: () => Promise<T>): Promise<T> {
     let lastError: unknown;
@@ -47,17 +59,190 @@ export const invoicing = (options: InvoicingOptions) => {
     throw lastError;
   }
 
+  async function saveRecord(record: InvoicingRecord): Promise<void> {
+    record.updatedAt = new Date();
+    await store.set(record.paymentId, record);
+  }
+
+  async function loadRecord(paymentId: string): Promise<InvoicingRecord | undefined> {
+    return await store.get(paymentId);
+  }
+
+  /**
+   * The e-document step, separate from creating the sales invoice: submit the
+   * invoice to the provider's e-Fatura / e-Arşiv issuance, then poll the job it
+   * hands back. The record only becomes `issued` when the provider confirms it;
+   * anything unconfirmed stays `pending` and remains retryable.
+   */
+  async function runIssuance(
+    paymentId: string,
+    event?: PaymentEvent<'payment.succeeded'>
+  ): Promise<InvoicingRecord> {
+    const record = await loadRecord(paymentId);
+    if (!record) {
+      throw new Error(`invoicing: no record found for paymentId '${paymentId}'`);
+    }
+    if (record.status === 'issued' || record.status === 'cancelled') {
+      return record;
+    }
+    if (!record.invoiceId) {
+      throw new Error(
+        `invoicing: paymentId '${paymentId}' has no sales invoice to issue; retry invoice creation first`
+      );
+    }
+    if (!adapter.issueInvoice) {
+      throw new Error(`invoicing: adapter '${adapter.name}' does not support e-document issuance`);
+    }
+    const submitIssuance = adapter.issueInvoice.bind(adapter);
+    if (issuanceInFlight.has(paymentId)) {
+      return record;
+    }
+    issuanceInFlight.add(paymentId);
+
+    try {
+      if (!record.issuanceJobId) {
+        // A single submission attempt on purpose: a repeated e-document POST is
+        // exactly the request that could double-issue, so failures are surfaced
+        // for an explicit `retry`/`issue` instead of silently re-sent.
+        try {
+          const issuance = await submitIssuance({
+            invoiceId: record.invoiceId!,
+            documentType: record.documentType ?? record.invoiceParams?.documentType,
+            buyer: record.invoiceParams?.buyer ?? { name: 'Customer' },
+            total: record.amount,
+            currency: record.currency,
+            conversationId: record.conversationId,
+            paymentDate: datePart(record.invoiceParams?.issueDate),
+            paymentPlatform: record.paymentPlatform,
+          });
+          record.documentType = issuance.documentType;
+          record.issuanceJobId = issuance.jobId;
+          if (issuance.status === 'issued') {
+            record.status = 'issued';
+            record.error = undefined;
+            await saveRecord(record);
+            if (options.onInvoiceIssued) {
+              await options.onInvoiceIssued(record, event);
+            }
+            return record;
+          }
+          if (issuance.status === 'failed') {
+            throw new Error(issuance.error ?? 'invoicing: issuance failed at the provider');
+          }
+          record.status = 'pending';
+        } catch (err) {
+          record.status = 'failed';
+          record.error = errorMessage(err);
+          await saveRecord(record);
+          if (options.onInvoiceIssuanceFailed) {
+            await options.onInvoiceIssuanceFailed(
+              err instanceof Error ? err : new Error(record.error),
+              record,
+              event
+            );
+          }
+          return record;
+        }
+        await saveRecord(record);
+      }
+
+      if (record.issuanceJobId && record.status === 'pending') {
+        if (!adapter.checkIssuance) {
+          pluginCtx?.logger?.info(
+            `invoicing: provider has no issuance status check for payment ${paymentId}; the record stays pending until confirmed externally`
+          );
+          return record;
+        }
+        const checkJob = adapter.checkIssuance.bind(adapter);
+        for (let i = 0; i < pollAttempts; i++) {
+          await sleep(pollIntervalMs);
+          const check = await checkJob(record.issuanceJobId);
+          if (check.status === 'issued') {
+            record.status = 'issued';
+            record.error = undefined;
+            await saveRecord(record);
+            if (options.onInvoiceIssued) {
+              await options.onInvoiceIssued(record, event);
+            }
+            return record;
+          }
+          if (check.status === 'failed') {
+            record.status = 'failed';
+            record.error = check.error ?? 'issuance job reported an error';
+            await saveRecord(record);
+            if (options.onInvoiceIssuanceFailed) {
+              await options.onInvoiceIssuanceFailed(new Error(record.error), record, event);
+            }
+            return record;
+          }
+        }
+        pluginCtx?.logger?.info(
+          `invoicing: issuance for payment ${paymentId} is still pending after ${pollAttempts} checks`
+        );
+      }
+      return record;
+    } finally {
+      issuanceInFlight.delete(paymentId);
+    }
+  }
+
+  function kickIssuance(paymentId: string, event: PaymentEvent<'payment.succeeded'>): void {
+    if (issuanceMode !== 'auto' || !adapter.issueInvoice) return;
+    void runIssuance(paymentId, event).catch((err) => {
+      pluginCtx?.logger?.error(
+        `Invoicing issuance step failed for payment ${paymentId}`,
+        err instanceof Error ? err : new Error(String(err))
+      );
+    });
+  }
+
   async function handlePaymentSucceeded(event: PaymentEvent<'payment.succeeded'>) {
+    const result = (event.result as Record<string, unknown>) || {};
     const paymentId =
-      event.paymentId ||
-      String(event.result && (event.result as Record<string, unknown>).paymentId) ||
-      `pay-${Date.now()}`;
+      event.paymentId || (typeof result.paymentId === 'string' ? result.paymentId : undefined);
     const conversationId = event.conversationId;
+    const keyedId = paymentId ?? conversationId;
     const req = (event.request as Record<string, unknown>) || {};
     const buyerRaw = (req.buyer as Record<string, unknown>) || {};
     const basketItemsRaw = (req.basketItems as Array<Record<string, unknown>>) || [];
-    const amount = event.amount || String(req.paidPrice || req.price || '0');
+    const rawAmount = event.amount ?? req.paidPrice ?? req.price;
+    const amount =
+      rawAmount !== undefined && rawAmount !== null && String(rawAmount) !== ''
+        ? String(rawAmount)
+        : undefined;
     const currency = event.currency || String(req.currency || 'TRY');
+
+    if (!keyedId) {
+      const error = new Error(
+        'invoicing: payment.succeeded event carries neither paymentId nor conversationId; refusing to invent an invoice key'
+      );
+      pluginCtx?.logger?.error('Invoicing failed', error);
+      if (options.onInvoiceFailed) {
+        await options.onInvoiceFailed(error, event);
+      }
+      return;
+    }
+
+    if (!amount) {
+      const error = new Error(
+        `invoicing: cannot invoice payment '${keyedId}': the event carries no amount`
+      );
+      const record: InvoicingRecord = {
+        paymentId: keyedId,
+        conversationId,
+        status: 'failed',
+        currency,
+        error: error.message,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      await saveRecord(record);
+      pluginCtx?.logger?.error(error.message, error);
+      if (options.onInvoiceFailed) {
+        await options.onInvoiceFailed(error, event);
+      }
+      return;
+    }
 
     const mapped = options.map
       ? await options.map({
@@ -65,7 +250,7 @@ export const invoicing = (options: InvoicingOptions) => {
           basketItems: req.basketItems as BasketItem[] | undefined,
           amount,
           currency,
-          paymentId,
+          paymentId: keyedId,
           conversationId,
           event,
         })
@@ -90,13 +275,14 @@ export const invoicing = (options: InvoicingOptions) => {
           ]);
 
     const params: CreateInvoiceParams = {
-      paymentId,
+      paymentId: keyedId,
       conversationId,
       buyer: {
         name:
           mapped.buyer?.name ||
           `${buyerRaw.name || ''} ${buyerRaw.surname || ''}`.trim() ||
           'Valued Customer',
+        contactId: mapped.buyer?.contactId,
         taxNumber: mapped.buyer?.taxNumber || String(buyerRaw.identityNumber || ''),
         taxOffice: mapped.buyer?.taxOffice,
         email: mapped.buyer?.email || String(buyerRaw.email || ''),
@@ -109,40 +295,55 @@ export const invoicing = (options: InvoicingOptions) => {
       total: amount,
       currency,
       vatRate: mapped.vatRate ?? defaultVatRate,
+      documentType: mapped.documentType,
     };
 
     try {
       const invoice = await executeWithRetry(() => adapter.createInvoice(params));
+      if (!invoice.id) {
+        throw new Error(
+          `invoicing: adapter '${adapter.name}' returned an invoice without an id; refusing to record it`
+        );
+      }
       const record: InvoicingRecord = {
-        paymentId,
+        paymentId: keyedId,
         conversationId,
         invoiceId: invoice.id,
         invoiceNumber: invoice.invoiceNumber,
         pdfUrl: invoice.pdfUrl,
-        status: invoice.status,
+        documentType: params.documentType,
+        status: 'created',
         amount,
         currency,
+        invoiceParams: params,
+        paymentPlatform: event.provider,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      records.set(paymentId, record);
+      await saveRecord(record);
       if (options.onInvoiceCreated) {
         await options.onInvoiceCreated(invoice, event);
       }
+      kickIssuance(keyedId, event);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      pluginCtx?.logger?.error(`Invoicing failed for payment ${paymentId}`, err as Error);
+      const errorMsg = errorMessage(err);
+      pluginCtx?.logger?.error(
+        `Invoicing failed for payment ${keyedId}`,
+        err instanceof Error ? err : new Error(errorMsg)
+      );
       const record: InvoicingRecord = {
-        paymentId,
+        paymentId: keyedId,
         conversationId,
         status: 'failed',
         amount,
         currency,
         error: errorMsg,
+        invoiceParams: params,
+        paymentPlatform: event.provider,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      records.set(paymentId, record);
+      await saveRecord(record);
       if (options.onInvoiceFailed) {
         await options.onInvoiceFailed(err instanceof Error ? err : new Error(errorMsg), event);
       }
@@ -152,47 +353,52 @@ export const invoicing = (options: InvoicingOptions) => {
   async function handleRefundSucceeded(event: PaymentEvent<'refund.succeeded'>) {
     if (onRefund === 'none') return;
 
+    const result = (event.result as Record<string, unknown>) || {};
     const paymentId =
-      event.paymentId ||
-      String(event.result && (event.result as Record<string, unknown>).paymentId);
+      event.paymentId || (typeof result.paymentId === 'string' ? result.paymentId : undefined);
     if (!paymentId) return;
 
-    const record = records.get(paymentId);
+    const record = await loadRecord(paymentId);
     if (!record || !record.invoiceId) return;
 
     const req = (event.request as Record<string, unknown>) || {};
-    const refundAmount =
-      event.amount || String(req.refundPrice || req.price || record.amount || '0');
+    const refundAmount = String(
+      event.amount ?? req.refundPrice ?? req.price ?? record.amount ?? ''
+    );
+    if (!refundAmount) return;
+
+    const snapshot = record.invoiceParams;
+    const returnParams: CreateInvoiceParams = snapshot
+      ? { ...snapshot, total: refundAmount }
+      : {
+          paymentId,
+          conversationId: record.conversationId,
+          buyer: { name: 'Customer' },
+          items: [
+            {
+              name: 'Refund Return',
+              quantity: 1,
+              unitPrice: refundAmount,
+              vatRate: defaultVatRate,
+            },
+          ],
+          total: refundAmount,
+          currency: record.currency,
+        };
 
     try {
       if (onRefund === 'cancel' && adapter.cancelInvoice) {
         await executeWithRetry(() => adapter.cancelInvoice!(record.invoiceId!));
-        record.status = 'failed';
-        record.updatedAt = new Date();
+        record.status = 'cancelled';
+        await saveRecord(record);
       } else if (onRefund === 'return-invoice' && adapter.createReturnInvoice) {
-        await executeWithRetry(() =>
-          adapter.createReturnInvoice!(record.invoiceId!, {
-            paymentId,
-            conversationId: record.conversationId,
-            buyer: { name: 'Customer' },
-            items: [
-              {
-                name: 'Refund Return',
-                quantity: 1,
-                unitPrice: refundAmount,
-                vatRate: defaultVatRate,
-              },
-            ],
-            total: refundAmount,
-            currency: record.currency,
-          })
-        );
-        record.updatedAt = new Date();
+        await executeWithRetry(() => adapter.createReturnInvoice!(record.invoiceId!, returnParams));
+        await saveRecord(record);
       }
     } catch (err) {
       pluginCtx?.logger?.error(
         `Refund invoicing action failed for payment ${paymentId}`,
-        err as Error
+        err instanceof Error ? err : new Error(errorMessage(err))
       );
     }
   }
@@ -209,41 +415,57 @@ export const invoicing = (options: InvoicingOptions) => {
     },
     methods: () => ({
       invoicing: {
-        get: (paymentId: string) => records.get(paymentId),
-        list: () => [...records.values()],
-        getFailed: () => [...records.values()].filter((r) => r.status === 'failed'),
-        retry: async (paymentId: string): Promise<InvoiceResult> => {
-          const record = records.get(paymentId);
+        get: async (paymentId: string): Promise<InvoicingRecord | undefined> =>
+          await loadRecord(paymentId),
+        list: async (): Promise<InvoicingRecord[]> => await store.list(),
+        getFailed: async (): Promise<InvoicingRecord[]> =>
+          (await store.list()).filter((r) => r.status === 'failed'),
+        /** Re-runs a failed creation, then the issuance step, from the saved snapshot */
+        retry: async (paymentId: string): Promise<InvoicingRecord> => {
+          const record = await loadRecord(paymentId);
           if (!record) {
             throw new Error(`invoicing: no record found for paymentId '${paymentId}'`);
           }
-          const invoice = await executeWithRetry(() =>
-            adapter.createInvoice({
-              paymentId,
-              conversationId: record.conversationId,
-              buyer: { name: 'Customer' },
-              items: [
-                {
-                  name: 'Invoice',
-                  quantity: 1,
-                  unitPrice: record.amount || '0',
-                  vatRate: defaultVatRate,
-                },
-              ],
-              total: record.amount || '0',
-              currency: record.currency,
-            })
-          );
-          record.invoiceId = invoice.id;
-          record.invoiceNumber = invoice.invoiceNumber;
-          record.pdfUrl = invoice.pdfUrl;
-          record.status = invoice.status;
-          record.error = undefined;
-          record.updatedAt = new Date();
-          return invoice;
+          if (record.status === 'issued' || record.status === 'cancelled') {
+            return record;
+          }
+          if (!record.invoiceId) {
+            if (!record.invoiceParams) {
+              throw new Error(
+                `invoicing: paymentId '${paymentId}' has no saved invoice data to retry from`
+              );
+            }
+            const invoice = await executeWithRetry(() =>
+              adapter.createInvoice(record.invoiceParams!)
+            );
+            if (!invoice.id) {
+              throw new Error(
+                `invoicing: adapter '${adapter.name}' returned an invoice without an id; refusing to record it`
+              );
+            }
+            record.invoiceId = invoice.id;
+            record.invoiceNumber = invoice.invoiceNumber;
+            record.pdfUrl = invoice.pdfUrl;
+            record.status = 'created';
+            record.error = undefined;
+            await saveRecord(record);
+          }
+          if (issuanceMode !== 'none' && adapter.issueInvoice) {
+            return await runIssuance(paymentId);
+          }
+          return record;
+        },
+        /** Explicit issuance: run the e-document step and wait for its outcome */
+        issue: async (paymentId: string): Promise<InvoicingRecord> => {
+          if (!adapter.issueInvoice) {
+            throw new Error(
+              `invoicing: adapter '${adapter.name}' does not support e-document issuance`
+            );
+          }
+          return await runIssuance(paymentId);
         },
         cancel: async (paymentId: string, reason?: string): Promise<void> => {
-          const record = records.get(paymentId);
+          const record = await loadRecord(paymentId);
           if (!record || !record.invoiceId) {
             throw new Error(`invoicing: no invoice found to cancel for paymentId '${paymentId}'`);
           }
@@ -251,8 +473,8 @@ export const invoicing = (options: InvoicingOptions) => {
             throw new Error(`invoicing: adapter '${adapter.name}' does not support cancelInvoice`);
           }
           await executeWithRetry(() => adapter.cancelInvoice!(record.invoiceId!, reason));
-          record.status = 'failed';
-          record.updatedAt = new Date();
+          record.status = 'cancelled';
+          await saveRecord(record);
         },
       },
     }),

@@ -126,14 +126,22 @@ export {
 export { invoicing } from './invoicing';
 export {
   parasut,
+  MemoryInvoicingStore,
   type ParasutOptions,
   type InvoicingOptions,
   type InvoicingAdapter,
   type InvoicingRecord,
+  type InvoicingStatus,
+  type InvoicingStore,
+  type InvoicingIssuanceOptions,
   type InvoiceResult,
+  type InvoiceDocumentType,
   type CreateInvoiceParams,
   type InvoiceItem,
   type InvoiceBuyer,
+  type IssueInvoiceParams,
+  type IssuanceResult,
+  type IssuanceCheckResult,
   type InvoicingMapFn,
   type InvoiceRefundAction,
 } from './invoicing/index';
