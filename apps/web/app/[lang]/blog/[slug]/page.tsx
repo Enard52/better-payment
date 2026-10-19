@@ -8,7 +8,7 @@ import RevealOnScroll from "@/components/RevealOnScroll";
 import { buttonVariants } from "@/lib/button-variants";
 import { GitHubIcon } from "@/components/icons";
 import { formatDate, getPost, getPosts, postSlug, readingMinutes } from "@/lib/blog";
-import { LOCALES, SITE_URL, alternates, isLocale, localePath } from "@/lib/i18n/config";
+import { LOCALES, SITE_URL, alternates, isLocale, localePath, openGraphLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/dictionary";
 import { getMDXComponents } from "@/lib/mdx-components";
 import AuthorAvatars from "@/components/AuthorAvatars";
@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/blog/[slug
     keywords: post.data.tags,
     openGraph: {
       type: "article",
-      locale: lang === "tr" ? "tr_TR" : "en_US",
+      locale: openGraphLocale(lang),
       siteName: "Better Payment",
       title: post.data.title,
       description: post.data.description,

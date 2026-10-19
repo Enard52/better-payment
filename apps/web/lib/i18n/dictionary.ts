@@ -1,4 +1,4 @@
-import type { Locale } from "./config";
+import { DEFAULT_LOCALE, type Locale } from "./config";
 
 const en = {
   accessibility: {
@@ -723,8 +723,59 @@ const tr: Dictionary = {
   },
 };
 
-const dictionaries: Record<Locale, Dictionary> = { en, tr };
+/**
+ * A dictionary may list only the keys a language has translated so far; every other key
+ * falls back to English. Only the languages with `docs: "required"` in locales.json must
+ * be typed as a full `Dictionary` (like `tr` above) so the compiler enforces completeness.
+ */
+type DeepPartial<T> = T extends readonly unknown[]
+  ? T
+  : T extends object
+    ? { [K in keyof T]?: DeepPartial<T[K]> }
+    : T;
+
+/** Locale code -> partial dictionary. A language missing here is served fully in English. */
+export type PartialDictionary = DeepPartial<Dictionary>;
+
+const de: PartialDictionary = {
+  meta: {
+    title: "Better Payment — Einheitliches Zahlungs-Gateway für Node.js",
+    description:
+      "Eine typsichere, einheitliche Zahlungs-Bibliothek für Node.js und Edge-Runtimes.",
+  },
+  docs: {
+    fallbackNotice:
+      "Diese Seite wurde noch nicht ins Deutsche übersetzt; sie wird auf Englisch angezeigt.",
+  },
+};
+
+const translations: Partial<Record<Locale, DeepPartial<Dictionary>>> = {
+  tr,
+  de,
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Copies the base record and overwrites every key the patch provides. */
+function merge(base: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = { ...base };
+  for (const [key, value] of Object.entries(patch)) {
+    const current = result[key];
+    result[key] = isRecord(current) && isRecord(value) ? merge(current, value) : value;
+  }
+  return result;
+}
+
+const cache = new Map<Locale, Dictionary>();
 
 export function getDictionary(lang: Locale): Dictionary {
-  return dictionaries[lang];
+  const cached = cache.get(lang);
+  if (cached) return cached;
+  const translation = translations[lang];
+  const dictionary =
+    lang === DEFAULT_LOCALE || !translation ? en : (merge(en, translation) as Dictionary);
+  cache.set(lang, dictionary);
+  return dictionary;
 }

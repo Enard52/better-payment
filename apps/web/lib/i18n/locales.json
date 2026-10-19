@@ -1,0 +1,17 @@
+{
+  "$comment": [
+    "Single source of truth for the website's languages. To add a language:",
+    "1. add one entry here (key = locale code used in URLs and file names, e.g. intro.de.mdx);",
+    "2. add an optional partial dictionary in lib/i18n/dictionary.ts (missing keys fall back to English);",
+    "3. translate docs pages as <path>.<code>.mdx. With docs: \"optional\" a language may start with zero pages:",
+    "   untranslated pages fall back to English with a notice. Set docs: \"required\" only when every page must exist.",
+    "ogLocale is the Open Graph tag (en_US), intlLocale is the BCP 47 tag used for dates (en-US),",
+    "rtl marks right-to-left scripts and sets dir=\"rtl\" on <html> (layout mirroring for RTL is tracked separately)."
+  ],
+  "defaultLanguage": "en",
+  "languages": {
+    "en": { "name": "English", "ogLocale": "en_US", "intlLocale": "en-US", "rtl": false, "docs": "required" },
+    "tr": { "name": "Türkçe", "ogLocale": "tr_TR", "intlLocale": "tr-TR", "rtl": false, "docs": "required" },
+    "de": { "name": "Deutsch", "ogLocale": "de_DE", "intlLocale": "de-DE", "rtl": false, "docs": "optional" }
+  }
+}

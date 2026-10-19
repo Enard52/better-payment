@@ -6,7 +6,9 @@ import remarkParse from 'remark-parse';
 import remarkMdx from 'remark-mdx';
 import remarkGfm from 'remark-gfm';
 import remarkStringify from 'remark-stringify';
+import { readLocaleRegistry, fileLocale, localeRoute, routeLocale } from './locales.mjs';
 
+const registry = readLocaleRegistry();
 const markdown = unified().use(remarkParse).use(remarkMdx).use(remarkGfm).use(remarkStringify);
 const text = (value) => ({ type: 'text', value });
 const paragraph = (value) => ({ type: 'paragraph', children: [text(value)] });
@@ -17,27 +19,31 @@ export function siteUrl(basePath = '') {
 }
 
 export function pageRoute(file) {
-  const lang = file.endsWith('.tr.mdx') ? 'tr' : 'en';
+  const lang = fileLocale(registry, file);
+  const suffix = new RegExp(`\\.(?:${registry.codes.join('|')})\\.mdx$`);
   const segments = file
     .replaceAll('\\', '/')
-    .replace(/(?:\.tr)?\.mdx$/, '')
+    .replace(suffix, '')
+    .replace(/\.mdx$/, '')
     .split('/')
     .filter((part) => !/^\(.*\)$/.test(part));
   if (segments.at(-1) === 'index') segments.pop();
   return {
     lang,
     slug: segments.join('/'),
-    route: `${lang === 'tr' ? '/tr' : ''}/docs${segments.length ? '/' + segments.join('/') : ''}`,
+    route: localeRoute(registry, lang, `/docs${segments.length ? '/' + segments.join('/') : ''}`),
   };
 }
 
 /** Convert MDX syntax, never execute expressions or imports from documentation. */
 export function toMarkdown(content, origin, route) {
   const tree = markdown.parse(content);
+  const locale = routeLocale(registry, route);
+  const prefix = localeRoute(registry, locale, '');
   const url = (value) => {
     if (value.startsWith('/') && !value.startsWith('//')) {
       const localized =
-        route.startsWith('/tr/') && /^\/docs(?:\/|#|$)/.test(value) ? `/tr${value}` : value;
+        prefix && /^\/docs(?:\/|#|$)/.test(value) ? `${prefix}${value}` : value;
       return `${origin}${localized}`;
     }
     return value.startsWith('#') ? `${origin}${route}${value}` : value;

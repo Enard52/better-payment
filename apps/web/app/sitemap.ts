@@ -1,15 +1,17 @@
 import type { MetadataRoute } from "next";
 import { source } from "@/lib/source";
 import { blogSource, postSlug } from "@/lib/blog";
-import { SITE_URL, localePath, type Locale } from "@/lib/i18n/config";
+import { LOCALES, SITE_URL, localePath, type Locale } from "@/lib/i18n/config";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const url = (lang: Locale, path: string) => `${SITE_URL}${localePath(lang, path)}`;
+  const languages = (path: string) =>
+    Object.fromEntries(LOCALES.map((code) => [code, url(code, path)]));
   const entry = (path: string, lastModified?: Date) =>
-    (["en", "tr"] as const).map((lang) => ({
+    LOCALES.map((lang) => ({
       url: url(lang, path),
       ...(lastModified && { lastModified }),
-      alternates: { languages: { en: url("en", path), tr: url("tr", path) } },
+      alternates: { languages: languages(path) },
     }));
 
   const posts = blogSource.getPages("en");
