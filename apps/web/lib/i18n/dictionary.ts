@@ -270,6 +270,7 @@ const en = {
     planned: "Planned",
   },
   contributors: {
+    owner: "CODEOWNER",
     titleLine1: "Want to contribute?",
     titleLine2: "Let's build the next part together.",
     lead: "A new provider, a clearer guide, a test that catches a bug. Every contribution makes Better Payment better for everyone.",
@@ -606,6 +607,7 @@ const tr: Dictionary = {
     planned: "Planlanıyor",
   },
   contributors: {
+    owner: "CODEOWNER",
     titleLine1: "Katkı sağlamak ister misin?",
     titleLine2: "Sıradaki adımı birlikte atalım.",
     lead: "Yeni bir sağlayıcı, daha anlaşılır bir rehber, bir hatayı yakalayan test. Her katkı, Better Payment’ı herkes için biraz daha iyi yapıyor.",
