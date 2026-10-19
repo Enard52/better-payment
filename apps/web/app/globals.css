@@ -399,8 +399,8 @@ html.dark {
 }
 
 /*
- * Docs (Faz 6). Sidebar page links get a small brand chevron; the active page is
- * marked by the tint and an indigo chevron instead of Fumadocs' thin line.
+ * Docs (Faz 6). Sidebar: grouped accordions with icon tiles; the active page is
+ * marked by a tint and a rounded indigo rail.
  */
 /* External links (GitHub, Contributing) keep their own icon instead of the chevron */
 :is(#nd-sidebar, #nd-sidebar-mobile) a[target="_blank"]::after {
@@ -461,31 +461,86 @@ html.dark {
   height: 18px;
 }
 
-:is(#nd-sidebar, #nd-sidebar-mobile) a[data-active]::after {
-  content: "";
-  order: -1;
-  flex: none;
-  width: 12px;
-  height: 12px;
-  background-color: currentColor;
-  opacity: 0.4;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E")
-    center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E")
-    center / contain no-repeat;
+/* Search: a quiet field that reads as an input, with the shortcut as keycaps */
+:is(#nd-sidebar, #nd-sidebar-mobile) button[data-search-full] {
+  height: 38px;
+  border-color: var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.5) inset;
+  font-weight: 450;
   transition:
-    transform 0.35s var(--bp-spring),
-    opacity var(--bp-d-sm);
+    border-color var(--bp-d-xs),
+    box-shadow var(--bp-d-xs);
 }
-:is(#nd-sidebar, #nd-sidebar-mobile) a[data-active]:hover::after {
-  opacity: 0.75;
-  transform: translateX(2px);
+:is(#nd-sidebar, #nd-sidebar-mobile) button[data-search-full]:hover {
+  border-color: var(--bp-line-strong);
+  background: var(--background);
+  color: var(--foreground);
 }
-:is(#nd-sidebar, #nd-sidebar-mobile) a[data-active="true"]::after {
-  opacity: 1;
+:is(#nd-sidebar, #nd-sidebar-mobile) button[data-search-full] kbd {
+  border-color: var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+/* Section headers (accordion triggers): small, semibold, icon in a tile */
+:is(#nd-sidebar, #nd-sidebar-mobile) [data-radix-scroll-area-viewport] > div > div > button {
+  margin-top: 2px;
+  padding: 7px 8px;
+  color: var(--foreground);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+:is(#nd-sidebar, #nd-sidebar-mobile) [data-radix-scroll-area-viewport] > div > div > button:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+:is(#nd-sidebar, #nd-sidebar-mobile) [data-radix-scroll-area-viewport] button > img[src*="docs-icons"] {
+  width: 24px;
+  height: 24px;
+  padding: 3px;
+  border-radius: 7px;
+  background: var(--bp-tint);
+  object-fit: contain;
+}
+/* Chevron: muted, rotates smoothly instead of snapping */
+:is(#nd-sidebar, #nd-sidebar-mobile) [data-radix-scroll-area-viewport] button > svg:last-child {
+  margin-inline-start: auto;
+  width: 14px;
+  height: 14px;
+  color: var(--muted-foreground);
+  opacity: 0.7;
+}
+
+/* Page links: no per-row chevrons; a rail on the left carries the active state */
+:is(#nd-sidebar, #nd-sidebar-mobile) a[data-active] {
+  padding-block: 6px;
+  padding-inline-start: 40px !important;
+  font-size: 13.5px;
+  transition:
+    color var(--bp-d-xs),
+    background-color var(--bp-d-xs);
+}
+:is(#nd-sidebar, #nd-sidebar-mobile) a[data-active="false"]:hover {
+  color: var(--foreground);
+}
+:is(#nd-sidebar, #nd-sidebar-mobile) a[data-active="true"] {
+  background: linear-gradient(90deg, var(--bp-tint), transparent 92%);
+  color: var(--bp-accent-text);
+  font-weight: 600;
 }
 :is(#nd-sidebar, #nd-sidebar-mobile) a[data-active="true"]::before {
-  display: none;
+  inset-block: 6px;
+  inset-inline-start: 9px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--primary);
 }
 
 /* Inline code in docs prose */
