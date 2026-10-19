@@ -118,6 +118,7 @@ const en = {
   features: {
     titleLine1: "Everything you need,",
     titleLine2: "nothing you don't.",
+    learnMore: "Learn more",
     items: {
       unified: {
         title: "Unified API surface",
@@ -283,6 +284,7 @@ const en = {
   quickStart: {
     titleLine1: "Up and running",
     titleLine2: "in minutes.",
+    lead: "Install the package, configure one provider and take your first 3D Secure payment. No adapters, no glue code.",
     steps: ["Install the package", "Configure your providers", "Start a 3D Secure payment"],
     fullDocs: "View full documentation",
   },
@@ -452,6 +454,7 @@ const tr: Dictionary = {
   features: {
     titleLine1: "İhtiyacınız olan her şey,",
     titleLine2: "fazlası değil.",
+    learnMore: "Detaylı incele",
     items: {
       unified: {
         title: "Birleşik API",
@@ -617,6 +620,7 @@ const tr: Dictionary = {
   quickStart: {
     titleLine1: "Dakikalar içinde",
     titleLine2: "çalışır durumda.",
+    lead: "Paketi kurun, bir sağlayıcı yapılandırın ve ilk 3D Secure ödemenizi alın. Adaptör yok, yapıştırma kod yok.",
     steps: ["Paketi kurun", "Sağlayıcılarınızı yapılandırın", "3D Secure ödeme başlatın"],
     fullDocs: "Tüm dokümantasyonu görün",
   },

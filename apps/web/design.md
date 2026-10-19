@@ -186,5 +186,6 @@ Each step is a separate commit on this branch. We stop for approval after each o
 - [x] Step 2a: Navbar mega menu, reworked to the Craftgate grammar (intro column + categorised groups + dimmed page). `components/Navbar.tsx`, `lib/nav-menu.ts`, `nav.menu` in the dictionary (EN + TR)
 - [x] Hero kept as is, plus: version badge, install command with npm/pnpm/bun tabs + copy, provider logo + stats strip (`HeroProof`, `InstallCommand`)
 - [x] Homepage container widened to `max-w-7xl` so navbar, hero and sections share one left edge
+- [x] Features: per-card "Learn more" links to the docs; QuickStart: two-column layout with sticky heading; footer aligned to the shared edge
 - [ ] Step 1: tokens (color ramp, type scale)
 - [ ] Hero, provider strip, stats, feature rows, developer section, CTA, footer

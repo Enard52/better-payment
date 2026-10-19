@@ -25,7 +25,7 @@ export default async function Home({ params }: PageProps<"/[lang]">) {
       <main id="main-content" tabIndex={-1} className="scroll-mt-20 focus:outline-none">
         <Hero lang={lang} t={t.hero} version={VERSION} copy={t.code} />
         <Integrations compare={t.compare} t={t.providers} bankTagline={t.banks.akbankTagline} code={t.code} />
-        <Features t={t.features} />
+        <Features lang={lang} t={t.features} />
         <Banks lang={lang} t={t.banks} />
         <Contributors lang={lang} t={t.contributors} />
         <QuickStart lang={lang} t={t.quickStart} code={t.code} />
