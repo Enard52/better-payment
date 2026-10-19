@@ -26,6 +26,61 @@ const en = {
     openMenu: "Open menu",
     language: "Language",
     theme: "Toggle dark mode",
+    menu: {
+      product: {
+        label: "Product",
+        items: {
+          unified: { title: "Unified API", desc: "One typed interface for every provider." },
+          handler: { title: "HTTP handler", desc: "Secure-by-default routes and verified callbacks." },
+          payments: { title: "Payments", desc: "Baskets, pre-authorization and stored cards." },
+          plugins: { title: "Plugins", desc: "Notifications, localized errors and chaos testing." },
+        },
+        feature: {
+          eyebrow: "New",
+          title: "Edge-ready by design",
+          desc: "Runs on Node.js, Cloudflare Workers and Vercel Edge with no runtime dependencies.",
+          cta: "Read the guide",
+        },
+      },
+      providers: {
+        label: "Providers",
+        gateways: "Gateways",
+        banks: "Bank virtual POS",
+        tagline: "11 providers, one API.",
+        all: "See all providers",
+        items: {
+          iyzico: "Hosted checkout, 3D Secure, refunds",
+          paytr: "iFrame checkout, installments",
+          sipay: "3D Secure and non-3D sales",
+          parampos: "TRY sales, BIN and installments",
+          akbank: "3D_PAY, refund and cancel",
+          est: "İş Bankası, Ziraat, Halkbank, TEB, Şekerbank",
+          kuveytturk: "Kuveyt Türk virtual POS",
+        },
+      },
+      developers: {
+        label: "Developers",
+        items: {
+          quickStart: { title: "Quick start", desc: "Take your first payment in minutes." },
+          installation: { title: "Installation", desc: "npm, pnpm, bun and edge runtimes." },
+          nextjs: { title: "Next.js", desc: "Route handlers and server actions." },
+          edge: { title: "Edge runtimes", desc: "Workers, Vercel Edge and Deno." },
+          api: { title: "API reference", desc: "Every method, option and type." },
+          testCards: { title: "Test cards", desc: "Sandbox cards for each provider." },
+        },
+      },
+      resources: {
+        label: "Resources",
+        items: {
+          changelog: { title: "Changelog", desc: "Release history and breaking changes." },
+          whatsNew: { title: "What's new", desc: "Highlights from the latest release." },
+          migration: { title: "Migration guide", desc: "Upgrade from 0.4 to 0.5." },
+          errorCodes: { title: "Error codes", desc: "Normalized errors across providers." },
+          customProviders: { title: "Custom providers", desc: "Add a gateway of your own." },
+          github: { title: "GitHub", desc: "Source, issues and discussions." },
+        },
+      },
+    },
   },
   hero: {
     titleLine1: "One API for",
@@ -303,6 +358,61 @@ const tr: Dictionary = {
     openMenu: "Menüyü aç",
     language: "Dil",
     theme: "Karanlık modu aç/kapat",
+    menu: {
+      product: {
+        label: "Ürün",
+        items: {
+          unified: { title: "Birleşik API", desc: "Tüm sağlayıcılar için tek tipli arayüz." },
+          handler: { title: "HTTP handler", desc: "Varsayılan güvenli rotalar ve doğrulanmış callback'ler." },
+          payments: { title: "Ödemeler", desc: "Sepet, ön provizyon ve kayıtlı kartlar." },
+          plugins: { title: "Eklentiler", desc: "Bildirim, yerelleştirilmiş hata ve kaos testi." },
+        },
+        feature: {
+          eyebrow: "Yeni",
+          title: "Edge için tasarlandı",
+          desc: "Node.js, Cloudflare Workers ve Vercel Edge üzerinde, çalışma zamanı bağımlılığı olmadan çalışır.",
+          cta: "Rehbere göz atın",
+        },
+      },
+      providers: {
+        label: "Sağlayıcılar",
+        gateways: "Ödeme altyapıları",
+        banks: "Banka sanal POS",
+        tagline: "11 sağlayıcı, tek API.",
+        all: "Tüm sağlayıcıları gör",
+        items: {
+          iyzico: "Hosted checkout, 3D Secure, iade",
+          paytr: "iFrame ödeme, taksit",
+          sipay: "3D Secure ve non-3D satış",
+          parampos: "TRY satış, BIN ve taksit",
+          akbank: "3D_PAY, iade ve iptal",
+          est: "İş Bankası, Ziraat, Halkbank, TEB, Şekerbank",
+          kuveytturk: "Kuveyt Türk sanal POS",
+        },
+      },
+      developers: {
+        label: "Geliştiriciler",
+        items: {
+          quickStart: { title: "Hızlı başlangıç", desc: "İlk ödemenizi dakikalar içinde alın." },
+          installation: { title: "Kurulum", desc: "npm, pnpm, bun ve edge ortamları." },
+          nextjs: { title: "Next.js", desc: "Route handler ve server action'lar." },
+          edge: { title: "Edge ortamları", desc: "Workers, Vercel Edge ve Deno." },
+          api: { title: "API referansı", desc: "Tüm metotlar, seçenekler ve tipler." },
+          testCards: { title: "Test kartları", desc: "Her sağlayıcı için sandbox kartları." },
+        },
+      },
+      resources: {
+        label: "Kaynaklar",
+        items: {
+          changelog: { title: "Değişiklik günlüğü", desc: "Sürüm geçmişi ve kırıcı değişiklikler." },
+          whatsNew: { title: "Yenilikler", desc: "Son sürümün öne çıkanları." },
+          migration: { title: "Geçiş rehberi", desc: "0.4'ten 0.5'e yükseltin." },
+          errorCodes: { title: "Hata kodları", desc: "Sağlayıcılar arası normalize hatalar." },
+          customProviders: { title: "Özel sağlayıcılar", desc: "Kendi altyapınızı ekleyin." },
+          github: { title: "GitHub", desc: "Kaynak kod, issue ve tartışmalar." },
+        },
+      },
+    },
   },
   hero: {
     titleLine1: "Türk ödeme sistemleri",
