@@ -11,7 +11,7 @@ description: Taksit sorgusu yanıtlarını ödeme sayfaları için hazır, biçi
 
 ```typescript
 import { buildInstallmentTable } from 'better-payment';
-// veya istemci (browser) kodunda:
+// or in client-side code:
 // import { buildInstallmentTable } from 'better-payment/client';
 
 const info = await payment.iyzico.installmentInfo({
@@ -49,12 +49,12 @@ Her satırda sağlayıcı uyumluluğu için `installmentNumber`, `installmentPri
 
 ```typescript
 const table = buildInstallmentTable(info, {
-  locale: 'tr-TR', // varsayılan: 'tr-TR'
-  currency: 'TRY', // varsayılan: 'TRY'
-  cardFamily: 'Bonus', // yanıtta birden fazla kart ailesi varsa birini seçin
-  bankCode: 46, // veya banka koduna göre filtreleyin
-  allDetails: false, // dönen tüm kart programlarını tek tabloda birleştirmek için true
-  singlePaymentTotal: 100, // sağlayıcı tek çekim seçeneğini dönmediyse temel tutar
+  locale: 'tr-TR', // default: 'tr-TR'
+  currency: 'TRY', // default: 'TRY'
+  cardFamily: 'Bonus', // select a specific card family if response contains multiple
+  bankCode: 46, // or filter by bank code
+  allDetails: false, // true to combine rows from all returned card programs
+  singlePaymentTotal: 100, // optional baseline if the provider omitted count 1
 });
 ```
 
@@ -70,19 +70,19 @@ function InstallmentTable({ info }) {
     <table>
       <thead>
         <tr>
-          <th>Taksit</th>
-          <th>Aylık Tutar</th>
-          <th>Toplam</th>
-          <th>Vade Farkı</th>
+          <th>Installments</th>
+          <th>Monthly</th>
+          <th>Total</th>
+          <th>Difference</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((row) => (
           <tr key={row.count} className={row.isSinglePayment ? 'single-payment' : ''}>
-            <td>{row.isSinglePayment ? 'Tek Çekim' : `${row.count} Taksit`}</td>
+            <td>{row.isSinglePayment ? 'Single payment' : `${row.count} installments`}</td>
             <td>{row.formattedMonthlyAmount}</td>
             <td>{row.formattedTotal}</td>
-            <td>{row.difference > 0 ? `+${row.formattedDifference}` : 'Vadesiz'}</td>
+            <td>{row.difference > 0 ? `+${row.formattedDifference}` : 'No interest'}</td>
           </tr>
         ))}
       </tbody>

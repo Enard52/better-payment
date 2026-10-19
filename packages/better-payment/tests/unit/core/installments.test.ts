@@ -175,10 +175,30 @@ describe('buildInstallmentTable', () => {
           bankName: 'AKBANK T.A.Ş.',
           commercial: 0,
           installmentPrices: [
-            { installmentNumber: 1, totalPrice: 101.75, installmentPrice: 101.75, commissionRate: 1.75 },
-            { installmentNumber: 2, totalPrice: 103.2, installmentPrice: 51.6, commissionRate: 3.2 },
-            { installmentNumber: 3, totalPrice: 104.1, installmentPrice: 34.7, commissionRate: 4.1 },
-            { installmentNumber: 6, totalPrice: 107.9, installmentPrice: 17.98, commissionRate: 7.9 },
+            {
+              installmentNumber: 1,
+              totalPrice: 101.75,
+              installmentPrice: 101.75,
+              commissionRate: 1.75,
+            },
+            {
+              installmentNumber: 2,
+              totalPrice: 103.2,
+              installmentPrice: 51.6,
+              commissionRate: 3.2,
+            },
+            {
+              installmentNumber: 3,
+              totalPrice: 104.1,
+              installmentPrice: 34.7,
+              commissionRate: 4.1,
+            },
+            {
+              installmentNumber: 6,
+              totalPrice: 107.9,
+              installmentPrice: 17.98,
+              commissionRate: 7.9,
+            },
           ],
         },
       ],
@@ -282,9 +302,7 @@ describe('buildInstallmentTable', () => {
         bankCode: 62,
         bankName: 'Garanti',
         commercial: 0,
-        installmentPrices: [
-          { installmentNumber: 1, totalPrice: 50, installmentPrice: 50 },
-        ],
+        installmentPrices: [{ installmentNumber: 1, totalPrice: 50, installmentPrice: 50 }],
       };
 
       const rows = buildInstallmentTable(priceDetail);
@@ -308,7 +326,9 @@ describe('buildInstallmentTable', () => {
       expect(buildInstallmentTable(null)).toEqual([]);
       expect(buildInstallmentTable(undefined)).toEqual([]);
       expect(buildInstallmentTable({ status: PaymentStatus.FAILURE })).toEqual([]);
-      expect(buildInstallmentTable({ status: PaymentStatus.SUCCESS, installmentDetails: [] })).toEqual([]);
+      expect(
+        buildInstallmentTable({ status: PaymentStatus.SUCCESS, installmentDetails: [] })
+      ).toEqual([]);
       expect(buildInstallmentTable([])).toEqual([]);
     });
 
