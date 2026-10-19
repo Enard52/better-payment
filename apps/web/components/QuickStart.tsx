@@ -70,13 +70,13 @@ export default function QuickStart({ lang, t, code }: { lang: Locale; t: Diction
             <li key={step.number} className="bp-reveal flex gap-5 sm:gap-6">
               <div className="flex shrink-0 flex-col items-center pt-1">
                 <div className="flex size-9 items-center justify-center rounded-lg bg-tint">
-                  <span className="font-mono text-[11px] font-semibold text-accent-text">{step.number}</span>
+                  <span className="font-mono text-label font-semibold text-accent-text">{step.number}</span>
                 </div>
                 {idx < steps.length - 1 && <div className="my-3 w-px flex-1 bg-border" />}
               </div>
 
               <div className={`min-w-0 flex-1 ${idx < steps.length - 1 ? "pb-10" : ""}`}>
-                <h3 className="mt-1.5 mb-4 text-[15px] font-semibold text-foreground">{t.steps[idx]}</h3>
+                <h3 className="mt-1.5 mb-4 text-body font-semibold text-foreground">{t.steps[idx]}</h3>
                 <Code code={step.code} file={step.file} shell={step.shell} copy={code} />
               </div>
             </li>

@@ -124,8 +124,8 @@ export default function Navbar({
         {/* Intro */}
         <div className="border-r border-border py-9 pr-10">
           <Icon className="mb-4 size-8 text-foreground" strokeWidth={1.5} />
-          <p className="text-[26px] leading-tight font-semibold tracking-[-0.02em] text-foreground">{copy.label}</p>
-          <p className="mt-3 text-[14.5px] leading-relaxed text-muted-foreground">{copy.desc}</p>
+          <p className="text-title-sm text-foreground">{copy.label}</p>
+          <p className="mt-3 text-body leading-relaxed text-muted-foreground">{copy.desc}</p>
           <Link
             href={href(def.href)}
             onClick={close}
@@ -145,7 +145,7 @@ export default function Navbar({
         >
           {def.groups.map((group) => (
             <div key={group.id}>
-              <p className="mb-4 text-[11.5px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+              <p className="mb-4 text-label font-semibold tracking-eyebrow text-muted-foreground uppercase">
                 {groupCopy[group.id]}
               </p>
               <ul className="grid gap-1">
@@ -158,7 +158,7 @@ export default function Navbar({
                         href={href(item.href)}
                         {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                         onClick={close}
-                        className="group/item -mx-2 flex items-center gap-3 rounded-lg px-2 py-2 text-[14.5px] font-medium text-foreground transition-colors hover:text-primary focus-visible:text-primary focus-visible:outline-none"
+                        className="group/item -mx-2 flex items-center gap-3 rounded-lg px-2 py-2 text-body font-medium text-foreground transition-colors hover:text-primary focus-visible:text-primary focus-visible:outline-none"
                       >
                         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-tint to-secondary text-primary ring-1 ring-inset ring-primary/10 transition-[transform,box-shadow] duration-200 group-hover/item:-translate-y-px group-hover/item:shadow-[0_6px_14px_-6px_var(--bp-glow)]">
                           <ItemIcon className="size-4" />
@@ -210,7 +210,7 @@ export default function Navbar({
             priority
             className="hidden h-6 w-auto dark:block"
           />
-          <Badge variant="secondary" className="hidden px-1.5 py-0 font-mono text-[10px] tracking-tight min-[1500px]:flex">
+          <Badge variant="secondary" className="hidden px-1.5 py-0 font-mono text-micro tracking-tight min-[1500px]:flex">
             v{version}
           </Badge>
         </Link>
@@ -228,7 +228,7 @@ export default function Navbar({
                 onFocus={() => show(key)}
                 onClick={() => (active === key ? setActive(null) : show(key))}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[15px] font-medium whitespace-nowrap transition-colors duration-300 outline-none focus-visible:outline-2 focus-visible:outline-primary",
+                  "inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-body font-medium whitespace-nowrap transition-colors duration-300 outline-none focus-visible:outline-2 focus-visible:outline-primary",
                   active === key ? "text-primary" : "text-foreground hover:text-primary",
                 )}
               >
@@ -239,7 +239,7 @@ export default function Navbar({
             <Link
               href={localePath(lang, "/docs")}
               onMouseEnter={hideSoon}
-              className="rounded-lg px-3.5 py-2 text-[15px] font-medium whitespace-nowrap text-foreground transition-colors duration-300 hover:text-primary"
+              className="rounded-lg px-3.5 py-2 text-body font-medium whitespace-nowrap text-foreground transition-colors duration-300 hover:text-primary"
             >
               {t.docs}
             </Link>
@@ -309,7 +309,7 @@ export default function Navbar({
                   type="button"
                   aria-expanded={expanded}
                   onClick={() => setMobileOpen(expanded ? null : key)}
-                  className="flex w-full items-center justify-between px-1 py-3.5 text-[15px] font-semibold text-foreground"
+                  className="flex w-full items-center justify-between px-1 py-3.5 text-body font-semibold text-foreground"
                 >
                   {menu[key].label}
                   <ChevronDown className={cn("size-4 text-muted-foreground transition-transform", expanded && "rotate-180")} />
@@ -318,7 +318,7 @@ export default function Navbar({
                   <div className="grid gap-4 pb-4">
                     {menus[key].groups.map((group) => (
                       <div key={group.id}>
-                        <p className="px-1 pb-1.5 text-[11px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+                        <p className="px-1 pb-1.5 text-label font-semibold tracking-eyebrow text-muted-foreground uppercase">
                           {groupCopy[group.id]}
                         </p>
                         {group.items.map((item) => {
@@ -344,7 +344,7 @@ export default function Navbar({
               </div>
             );
           })}
-          <Link href={localePath(lang, "/docs")} onClick={close} className="px-1 py-3.5 text-[15px] font-semibold text-foreground">
+          <Link href={localePath(lang, "/docs")} onClick={close} className="px-1 py-3.5 text-body font-semibold text-foreground">
             {t.docs}
           </Link>
           <Separator className="my-1.5" />

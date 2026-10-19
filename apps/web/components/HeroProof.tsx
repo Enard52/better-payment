@@ -11,7 +11,7 @@ export default function HeroProof({ t }: { t: Dictionary["hero"]["proof"] }) {
   return (
     <div className="rounded-2xl border border-border bg-card/80 backdrop-blur-md">
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-5 py-4 sm:px-6">
-        <p className="w-full font-mono text-[11.5px] sm:w-auto font-medium tracking-[0.06em] text-muted-foreground uppercase">{t.label}</p>
+        <p className="w-full font-mono text-label sm:w-auto font-medium tracking-eyebrow text-muted-foreground uppercase">{t.label}</p>
         <ul className="flex flex-1 flex-wrap items-center gap-2.5">
           {logos.map((tile) => (
             <li
@@ -28,7 +28,7 @@ export default function HeroProof({ t }: { t: Dictionary["hero"]["proof"] }) {
               />
             </li>
           ))}
-          <li className="px-1 text-[13px] font-medium text-muted-foreground">{t.more}</li>
+          <li className="px-1 text-caption font-medium text-muted-foreground">{t.more}</li>
         </ul>
       </div>
       <dl className="grid grid-cols-2 border-t border-border md:grid-cols-4">
@@ -38,8 +38,8 @@ export default function HeroProof({ t }: { t: Dictionary["hero"]["proof"] }) {
             className={`px-5 py-4 sm:px-6 ${i % 2 === 1 ? "border-l" : ""} ${i > 1 ? "max-md:border-t" : ""} ${i > 0 ? "md:border-l" : ""} border-border`}
           >
             <dt className="sr-only">{stat.label}</dt>
-            <dd className="text-[22px] leading-none font-bold tracking-[-0.02em] text-foreground">{stat.value}</dd>
-            <p className="mt-1.5 text-[13px] text-muted-foreground" aria-hidden>
+            <dd className="text-stat text-foreground">{stat.value}</dd>
+            <p className="mt-1.5 text-caption text-muted-foreground" aria-hidden>
               {stat.label}
             </p>
           </div>

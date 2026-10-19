@@ -8,6 +8,83 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Design tokens (apps/web/design.md). The brand ramp is built from the Signal Indigo colours the
+ * site already used, so 50 is the tint, 300 the lilac, 400 the dark-mode primary, 500 the primary,
+ * 600 its hover and 950 the ink. `static` keeps every step available as a utility and a variable.
+ */
+@theme static {
+  --color-brand-50: #eceaff;
+  --color-brand-100: #dcd8ff;
+  --color-brand-200: #c4c0ff;
+  --color-brand-300: #a9a3ff;
+  --color-brand-400: #7068ff;
+  --color-brand-500: #4338f2;
+  --color-brand-600: #3a2fe0;
+  --color-brand-700: #2b2496;
+  --color-brand-800: #1f1a6e;
+  --color-brand-900: #17144f;
+  --color-brand-950: #13132b;
+
+  /* Blue-tinted neutrals for light surfaces, borders and secondary text */
+  --color-ink-50: #f8f8fc;
+  --color-ink-100: #f0eff8;
+  --color-ink-200: #e4e3f0;
+  --color-ink-300: #cfcde6;
+  --color-ink-500: #5a5a78;
+  --color-ink-900: #13132b;
+
+  /*
+   * Type scale: size, then line height, tracking and weight where a step owns them.
+   * Display and title steps are headings; body steps and below set only the size.
+   */
+  --text-display-lg: 3.9rem;
+  --text-display-lg--line-height: 1.03;
+  --text-display-lg--letter-spacing: -0.035em;
+  --text-display-lg--font-weight: 800;
+  --text-display-md: 3rem;
+  --text-display-md--line-height: 1.05;
+  --text-display-md--letter-spacing: -0.035em;
+  --text-display-md--font-weight: 800;
+  --text-display-sm: 2.6rem;
+  --text-display-sm--line-height: 1.03;
+  --text-display-sm--letter-spacing: -0.035em;
+  --text-display-sm--font-weight: 800;
+  --text-title-xl: 2.5rem;
+  --text-title-xl--line-height: 1.08;
+  --text-title-xl--letter-spacing: -0.03em;
+  --text-title-xl--font-weight: 800;
+  --text-title-lg: 2rem;
+  --text-title-lg--line-height: 1.08;
+  --text-title-lg--letter-spacing: -0.03em;
+  --text-title-lg--font-weight: 800;
+  --text-title-md: 1.75rem;
+  --text-title-md--line-height: 1.15;
+  --text-title-md--letter-spacing: -0.02em;
+  --text-title-md--font-weight: 700;
+  --text-title-sm: 1.5rem;
+  --text-title-sm--line-height: 1.2;
+  --text-title-sm--letter-spacing: -0.02em;
+  --text-title-sm--font-weight: 600;
+  --text-stat: 1.375rem;
+  --text-stat--line-height: 1;
+  --text-stat--letter-spacing: -0.02em;
+  --text-stat--font-weight: 700;
+  --text-body-lg: 1.0625rem;
+  --text-body: 0.9375rem;
+  --text-body-sm: 0.875rem;
+  --text-caption: 0.8125rem;
+  --text-meta: 0.75rem;
+  --text-label: 0.71875rem;
+  --text-micro: 0.625rem;
+
+  --tracking-eyebrow: 0.06em;
+  --tracking-title: -0.02em;
+  --tracking-snug: -0.01em;
+
+  --leading-code: 1.75;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -84,38 +161,38 @@ html.dark {
  * Fumadocs reads the same variables through fumadocs-ui/css/shadcn.css.
  */
 :root {
-  --background: #f8f8fc;
-  --foreground: #13132b;
+  --background: var(--color-ink-50);
+  --foreground: var(--color-ink-900);
   --card: #ffffff;
-  --card-foreground: #13132b;
+  --card-foreground: var(--color-ink-900);
   --popover: #ffffff;
-  --popover-foreground: #13132b;
-  --primary: #4338f2;
+  --popover-foreground: var(--color-ink-900);
+  --primary: var(--color-brand-500);
   --primary-foreground: #ffffff;
-  --secondary: #eceaff;
-  --secondary-foreground: #4338f2;
-  --muted: #f0eff8;
-  --muted-foreground: #5a5a78;
-  --accent: #eceaff;
-  --accent-foreground: #13132b;
+  --secondary: var(--color-brand-50);
+  --secondary-foreground: var(--color-brand-500);
+  --muted: var(--color-ink-100);
+  --muted-foreground: var(--color-ink-500);
+  --accent: var(--color-brand-50);
+  --accent-foreground: var(--color-ink-900);
   --destructive: #c8322b;
-  --border: #e4e3f0;
-  --input: #e4e3f0;
-  --ring: #4338f2;
+  --border: var(--color-ink-200);
+  --input: var(--color-ink-200);
+  --ring: var(--color-brand-500);
   --radius: 0.75rem;
-  --sidebar: #f8f8fc;
-  --sidebar-foreground: #13132b;
-  --sidebar-primary: #4338f2;
+  --sidebar: var(--color-ink-50);
+  --sidebar-foreground: var(--color-ink-900);
+  --sidebar-primary: var(--color-brand-500);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #eceaff;
-  --sidebar-accent-foreground: #4338f2;
-  --sidebar-border: #e4e3f0;
-  --sidebar-ring: #4338f2;
+  --sidebar-accent: var(--color-brand-50);
+  --sidebar-accent-foreground: var(--color-brand-500);
+  --sidebar-border: var(--color-ink-200);
+  --sidebar-ring: var(--color-brand-500);
 
-  --bp-tint: #eceaff;
-  --bp-lilac: #a9a3ff;
-  --bp-line-strong: #cfcde6;
-  --bp-primary-hover: #3a2fe0;
+  --bp-tint: var(--color-brand-50);
+  --bp-lilac: var(--color-brand-300);
+  --bp-line-strong: var(--color-ink-300);
+  --bp-primary-hover: var(--color-brand-600);
   --bp-success: #087a55;
   --bp-success-soft: #e6f5ef;
   --bp-warning: #a86207;
@@ -123,16 +200,17 @@ html.dark {
   --bp-danger: #c8322b;
   --bp-danger-soft: #fdeceb;
   /* Indigo used as text on tinted surfaces (inline code, labels) */
-  --bp-accent-text: #4338f2;
+  --bp-accent-text: var(--color-brand-500);
   /* Third-party logos are drawn for light backgrounds, so they keep a light tile */
   --bp-logo-surface: #ffffff;
   --bp-wire: #d9d6f2;
-  --bp-glow: rgb(67 56 242 / 0.67);
-  --bp-shadow: rgb(19 19 43 / 0.22);
+  --bp-glow: color-mix(in srgb, var(--color-brand-500) 67%, transparent);
+  --bp-shadow: color-mix(in srgb, var(--color-brand-950) 22%, transparent);
+  --bp-shadow-xs: color-mix(in srgb, var(--color-brand-950) 4%, transparent);
   --bp-code-fn: #6a3fd8;
   --bp-code-muted-bg: #fbfbfe;
-  --bp-callout-info-border: #dcd8ff;
-  --bp-callout-info-title: #2b2496;
+  --bp-callout-info-border: var(--color-brand-100);
+  --bp-callout-info-title: var(--color-brand-700);
   --bp-callout-warn-border: #f4dfb8;
   --bp-callout-warn-title: #7a4605;
   --bp-callout-error-border: #f6cfcc;

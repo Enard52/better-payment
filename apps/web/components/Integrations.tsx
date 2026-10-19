@@ -46,13 +46,13 @@ export default function Integrations({
 
         <div className="bp-reveal mb-5 rounded-2xl border border-border bg-card p-4 sm:p-5">
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-1">
-            <p className="text-[15px] font-bold tracking-tight text-foreground">{t.summary}</p>
-            <p className="text-[13px] text-muted-foreground">{t.pick}</p>
+            <p className="text-body font-bold tracking-tight text-foreground">{t.summary}</p>
+            <p className="text-caption text-muted-foreground">{t.pick}</p>
           </div>
           <div role="tablist" aria-label={t.capabilities} className="flex flex-col gap-y-4 sm:flex-row sm:flex-wrap sm:gap-x-6">
             {GROUPS.map((group) => (
               <div key={group} role="presentation" className="min-w-0">
-                <p className="mb-2 px-1 text-[11.5px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+                <p className="mb-2 px-1 text-label font-semibold tracking-eyebrow text-muted-foreground uppercase">
                   {t.groups[group]}
                 </p>
                 <div role="presentation" className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
@@ -82,7 +82,7 @@ export default function Integrations({
                             className={cn("w-auto max-w-full object-contain", item.tall ? "max-h-11" : "max-h-7")}
                           />
                         ) : (
-                          <span className="text-[14px] font-bold tracking-tight text-foreground dark:text-[#13132b]">{item.name}</span>
+                          <span className="text-body-sm font-bold tracking-tight text-foreground dark:text-brand-950">{item.name}</span>
                         )}
                       </button>
                     ),
@@ -100,7 +100,7 @@ export default function Integrations({
                 {tile.logo ? (
                   <Image src={withBasePath(tile.logo)} alt="" width={40} height={24} className="h-6 w-10 object-contain" />
                 ) : (
-                  <span className="text-xs font-bold text-foreground dark:text-[#13132b]">{tile.name.slice(0, 2)}</span>
+                  <span className="text-xs font-bold text-foreground dark:text-brand-950">{tile.name.slice(0, 2)}</span>
                 )}
               </span>
               <div>
@@ -108,14 +108,14 @@ export default function Integrations({
                 <p className="text-sm text-muted-foreground">{tagline}</p>
               </div>
             </div>
-            <p className="text-[14.5px] leading-relaxed text-muted-foreground">{info.description}</p>
+            <p className="text-body leading-relaxed text-muted-foreground">{info.description}</p>
             {p.id === "est" && (
-              <p className="mt-3 text-[13px] text-muted-foreground">
+              <p className="mt-3 text-caption text-muted-foreground">
                 {t.estBanks}: <span className="font-medium text-foreground">{estBanks.map((b) => b.name).join(", ")}</span>
               </p>
             )}
 
-            <p className="mt-6 mb-3 text-[13px] font-medium text-muted-foreground">{t.capabilities}</p>
+            <p className="mt-6 mb-3 text-caption font-medium text-muted-foreground">{t.capabilities}</p>
             <ul className="grid gap-2.5">
               {info.features.map((feature) => (
                 <li key={feature} className="flex items-center gap-2.5 text-sm text-foreground">

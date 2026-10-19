@@ -100,12 +100,12 @@ export default async function BlogPostPage({ params }: PageProps<"/[lang]/blog/[
 
         <ul className="mb-4 flex flex-wrap gap-1.5">
           {post.data.tags.map((tag) => (
-            <li key={tag} className="rounded-full bg-tint px-2.5 py-0.5 font-mono text-[11px] font-medium text-accent-text">
+            <li key={tag} className="rounded-full bg-tint px-2.5 py-0.5 font-mono text-label font-medium text-accent-text">
               {tag}
             </li>
           ))}
         </ul>
-        <h1 className="max-w-4xl text-[2.25rem] leading-[1.08] font-extrabold tracking-[-0.03em] text-foreground sm:text-[3rem]">
+        <h1 className="max-w-4xl text-title-lg text-foreground sm:text-display-md">
           {post.data.title}
         </h1>
         <p className="mt-5 max-w-3xl text-lg leading-relaxed text-muted-foreground">{post.data.description}</p>
@@ -155,7 +155,7 @@ export default async function BlogPostPage({ params }: PageProps<"/[lang]/blog/[
             </div>
 
             <aside className="mt-16 max-w-3xl rounded-2xl border border-border bg-tint/60 p-8">
-              <h2 className="text-xl font-bold tracking-[-0.02em] text-foreground">{t.cta.title}</h2>
+              <h2 className="text-xl font-bold tracking-title text-foreground">{t.cta.title}</h2>
               <p className="mt-2 text-muted-foreground">{t.cta.lead}</p>
               <div className="mt-5 flex flex-wrap gap-3">
                 <Link href={localePath(lang, "/docs")} className={buttonVariants({ size: "sm" })}>
@@ -172,13 +172,13 @@ export default async function BlogPostPage({ params }: PageProps<"/[lang]/blog/[
           {post.data.toc.length > 0 && (
             <nav aria-label={t.toc} className="hidden lg:block">
               <div className="sticky top-24">
-                <p className="mb-3 text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">{t.toc}</p>
+                <p className="mb-3 text-xs font-semibold tracking-eyebrow text-muted-foreground uppercase">{t.toc}</p>
                 <ul className="grid gap-0.5 border-l border-border">
                   {post.data.toc.map((item) => (
                     <li key={item.url}>
                       <a
                         href={item.url}
-                        className="-ml-px block border-l border-transparent py-1.5 text-[13.5px] leading-snug text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+                        className="-ml-px block border-l border-transparent py-1.5 text-body-sm leading-snug text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
                         style={{ paddingLeft: `${0.875 + (item.depth - 2) * 0.75}rem` }}
                       >
                         {item.title}
@@ -194,7 +194,7 @@ export default async function BlogPostPage({ params }: PageProps<"/[lang]/blog/[
 
       {related.length > 0 && (
         <div className="mx-auto mt-24 max-w-7xl">
-          <h2 className="mb-6 text-2xl font-bold tracking-[-0.02em] text-foreground">{t.moreTitle}</h2>
+          <h2 className="mb-6 text-2xl font-bold tracking-title text-foreground">{t.moreTitle}</h2>
           <div className="grid gap-4 md:grid-cols-2">
             {related.map((other) => (
               <PostCard key={other.url} post={other} lang={lang} t={t} />

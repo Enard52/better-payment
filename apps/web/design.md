@@ -67,51 +67,58 @@ Gaps compared to Craftgate:
 
 ---
 
-## 4. Tokens (proposed)
+## 4. Tokens (implemented in `app/globals.css`)
 
 ### 4.1 Color
 
-Keep the "Signal Indigo" brand. Add a full ramp and cool neutrals.
+The brand ramp is built from the colours the site already used, so nothing shifted visually.
 
-```
-brand-50   #eeedff     brand-500  #4338f2  (primary, unchanged)
-brand-100  #e0deff     brand-600  #3a2fe0  (hover, = --bp-primary-hover)
-brand-200  #c4c0ff     brand-700  #2f27b8
-brand-300  #a9a3ff     brand-800  #251f8f
-brand-400  #7f76f8     brand-900  #1b1768
-                       brand-950  #13132b  (= foreground)
+| Token | Value | Notes |
+|---|---|---|
+| `brand-50` | `#eceaff` | tint, secondary, accent surfaces |
+| `brand-100` | `#dcd8ff` | info callout border, soft text on indigo |
+| `brand-200` | `#c4c0ff` | dark-mode secondary text |
+| `brand-300` | `#a9a3ff` | lilac |
+| `brand-400` | `#7068ff` | dark-mode primary |
+| `brand-500` | `#4338f2` | primary |
+| `brand-600` | `#3a2fe0` | primary hover |
+| `brand-700` | `#2b2496` | info callout title |
+| `brand-800` / `900` | `#1f1a6e` / `#17144f` | deep indigo |
+| `brand-950` | `#13132b` | ink |
+| `ink-50` .. `ink-900` | `#f8f8fc` .. `#13132b` | blue-tinted neutrals (50, 100, 200, 300, 500, 900) |
 
-ink-50  #f8f8fc   ink-100 #f0eff8   ink-200 #e4e3f0   ink-300 #cfcde6
-ink-400 #9a99b8   ink-500 #5a5a78   ink-600 #3f3f5c   ink-900 #13132b
-```
-
-The existing semantic variables (`--background`, `--card`, `--border`, `--muted-foreground`) stay and point at this ramp, so docs, dark mode and Fumadocs keep working.
+Use `bg-brand-500`, `text-brand-100` and so on in components. Semantic variables (`--background`, `--primary`, `--border` ...) point at the ramp for the light palette, and the dark palette uses `brand-400` and `brand-200` where they match. Dark surfaces (`#0d0d1c`, `#15152a` ...) are their own small set in `.dark`.
 
 Rules:
 
 - Indigo is for actions, links and one highlighted word per headline.
-- Surfaces alternate `background` and `card` or `brand-50` to separate sections. No heavy borders between sections.
-- Dark sections use `brand-950`, with white text and `brand-400` accents (Craftgate does this in the footer and for emphasis bands).
+- Surfaces alternate `background` and `card` or `brand-50` to separate sections.
 - Success, warning and danger colors are for status only.
+- No hex or `rgb()` literals in components: use the ramp, or `color-mix()` on a ramp variable.
 
 ### 4.2 Typography
 
-Keep Inter (UI) and JetBrains Mono (code). Drop Manrope for the homepage unless a headline test shows it clearly helps; fewer families is more professional. Open question in section 8.
+Inter for text, JetBrains Mono for code. Headings use the named steps below; each heading step owns its size, line height, tracking and weight, so a heading is one class (`text-title-lg`).
 
-Named scale with paired line-height and tracking:
+| Step | Size | Use |
+|---|---|---|
+| `display-lg` / `md` / `sm` | 3.9rem / 3rem / 2.6rem | Hero h1 (lg desktop, md tablet, sm mobile) |
+| `title-xl` | 2.5rem | Section h2, desktop |
+| `title-lg` | 2rem | Section h2, mobile; blog post h1 |
+| `title-md` | 1.75rem | Featured card title |
+| `title-sm` | 1.5rem | Mega menu panel title |
+| `stat` | 1.375rem | Numbers in the stats row |
+| `body-lg` | 1.0625rem (17px) | Lead paragraphs |
+| `body` | 0.9375rem (15px) | Default UI text |
+| `body-sm` | 0.875rem (14px) | Secondary text |
+| `caption` | 0.8125rem (13px) | Meta lines, code |
+| `meta` | 0.75rem (12px) | Small meta |
+| `label` | 0.71875rem (11.5px) | Mono labels and keycaps |
+| `micro` | 0.625rem (10px) | Badges |
 
-| Token | Size / line | Tracking | Use |
-|---|---|---|---|
-| `display` | 56 / 60 (40 / 44 on mobile) | -0.035em | Hero h1 only |
-| `title-lg` | 40 / 46 | -0.03em | Section h2 |
-| `title-md` | 28 / 34 | -0.02em | Feature row h3 |
-| `title-sm` | 20 / 28 | -0.01em | Card titles |
-| `body-lg` | 18 / 28 | -0.01em | Lead paragraphs |
-| `body-md` | 16 / 24 | 0 | Default |
-| `body-sm` | 14 / 20 | 0 | Meta, captions |
-| `mono-sm` | 13 / 20 | 0 | Code, install command |
+Body steps set only the size. Tailwind's own `text-xs` to `text-2xl` stay available for one-off text. Tracking tokens: `tracking-eyebrow` (uppercase labels), `tracking-title`, `tracking-snug`. `leading-code` is the line height of code blocks.
 
-Weights: 400 body, 500 UI labels, 600 titles, 700 only for display.
+New homepage text should pick a step. An arbitrary `text-[13.5px]` or a hex colour in a component is a bug.
 
 ### 4.3 Space, radius, elevation
 
@@ -187,5 +194,5 @@ Each step is a separate commit on this branch. We stop for approval after each o
 - [x] Hero kept as is, plus: version badge, install command with npm/pnpm/bun tabs + copy, provider logo + stats strip (`HeroProof`, `InstallCommand`)
 - [x] Homepage container widened to `max-w-7xl` so navbar, hero and sections share one left edge
 - [x] Features: per-card "Learn more" links to the docs; QuickStart: two-column layout with sticky heading; footer aligned to the shared edge
-- [ ] Step 1: tokens (color ramp, type scale)
+- [x] Step 1: tokens. Brand ramp and type scale in `globals.css`; all homepage and blog components use them. Light, dark and mobile screenshots compared before and after: no visual change beyond a few pixels of height
 - [ ] Hero, provider strip, stats, feature rows, developer section, CTA, footer

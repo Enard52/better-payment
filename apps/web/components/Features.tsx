@@ -18,7 +18,7 @@ export default function Features({ lang, t }: { lang: Locale; t: Dictionary["fea
   return (
     <section id="features" className="scroll-mt-20 px-5 py-24 sm:px-8 md:py-28">
       <div className="mx-auto max-w-7xl">
-        <h2 className="bp-reveal mb-12 max-w-2xl text-[2rem] leading-[1.08] font-extrabold tracking-[-0.03em] text-foreground sm:text-[2.5rem]">
+        <h2 className="bp-reveal mb-12 max-w-2xl text-title-lg text-foreground sm:text-title-xl">
           {t.titleLine1}
           <br />
           <span className="text-muted-foreground">{t.titleLine2}</span>
@@ -38,8 +38,8 @@ export default function Features({ lang, t }: { lang: Locale; t: Dictionary["fea
                 name={f.icon}
                 className="-mt-1.5 -ml-2 mb-3 transition-transform duration-(--bp-d-lg) ease-spring group-hover:-translate-y-1 group-hover:scale-[1.08] group-hover:-rotate-[5deg]"
               />
-              <h3 className="mb-2 text-[17px] font-bold tracking-[-0.01em] text-foreground">{f.title}</h3>
-              <p className="text-[14.5px] leading-relaxed text-muted-foreground">{f.description}</p>
+              <h3 className="mb-2 text-body-lg font-bold tracking-snug text-foreground">{f.title}</h3>
+              <p className="text-body leading-relaxed text-muted-foreground">{f.description}</p>
               <Link
                 href={localePath(lang, f.href)}
                 className="group/link mt-auto inline-flex w-fit pt-4 items-center gap-1 text-sm font-semibold text-accent-text after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"

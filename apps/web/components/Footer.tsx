@@ -101,7 +101,7 @@ export default function Footer({ lang, t }: { lang: Locale; t: Dictionary["foote
           {/* Link columns */}
           {footerLinks(t).map(({ group, items }) => (
             <div key={group} className="col-span-1">
-              <h4 className="text-[13px] font-semibold text-foreground mb-4">
+              <h4 className="text-caption font-semibold text-foreground mb-4">
                 {group}
               </h4>
               <ul className="space-y-2.5">

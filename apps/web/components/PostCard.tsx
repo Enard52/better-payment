@@ -30,15 +30,15 @@ export default function PostCard({
     >
       <ul className="mb-4 flex flex-wrap gap-1.5">
         {post.data.tags.map((tag) => (
-          <li key={tag} className="rounded-full bg-tint px-2.5 py-0.5 font-mono text-[11px] font-medium text-accent-text">
+          <li key={tag} className="rounded-full bg-tint px-2.5 py-0.5 font-mono text-label font-medium text-accent-text">
             {tag}
           </li>
         ))}
       </ul>
       <h2
         className={cn(
-          "font-bold tracking-[-0.02em] text-foreground",
-          featured ? "max-w-3xl text-[1.75rem] leading-[1.15] md:text-[2.25rem]" : "text-xl leading-snug",
+          "text-foreground",
+          featured ? "max-w-3xl text-title-md md:text-title-lg" : "text-xl leading-snug font-bold tracking-title",
         )}
       >
         <Link
@@ -48,10 +48,10 @@ export default function PostCard({
           {post.data.title}
         </Link>
       </h2>
-      <p className={cn("mt-3 leading-relaxed text-muted-foreground", featured ? "max-w-2xl text-[17px]" : "text-[14.5px]")}>
+      <p className={cn("mt-3 leading-relaxed text-muted-foreground", featured ? "max-w-2xl text-body-lg" : "text-body")}>
         {post.data.description}
       </p>
-      <div className="mt-auto flex items-center justify-between gap-3 pt-6 text-[13px] text-muted-foreground">
+      <div className="mt-auto flex items-center justify-between gap-3 pt-6 text-caption text-muted-foreground">
         <span className="flex items-center gap-2.5">
           <AuthorAvatars authors={authors} size={24} />
           <span>

@@ -52,14 +52,14 @@ export default function Hero({
         <div className="min-w-0">
           <Link
             href={localePath(lang, "/docs/whats-new")}
-            className="bp-enter group/badge mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/80 py-1 pr-3 pl-1 text-[13px] font-medium text-foreground backdrop-blur-sm transition-colors hover:border-line-strong"
+            className="bp-enter group/badge mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/80 py-1 pr-3 pl-1 text-caption font-medium text-foreground backdrop-blur-sm transition-colors hover:border-line-strong"
             style={at(160)}
           >
-            <span className="rounded-full bg-tint px-2 py-0.5 font-mono text-[11px] text-accent-text">v{version}</span>
+            <span className="rounded-full bg-tint px-2 py-0.5 font-mono text-label text-accent-text">v{version}</span>
             {t.badge}
             <ArrowRight className="size-3.5 text-muted-foreground transition-transform group-hover/badge:translate-x-0.5" />
           </Link>
-          <h1 className="text-[2.6rem] leading-[1.03] font-extrabold tracking-[-0.035em] text-foreground sm:text-5xl lg:text-[3.9rem]">
+          <h1 className="text-display-sm text-foreground sm:text-display-md lg:text-display-lg">
             <span className="bp-enter block" style={at(300)}>
               {t.titleLine1}
             </span>

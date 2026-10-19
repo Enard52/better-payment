@@ -41,7 +41,7 @@ export default function Contributors({ lang, t }: { lang: Locale; t: Dictionary[
                   <span className="relative">
                     <Image src={`https://avatars.githubusercontent.com/u/${avatarId}?v=4&s=128`} alt="" width={64} height={64} unoptimized className={`size-16 rounded-full object-cover shadow-sm ${owner ? "border-4 border-card ring-2 ring-primary/70" : "border-4 border-card"}`} />
                     {owner && (
-                      <span className="absolute -bottom-2 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-full border border-lilac bg-card px-2 py-0.5 font-mono text-[9.5px] font-semibold tracking-[0.06em] whitespace-nowrap text-accent-text shadow-sm">
+                      <span className="absolute -bottom-2 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-full border border-lilac bg-card px-2 py-0.5 font-mono text-micro font-semibold tracking-eyebrow whitespace-nowrap text-accent-text shadow-sm">
                         <ShieldCheck className="size-3" />
                         {t.owner}
                       </span>
