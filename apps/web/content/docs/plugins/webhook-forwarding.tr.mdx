@@ -9,7 +9,7 @@ Uygulamalar ödeme durumlarını genellikle diğer servislere (sipariş takip, s
 
 `webhookForwarding` eklentisi, [ödeme olaylarını](/docs/concepts/events) HMAC-SHA256 ile imzalanmış JSON webhook bildirimlerine dönüştürür. Üstel geri çekilme (exponential backoff) ile yeniden dener ve kart bilgilerini otomatik olarak temizler. Yavaş veya yanıt vermeyen harici servisler ana ödeme akışını asla engellemez ya da başarısızlığa uğratmaz.
 
-## Kurulum
+## Kurulum [#setup]
 
 ```typescript
 import { betterPayment, iyzico } from 'better-payment';
@@ -23,14 +23,14 @@ const payment = betterPayment({
     webhookForwarding({
       endpoints: [
         {
-          url: 'https://siparis.magazam.com/webhooks/odemeler',
+          url: 'https://orders.myshop.com/webhooks/payments',
           secret: process.env.ORDERS_WEBHOOK_SECRET!,
           events: ['payment.succeeded', 'refund.succeeded'],
         },
         {
-          url: 'https://analitik.magazam.com/webhooks/tum-olaylar',
+          url: 'https://analytics.myshop.com/webhooks/all-events',
           secret: process.env.ANALYTICS_WEBHOOK_SECRET!,
-          events: ['*'], // tüm olaylar
+          events: ['*'], // all payment events
         },
       ],
       retry: {
@@ -42,7 +42,7 @@ const payment = betterPayment({
 });
 ```
 
-## İstek gövdesi (Payload)
+## İstek gövdesi (Payload) [#payload-structure]
 
 Harici servise iletilen her `POST` isteği olay detaylarını ve hassas verilerden arındırılmış işlem sonucunu içerir:
 
@@ -67,7 +67,7 @@ Harici servise iletilen her `POST` isteği olay detaylarını ve hassas verilerd
 
 Kart numarası, CVV ve kart sahibi bilgileri gönderilmeden önce güvenlik amacıyla otomatik olarak filtrelenir.
 
-## Alıcı serviste webhook doğrulaması
+## Alıcı serviste webhook doğrulaması [#verifying-webhooks-on-the-receiver]
 
 Her istek `x-signature` ve `x-better-payment-signature` başlıklarında HMAC-SHA256 imzasını, `x-signature-timestamp` başlığında ise zaman damgasını taşır.
 
@@ -76,7 +76,7 @@ Alıcı serviste imza doğrulaması `verifyForwardedWebhook` fonksiyonuyla saniy
 ```typescript
 import { verifyForwardedWebhook } from 'better-payment/plugins';
 
-// Express / Next.js / Hono endpoint'inizde:
+// In your Express / Next.js / Hono handler:
 export async function POST(req: Request) {
   const signature = req.headers.get('x-signature')!;
   const rawBody = await req.text();
@@ -88,17 +88,17 @@ export async function POST(req: Request) {
   );
 
   if (!isValid) {
-    return new Response('Geçersiz webhook imzası', { status: 401 });
+    return new Response('Invalid webhook signature', { status: 401 });
   }
 
   const payload = JSON.parse(rawBody);
-  console.log(`Alınan olay: ${payload.event}, Ödeme ID: ${payload.paymentId}`);
+  console.log(`Received event: ${payload.event} for payment ${payload.paymentId}`);
 
   return new Response('OK', { status: 200 });
 }
 ```
 
-## Seçenekler
+## Seçenekler [#options]
 
 | Seçenek | Varsayılan | Açıklama |
 | ------- | ---------- | -------- |
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
 | `onError` | logger | `(error, endpoint, payload) => void`: iletim başarısız olduğunda çağrılır |
 | `waitUntil` | — | Sunucusuz ortamlarda arka plan görevini canlı tutar (örn. Vercel `waitUntil` veya Cloudflare `ctx.waitUntil`) |
 
-## Endpoint ayarları
+## Endpoint ayarları [#endpoint-configuration]
 
 | Alan | Tip | Açıklama |
 | ---- | --- | -------- |

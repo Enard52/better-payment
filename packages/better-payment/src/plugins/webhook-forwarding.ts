@@ -62,11 +62,7 @@ export interface WebhookForwardingOptions {
   /** Custom fetch implementation (defaults to globalThis.fetch) */
   fetch?: typeof fetch;
   /** Optional error callback called when an endpoint delivery fails */
-  onError?: (
-    error: unknown,
-    endpoint: WebhookEndpoint,
-    payload: ForwardedWebhookPayload
-  ) => void;
+  onError?: (error: unknown, endpoint: WebhookEndpoint, payload: ForwardedWebhookPayload) => void;
   /**
    * Keeps serverless runtimes alive until deliveries finish
    * (e.g. Vercel `waitUntil` or Cloudflare `ctx.waitUntil`).
