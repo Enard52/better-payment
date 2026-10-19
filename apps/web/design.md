@@ -195,4 +195,4 @@ Each step is a separate commit on this branch. We stop for approval after each o
 - [x] Homepage container widened to `max-w-7xl` so navbar, hero and sections share one left edge
 - [x] Features: per-card "Learn more" links to the docs; QuickStart: two-column layout with sticky heading; footer aligned to the shared edge
 - [x] Step 1: tokens. Brand ramp and type scale in `globals.css`; all homepage and blog components use them. Light, dark and mobile screenshots compared before and after: no visual change beyond a few pixels of height
-- [ ] Hero, provider strip, stats, feature rows, developer section, CTA, footer
+- [x] Hero extras, provider strip, stats, Features links, QuickStart layout, CTA and footer alignment, docs header/footer/sidebar, version dropdown, blog
