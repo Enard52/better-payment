@@ -20,7 +20,18 @@ export interface OpenAPIOptions {
    * Default: false
    */
   disabled?: boolean;
+  /**
+   * URL of the Scalar reference UI script. Pinned to `@scalar/api-reference@<version>` by
+   * default so a new Scalar release cannot change the page on a merchant's domain without
+   * review. Point it at a self-hosted copy to avoid the CDN entirely.
+   */
+  scalarScriptUrl?: string;
 }
+
+/** Pinned so the reference page only changes when this library is updated. */
+export const SCALAR_API_REFERENCE_VERSION = '1.75.0';
+
+const DEFAULT_SCALAR_SCRIPT_URL = `https://cdn.jsdelivr.net/npm/@scalar/api-reference@${SCALAR_API_REFERENCE_VERSION}`;
 
 export interface OpenAPISpec {
   openapi: string;
@@ -395,12 +406,27 @@ export function buildOpenAPISpec(options: OpenAPIOptions, ctx?: PluginContext): 
   };
 }
 
-function renderScalarHtml(spec: OpenAPISpec, title: string): string {
+/**
+ * Escapes a value for interpolation into HTML text or a double-quoted attribute.
+ */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderScalarHtml(spec: OpenAPISpec, title: string, scriptUrl: string): string {
+  // The document goes in the element's text, not an attribute: descriptions and summaries are
+  // free text and an apostrophe would end a quoted attribute and break the page.
+  // `<` is escaped as a JSON string escape, so a value can never close the script element.
   const specJson = JSON.stringify(spec).replace(/</g, '\\u003c');
   return `<!doctype html>
 <html>
   <head>
-    <title>${title}</title>
+    <title>${escapeHtml(title)}</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
@@ -408,12 +434,8 @@ function renderScalarHtml(spec: OpenAPISpec, title: string): string {
     </style>
   </head>
   <body>
-    <script
-      id="api-reference"
-      type="application/json"
-      data-configuration='{"spec":{"content":${specJson}},"theme":"purple"}'>
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+    <script id="api-reference" type="application/json" data-configuration='{"theme":"purple"}'>${specJson}</script>
+    <script src="${escapeHtml(scriptUrl)}"></script>
   </body>
 </html>`;
 }
@@ -444,6 +466,7 @@ export function openAPI(options: OpenAPIOptions = {}): BetterPaymentPlugin {
   const rawPath = options.path ?? '/reference';
   const basePath = '/' + trimSlashes(rawPath);
   const jsonPath = `${basePath}/openapi.json`;
+  const scriptUrl = options.scalarScriptUrl ?? DEFAULT_SCALAR_SCRIPT_URL;
   let pluginCtx: PluginContext;
 
   return definePlugin({
@@ -466,7 +489,8 @@ export function openAPI(options: OpenAPIOptions = {}): BetterPaymentPlugin {
           const spec = buildOpenAPISpec(options, pluginCtx ?? ctx);
           const html = renderScalarHtml(
             spec,
-            options.info?.title ?? 'Better Payment API Reference'
+            options.info?.title ?? 'Better Payment API Reference',
+            scriptUrl
           );
           if (typeof ctx.html === 'function') {
             return ctx.html(html);

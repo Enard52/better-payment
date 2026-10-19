@@ -187,4 +187,90 @@ describe('openAPI plugin', () => {
     });
     expect(jsonRes.status).toBe(200);
   });
+
+  it('keeps quotes and angle brackets in the document from breaking the page', async () => {
+    const tricky = "Doesn't need a card & it's </script><script>alert(1)</script>";
+    const quotePlugin = definePlugin({
+      id: 'quotes',
+      endpoints: {
+        check: {
+          method: 'GET',
+          path: '/quote-check',
+          openapi: { summary: 'Quote check', description: tricky },
+          handler: () => ({ ok: true }),
+        },
+      },
+    });
+
+    const payment = betterPayment({
+      providers: { mock: new MockProvider() },
+      plugins: [quotePlugin, openAPI()],
+      handler: { basePath: '/api/pay' },
+    });
+
+    const res = await payment.handler.handle({
+      method: 'GET',
+      url: 'http://localhost/api/pay/reference',
+      headers: {},
+    });
+    const html = res.body as string;
+
+    // The document is the element's text, so it has to parse back into the same spec.
+    const embedded = html.match(/<script id="api-reference"[^>]*>([\s\S]*?)<\/script>/);
+    expect(embedded).not.toBeNull();
+    const spec = JSON.parse(embedded![1]) as ReturnType<typeof buildOpenAPISpec>;
+    const doc = spec.paths['/quote-check'].get as Record<string, unknown>;
+    expect(doc.description).toBe(tricky);
+
+    // Nothing in the JSON may close the script element early.
+    expect(html.match(/<\/script>/g)).toHaveLength(2);
+    expect(html.match(/<script/g)).toHaveLength(2);
+  });
+
+  it('escapes the page title', async () => {
+    const payment = betterPayment({
+      providers: { mock: new MockProvider() },
+      plugins: [openAPI({ info: { title: `Tom & Jerry's "API"` } })],
+      handler: { basePath: '/api/pay' },
+    });
+
+    const res = await payment.handler.handle({
+      method: 'GET',
+      url: 'http://localhost/api/pay/reference',
+      headers: {},
+    });
+
+    expect(res.body as string).toContain('<title>Tom &amp; Jerry&#39;s &quot;API&quot;</title>');
+  });
+
+  it('pins the Scalar script and accepts a self-hosted URL', async () => {
+    const payment = betterPayment({
+      providers: { mock: new MockProvider() },
+      plugins: [openAPI()],
+      handler: { basePath: '/api/pay' },
+    });
+
+    const res = await payment.handler.handle({
+      method: 'GET',
+      url: 'http://localhost/api/pay/reference',
+      headers: {},
+    });
+    expect(res.body as string).toMatch(
+      /cdn\.jsdelivr\.net\/npm\/@scalar\/api-reference@\d+\.\d+\.\d+/
+    );
+
+    const selfHosted = betterPayment({
+      providers: { mock: new MockProvider() },
+      plugins: [openAPI({ scalarScriptUrl: '/assets/scalar.js' })],
+      handler: { basePath: '/api/pay' },
+    });
+
+    const ownRes = await selfHosted.handler.handle({
+      method: 'GET',
+      url: 'http://localhost/api/pay/reference',
+      headers: {},
+    });
+    expect(ownRes.body as string).toContain('<script src="/assets/scalar.js"></script>');
+    expect(ownRes.body as string).not.toContain('jsdelivr');
+  });
 });

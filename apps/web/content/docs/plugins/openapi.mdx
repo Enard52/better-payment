@@ -85,6 +85,17 @@ const inventoryPlugin = definePlugin({
 
 Privileged endpoints (`privileged: true`) are automatically annotated with `security: [{ bearerAuth: [] }]`.
 
+## The Scalar script
+
+The reference page loads `@scalar/api-reference` from jsDelivr at an exact version, pinned in the library, so a new Scalar release cannot change the page on a merchant's domain without a release of `better-payment`. Set `scalarScriptUrl` to pin another version or to serve the script from your own origin:
+
+```typescript
+openAPI({
+  path: '/reference',
+  scalarScriptUrl: '/assets/scalar/api-reference.js', // self-hosted, no CDN
+});
+```
+
 ## Options
 
 | Option | Default | Description |
@@ -94,3 +105,4 @@ Privileged endpoints (`privileged: true`) are automatically annotated with `secu
 | `info.version` | `'1.0.0'` | Semantic API version |
 | `info.description` | — | Summary description for your API reference |
 | `disabled` | `false` | When `true`, endpoints return 404 (recommended for production environments where public documentation is not desired) |
+| `scalarScriptUrl` | pinned jsDelivr URL | URL of the Scalar reference UI script; point it at a self-hosted copy to avoid the CDN |

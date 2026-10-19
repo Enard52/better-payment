@@ -85,6 +85,17 @@ const inventoryPlugin = definePlugin({
 
 Yetkili endpoint'ler (`privileged: true`) otomatik olarak `security: [{ bearerAuth: [] }]` ile işaretlenir.
 
+## Scalar betiği [#the-scalar-script]
+
+Referans sayfası `@scalar/api-reference` betiğini jsDelivr'den sabit bir sürümle yükler; yeni bir Scalar sürümü, `better-payment` yayınlanmadan müşteri alan adındaki sayfayı değiştiremez. Başka bir sürüm sabitlemek veya betiği kendi sunucunuzdan vermek için `scalarScriptUrl` kullanın:
+
+```typescript
+openAPI({
+  path: '/reference',
+  scalarScriptUrl: '/assets/scalar/api-reference.js', // self-hosted, no CDN
+});
+```
+
 ## Seçenekler [#options]
 
 | Seçenek | Varsayılan | Açıklama |
@@ -94,3 +105,4 @@ Yetkili endpoint'ler (`privileged: true`) otomatik olarak `security: [{ bearerAu
 | `info.version` | `'1.0.0'` | API sürüm numarası |
 | `info.description` | — | Dokümantasyon açıklaması |
 | `disabled` | `false` | `true` yapıldığında endpoint'ler 404 döner (canlı ortamda dokümantasyonu gizlemek için önerilir) |
+| `scalarScriptUrl` | sabit jsDelivr adresi | Scalar referans arayüzü betiğinin adresi; CDN'i tamamen kaldırmak için kendi betik adresinizi verin |
