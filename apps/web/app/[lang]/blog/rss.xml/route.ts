@@ -1,4 +1,5 @@
 import { getPosts, postSlug } from "@/lib/blog";
+import { resolveAuthors } from "@/lib/authors";
 import { SITE_URL, isLocale, localePath } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/dictionary";
 
@@ -25,13 +26,14 @@ export async function GET(_request: Request, ctx: RouteContext<"/[lang]/blog/rss
       <guid isPermaLink="true">${link}</guid>
       <pubDate>${post.data.date.toUTCString()}</pubDate>
       <description>${escape(post.data.description ?? "")}</description>
+      <dc:creator>${escape(resolveAuthors(post.data.authors).map((author) => author.name).join(", ") || "Better Payment")}</dc:creator>
 ${post.data.tags.map((tag) => `      <category>${escape(tag)}</category>`).join("\n")}
     </item>`;
     })
     .join("\n");
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
     <title>Better Payment ${escape(t.blog.metaTitle)}</title>
     <link>${SITE_URL}${localePath(lang, "/blog")}</link>

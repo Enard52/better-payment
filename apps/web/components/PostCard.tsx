@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import AuthorAvatars from "@/components/AuthorAvatars";
 import { formatDate, postSlug, readingMinutes, type BlogPost } from "@/lib/blog";
+import { resolveAuthors } from "@/lib/authors";
 import { localePath, type Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionary";
 import { cn } from "@/lib/utils";
@@ -18,6 +20,7 @@ export default function PostCard({
   featured?: boolean;
 }) {
   const href = localePath(lang, `/blog/${postSlug(post)}`);
+  const authors = resolveAuthors(post.data.authors);
   return (
     <article
       className={cn(
@@ -49,10 +52,13 @@ export default function PostCard({
         {post.data.description}
       </p>
       <div className="mt-auto flex items-center justify-between gap-3 pt-6 text-[13px] text-muted-foreground">
-        <span>
-          <time dateTime={post.data.date.toISOString()}>{formatDate(post.data.date, lang)}</time>
-          <span aria-hidden> · </span>
-          {readingMinutes(post)} {t.minutes}
+        <span className="flex items-center gap-2.5">
+          <AuthorAvatars authors={authors} size={24} />
+          <span>
+            <time dateTime={post.data.date.toISOString()}>{formatDate(post.data.date, lang)}</time>
+            <span aria-hidden> · </span>
+            {readingMinutes(post)} {t.minutes}
+          </span>
         </span>
         <span className="inline-flex items-center gap-1 font-semibold text-accent-text">
           {t.readMore}

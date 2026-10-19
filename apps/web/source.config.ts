@@ -20,7 +20,8 @@ export const blog = defineCollections({
     date: z.coerce.date(),
     // Set when a post is edited in a meaningful way; shown as "updated" and used for SEO
     updated: z.coerce.date().optional(),
-    author: z.string().default('Better Payment'),
+    // GitHub logins of the authors, registered in lib/authors.ts
+    authors: z.array(z.string()).default(['czaydev']),
     tags: z.array(z.string()).default([]),
   }),
 });

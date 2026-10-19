@@ -11,6 +11,8 @@ import { formatDate, getPost, getPosts, postSlug, readingMinutes } from "@/lib/b
 import { LOCALES, SITE_URL, alternates, isLocale, localePath } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/dictionary";
 import { getMDXComponents } from "@/lib/mdx-components";
+import AuthorAvatars from "@/components/AuthorAvatars";
+import { authorsJsonLd, resolveAuthors } from "@/lib/authors";
 
 const REPOSITORY = "https://github.com/czaydev/better-payment";
 
@@ -35,7 +37,7 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/blog/[slug
     title: post.data.title,
     description: post.data.description,
     alternates: alternates(`/blog/${slug}`, lang),
-    authors: [{ name: post.data.author }],
+    authors: resolveAuthors(post.data.authors).map(({ name, url }) => ({ name, url })),
     keywords: post.data.tags,
     openGraph: {
       type: "article",
@@ -45,7 +47,7 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/blog/[slug
       description: post.data.description,
       publishedTime: post.data.date.toISOString(),
       modifiedTime: (post.data.updated ?? post.data.date).toISOString(),
-      authors: [post.data.author],
+      authors: resolveAuthors(post.data.authors).map((author) => author.url),
       tags: post.data.tags,
       images: [socialImage],
     },
@@ -60,6 +62,7 @@ export default async function BlogPostPage({ params }: PageProps<"/[lang]/blog/[
   if (!post) notFound();
   const t = getDictionary(lang).blog;
   const MDX = post.data.body;
+  const postAuthors = resolveAuthors(post.data.authors);
   const related = getPosts(lang)
     .filter((other) => postSlug(other) !== slug)
     .slice(0, 2);
@@ -73,7 +76,7 @@ export default async function BlogPostPage({ params }: PageProps<"/[lang]/blog/[
     datePublished: post.data.date.toISOString(),
     dateModified: (post.data.updated ?? post.data.date).toISOString(),
     inLanguage: lang,
-    author: { "@type": "Organization", name: post.data.author, url: SITE_URL },
+    author: authorsJsonLd(postAuthors),
     publisher: { "@type": "Organization", name: "Better Payment", url: SITE_URL },
     mainEntityOfPage: url,
     keywords: post.data.tags.join(", "),
@@ -106,25 +109,43 @@ export default async function BlogPostPage({ params }: PageProps<"/[lang]/blog/[
           {post.data.title}
         </h1>
         <p className="mt-5 text-lg leading-relaxed text-muted-foreground">{post.data.description}</p>
-        <p className="mt-6 flex flex-wrap items-center gap-x-2 border-b border-border pb-8 text-sm text-muted-foreground">
-          <span>
-            {t.by} <span className="font-medium text-foreground">{post.data.author}</span>
-          </span>
-          <span aria-hidden>·</span>
-          <time dateTime={post.data.date.toISOString()}>{formatDate(post.data.date, lang)}</time>
-          <span aria-hidden>·</span>
-          <span>
-            {readingMinutes(post)} {t.minutes}
-          </span>
-          {post.data.updated && (
-            <>
-              <span aria-hidden>·</span>
-              <span>
-                {t.updated} <time dateTime={post.data.updated.toISOString()}>{formatDate(post.data.updated, lang)}</time>
-              </span>
-            </>
-          )}
-        </p>
+        <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-border pb-8 text-sm text-muted-foreground">
+          <div className="flex items-center gap-3">
+            <AuthorAvatars authors={postAuthors} size={40} />
+            <p className="leading-snug">
+              <span className="block text-xs">{t.by}</span>
+              {postAuthors.map((author, i) => (
+                <span key={author.login}>
+                  {i > 0 && ", "}
+                  <a
+                    href={author.url}
+                    target="_blank"
+                    rel="noopener noreferrer author"
+                    className="font-semibold text-foreground underline-offset-4 hover:underline"
+                  >
+                    {author.name}
+                  </a>
+                </span>
+              ))}
+            </p>
+          </div>
+          <span aria-hidden className="hidden h-8 w-px bg-border sm:block" />
+          <p className="flex flex-wrap items-center gap-x-2">
+            <time dateTime={post.data.date.toISOString()}>{formatDate(post.data.date, lang)}</time>
+            <span aria-hidden>·</span>
+            <span>
+              {readingMinutes(post)} {t.minutes}
+            </span>
+            {post.data.updated && (
+              <>
+                <span aria-hidden>·</span>
+                <span>
+                  {t.updated} <time dateTime={post.data.updated.toISOString()}>{formatDate(post.data.updated, lang)}</time>
+                </span>
+              </>
+            )}
+          </p>
+        </div>
 
         <div className="prose mt-10 max-w-none">
           <MDX components={getMDXComponents(defaultMdxComponents, lang)} />
