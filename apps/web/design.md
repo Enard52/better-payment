@@ -183,6 +183,6 @@ Each step is a separate commit on this branch. We stop for approval after each o
 
 ## 9. Progress
 
-- [x] Step 2a: Navbar mega menu (`components/Navbar.tsx`, `lib/nav-menu.ts`, `nav.menu` in the dictionary, EN + TR)
+- [x] Step 2a: Navbar mega menu, reworked to the Craftgate grammar (intro column + categorised groups + dimmed page). `components/Navbar.tsx`, `lib/nav-menu.ts`, `nav.menu` in the dictionary (EN + TR)
 - [ ] Step 1: tokens (color ramp, type scale)
 - [ ] Hero, provider strip, stats, feature rows, developer section, CTA, footer
