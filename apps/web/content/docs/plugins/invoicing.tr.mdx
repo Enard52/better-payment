@@ -13,7 +13,7 @@ Fatura üretimi müşteri ödeme akışını asla bekletmez veya yavaşlatmaz. E
 
 ```typescript
 import { betterPayment, iyzico } from 'better-payment';
-import { invoicing, parasut } from 'better-payment/plugins';
+import { invoicing, parasut } from 'better-payment/invoicing';
 
 export const payment = betterPayment({
   providers: {
@@ -99,7 +99,7 @@ Düzenlenen faturalar yasal açıdan önemli belgelerdir: neyin düzenlendiğine
 > **Uyarı:** Varsayılan `MemoryInvoicingStore` süreç içidir ve yeniden başlatmada her şeyi kaybeder. Yalnızca geliştirme ve test içindir — üretimde `store` seçeneğine kalıcı bir store (SQL, Redis, KV) vermeniz gerekir.
 
 ```typescript
-import type { InvoicingRecord, InvoicingStore } from 'better-payment/plugins';
+import type { InvoicingRecord, InvoicingStore } from 'better-payment/invoicing';
 
 // Persist records as JSON so issued invoices survive restarts and deploys.
 export function invoicingStoreFromKeyValue(kv: {

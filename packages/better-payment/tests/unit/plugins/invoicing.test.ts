@@ -9,7 +9,7 @@ import {
   type InvoicingStore,
   type InvoiceResult,
   type ParasutOptions,
-} from 'better-payment/plugins';
+} from 'better-payment/invoicing';
 import { mockPaymentRequest } from '../../fixtures/payment-data';
 
 const FAKE_CREDENTIALS = {

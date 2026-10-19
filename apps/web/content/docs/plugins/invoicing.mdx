@@ -13,7 +13,7 @@ Invoice generation never blocks or slows down the customer's checkout flow. The 
 
 ```typescript
 import { betterPayment, iyzico } from 'better-payment';
-import { invoicing, parasut } from 'better-payment/plugins';
+import { invoicing, parasut } from 'better-payment/invoicing';
 
 export const payment = betterPayment({
   providers: {
@@ -99,7 +99,7 @@ Issued invoices are legally relevant documents: losing the record of what was is
 > **Warning:** The default `MemoryInvoicingStore` is per-process and loses everything on restart. It is for development and tests only — in production you must pass a persistent store (SQL, Redis, KV) to the `store` option.
 
 ```typescript
-import type { InvoicingRecord, InvoicingStore } from 'better-payment/plugins';
+import type { InvoicingRecord, InvoicingStore } from 'better-payment/invoicing';
 
 // Persist records as JSON so issued invoices survive restarts and deploys.
 export function invoicingStoreFromKeyValue(kv: {

@@ -6,13 +6,8 @@ import {
   type PaymentEvent,
   type PluginContext,
 } from 'better-payment';
-import { MemoryInvoicingStore } from './invoicing/store';
-import type {
-  CreateInvoiceParams,
-  InvoiceItem,
-  InvoicingOptions,
-  InvoicingRecord,
-} from './invoicing/types';
+import { MemoryInvoicingStore } from './store';
+import type { CreateInvoiceParams, InvoiceItem, InvoicingOptions, InvoicingRecord } from './types';
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
