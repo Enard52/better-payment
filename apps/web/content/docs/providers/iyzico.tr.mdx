@@ -135,26 +135,26 @@ Abonelik yanıtları iyzico'nun yapısını (`data`, `systemTime`) korur. `statu
 iyzico, asenkron üye işyeri bildirimlerini (ör. `CHECKOUT_FORM_AUTH`, `THREEDS_AUTH`, `PWI_AUTH`, `REFUND`) panelinizde belirlediğiniz webhook URL'ine iletir. Gelen bildirimleri doğrudan doğrulayabilir veya `BetterPaymentHandler` ile otomatik yönetebilirsiniz.
 
 ```typescript
-// Manuel doğrulama
-const { valid, event, result } = payment.iyzico.verifyWebhook(
-  req.headers, // x-iyz-signature-v3 başlığını içermelidir
-  req.body     // JSON nesnesi veya gövde metni
+// Manual verification
+const { valid, event, result } = await payment.iyzico.verifyWebhook(
+  req.headers, // must contain x-iyz-signature-v3
+  req.body // parsed JSON or string payload
 );
 
 if (!valid) {
-  return res.status(401).send('Geçersiz imza');
+  return res.status(401).send('Invalid signature');
 }
 
-console.log(event.iyziEventType, result?.status, result?.paymentId);
+console.log(event?.iyziEventType, result?.status, result?.paymentId);
 ```
 
 `BetterPaymentHandler` veya HTTP adaptörleri kullanıldığında `/api/pay/iyzico/webhook` rotası otomatik karşılanır:
 
 ```typescript
 const handler = new BetterPaymentHandler(payment, {
-  onWebhook: async ({ provider, valid, event, result }) => {
-    if (!valid) return;
-    // Sipariş durumunu veritabanında güncelle
+  // Runs for every verified notification, and for 3DS callbacks
+  onCallback: async (result) => {
+    // Update order status in database
     await updateOrder(result.paymentId, result.status);
   },
 });

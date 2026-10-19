@@ -6,7 +6,7 @@ import type { EndpointContext, EndpointHandlerInfo } from './plugin';
 import { VERSION } from '../version';
 import { PaymentStatus } from '../types';
 import type { PaymentResponse } from '../types';
-import type { PaymentProvider } from './PaymentProvider';
+import type { PaymentProvider, WebhookVerifiableProvider } from './PaymentProvider';
 import { errorMessage } from './utils';
 import { NETWORK_ERROR_CODE } from './failure';
 import { fingerprint, MemoryIdempotencyStore, type IdempotencyStore } from './idempotency';
@@ -972,7 +972,9 @@ export class BetterPaymentHandler {
    * Verifies signatures with the provider and emits typed payment events.
    */
   private async handleWebhook(ctx: CallbackContext): Promise<BetterPaymentResponse> {
-    const provider = this.core.rawProvider(ctx.provider) as any;
+    const provider = this.core.rawProvider(
+      ctx.provider
+    ) as unknown as Partial<WebhookVerifiableProvider>;
     if (typeof provider.verifyWebhook !== 'function') {
       return this.errorResponse(400, `Webhooks are not supported by provider '${ctx.provider}'`);
     }
