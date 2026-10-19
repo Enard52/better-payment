@@ -46,7 +46,10 @@ export interface CreatePaymentLinkOptions {
 export interface PaymentLinkStore {
   get(id: string): Promise<PaymentLink | undefined> | PaymentLink | undefined;
   set(link: PaymentLink): Promise<void> | void;
-  update(id: string, patch: Partial<PaymentLink>): Promise<PaymentLink | undefined> | PaymentLink | undefined;
+  update(
+    id: string,
+    patch: Partial<PaymentLink>
+  ): Promise<PaymentLink | undefined> | PaymentLink | undefined;
 }
 
 export class MemoryPaymentLinkStore implements PaymentLinkStore {
@@ -95,7 +98,9 @@ function parseDuration(val: number | string | Date | undefined, fallback: number
   if (typeof val === 'number') return val;
   const match = /^(\d+(?:\.\d+)?)\s*(s|m|h|d)$/i.exec(val.trim());
   if (!match) {
-    throw new ConfigurationError(`paymentLinks: invalid duration '${val}'. Use milliseconds or '60s', '24h', '7d'.`);
+    throw new ConfigurationError(
+      `paymentLinks: invalid duration '${val}'. Use milliseconds or '60s', '24h', '7d'.`
+    );
   }
   return Number(match[1]) * DURATION_UNITS[match[2].toLowerCase()];
 }
@@ -202,7 +207,10 @@ export function paymentLinks(options: PaymentLinksOptions): BetterPaymentPlugin 
             return ctx.json({ error: true, message: 'This payment link has expired' }, 410);
           }
           if (status === 'paid' && link.singleUse) {
-            return ctx.json({ error: true, message: 'This payment link has already been paid' }, 410);
+            return ctx.json(
+              { error: true, message: 'This payment link has already been paid' },
+              410
+            );
           }
           if (status === 'cancelled') {
             return ctx.json({ error: true, message: 'This payment link was cancelled' }, 410);
@@ -216,7 +224,7 @@ export function paymentLinks(options: PaymentLinksOptions): BetterPaymentPlugin 
           const provider =
             typeof body?.provider === 'string' && ctx.providerIds.includes(body.provider)
               ? body.provider
-              : ctx.defaultProvider ?? ctx.providerIds[0];
+              : (ctx.defaultProvider ?? ctx.providerIds[0]);
 
           if (!provider) {
             return ctx.json({ error: true, message: 'No payment provider available' }, 500);

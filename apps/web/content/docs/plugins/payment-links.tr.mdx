@@ -35,9 +35,9 @@ export const payment = betterPayment({
 const link = await payment.links.create({
   amount: '250.00',
   currency: 'TRY',
-  description: 'Fatura #42 - Web tasarım danışmanlığı',
-  expiresIn: '7d', // örn. '24h', '7d' veya milisaniye
-  singleUse: true, // varsayılan: true (ilk başarılı ödemeden sonra 'paid' durumuna geçer)
+  description: 'Invoice #42 - Web design',
+  expiresIn: '7d', // e.g. '24h', '7d', or milliseconds
+  singleUse: true, // default: true (marks link 'paid' after first successful charge)
 });
 
 console.log(link.url);
@@ -56,7 +56,7 @@ Link bilgilerini çözer, HMAC imzasını doğrular ve geçerli bilgileri döner
   "id": "a1b2c3d4",
   "amount": "250.00",
   "currency": "TRY",
-  "description": "Fatura #42 - Web tasarım danışmanlığı",
+  "description": "Invoice #42 - Web design",
   "status": "open",
   "expiresAt": 1729800000000,
   "singleUse": true
@@ -81,11 +81,11 @@ Link `singleUse: true` ise, başarılı ödemenin ardından durumu `paid` yapıl
 ## Link Durumu ve İptal [#link-lifecycle--cancellation]
 
 ```typescript
-// Link durumunu sorgulama
+// Query link status
 const link = await payment.links.get('a1b2c3d4');
 console.log(link?.status); // 'open' | 'paid' | 'expired' | 'cancelled'
 
-// Linki iptal etme
+// Cancel a link
 await payment.links.cancel('a1b2c3d4');
 ```
 
