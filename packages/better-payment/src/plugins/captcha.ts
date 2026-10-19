@@ -52,7 +52,10 @@ const SITEVERIFY_URLS: Record<CaptchaProvider, string> = {
   hcaptcha: 'https://api.hcaptcha.com/siteverify',
 };
 
-function extractToken(request: unknown, customExtractor?: (req: unknown) => string | undefined): string | undefined {
+function extractToken(
+  request: unknown,
+  customExtractor?: (req: unknown) => string | undefined
+): string | undefined {
   if (customExtractor) {
     const custom = customExtractor(request);
     if (custom) return custom;
@@ -139,7 +142,10 @@ export function captcha(options: CaptchaOptions) {
   const targetOps = new Set(operations);
   const siteverifyUrl = SITEVERIFY_URLS[provider];
 
-  async function verifySiteToken(token: string, remoteIp?: string): Promise<{ valid: boolean; reason?: string }> {
+  async function verifySiteToken(
+    token: string,
+    remoteIp?: string
+  ): Promise<{ valid: boolean; reason?: string }> {
     try {
       const form = new URLSearchParams({
         secret: secretKey,

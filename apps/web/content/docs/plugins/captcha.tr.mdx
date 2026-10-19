@@ -54,7 +54,7 @@ Davranışsal puan eşiği (0.0 ile 1.0 arası) desteği:
 captcha({
   provider: 'google-recaptcha',
   secretKey: process.env.RECAPTCHA_SECRET_KEY!,
-  minScore: 0.5, // 0.5 altındaki şüpheli puanları reddet
+  minScore: 0.5, // reject submissions with score < 0.5
 });
 ```
 
@@ -72,7 +72,7 @@ captcha({
 Ödeme isteğinizde token'ı iletin:
 
 ```typescript
-// Next.js / React ile Cloudflare Turnstile
+// Next.js / React with Cloudflare Turnstile
 const res = await fetch('/api/pay/iyzico/payment', {
   method: 'POST',
   headers: {
