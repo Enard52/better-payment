@@ -254,7 +254,7 @@ export function multiTenant(options: MultiTenantOptions): BetterPaymentPlugin {
 
     const attachTenant = <T>(res: T): T => {
       if (res && typeof res === 'object') {
-        ((res as unknown) as Record<string, unknown>).tenantId = tenantId;
+        (res as unknown as Record<string, unknown>).tenantId = tenantId;
       }
       return res;
     };
@@ -264,63 +264,63 @@ export function multiTenant(options: MultiTenantOptions): BetterPaymentPlugin {
       createPayment: async (req) => {
         const p = await getTenantProvider(
           tenantId,
-          resolveProvider(((req as unknown) as { provider?: string }).provider)
+          resolveProvider((req as unknown as { provider?: string }).provider)
         );
         return attachTenant(await p.createPayment(req));
       },
       initThreeDSPayment: async (req) => {
         const p = await getTenantProvider(
           tenantId,
-          resolveProvider(((req as unknown) as { provider?: string }).provider)
+          resolveProvider((req as unknown as { provider?: string }).provider)
         );
         return attachTenant(await p.initThreeDSPayment(req));
       },
       completeThreeDSPayment: async (req) => {
         const p = await getTenantProvider(
           tenantId,
-          resolveProvider(((req as unknown) as { provider?: string }).provider)
+          resolveProvider((req as unknown as { provider?: string }).provider)
         );
         return attachTenant(await p.completeThreeDSPayment(req));
       },
       authorize: async (req) => {
         const p = await getTenantProvider(
           tenantId,
-          resolveProvider(((req as unknown) as { provider?: string }).provider)
+          resolveProvider((req as unknown as { provider?: string }).provider)
         );
         return attachTenant(await p.authorize(req));
       },
       initThreeDSAuthorize: async (req) => {
         const p = await getTenantProvider(
           tenantId,
-          resolveProvider(((req as unknown) as { provider?: string }).provider)
+          resolveProvider((req as unknown as { provider?: string }).provider)
         );
         return attachTenant(await p.initThreeDSAuthorize(req));
       },
       capture: async (req) => {
         const p = await getTenantProvider(
           tenantId,
-          resolveProvider(((req as unknown) as { provider?: string }).provider)
+          resolveProvider((req as unknown as { provider?: string }).provider)
         );
         return attachTenant(await p.capture(req));
       },
       voidAuthorization: async (req) => {
         const p = await getTenantProvider(
           tenantId,
-          resolveProvider(((req as unknown) as { provider?: string }).provider)
+          resolveProvider((req as unknown as { provider?: string }).provider)
         );
         return attachTenant(await p.voidAuthorization(req));
       },
       refund: async (req) => {
         const p = await getTenantProvider(
           tenantId,
-          resolveProvider(((req as unknown) as { provider?: string }).provider)
+          resolveProvider((req as unknown as { provider?: string }).provider)
         );
         return attachTenant(await p.refund(req));
       },
       cancel: async (req) => {
         const p = await getTenantProvider(
           tenantId,
-          resolveProvider(((req as unknown) as { provider?: string }).provider)
+          resolveProvider((req as unknown as { provider?: string }).provider)
         );
         return attachTenant(await p.cancel(req));
       },
@@ -331,21 +331,21 @@ export function multiTenant(options: MultiTenantOptions): BetterPaymentPlugin {
       saveCard: async (req) => {
         const p = await getTenantProvider(
           tenantId,
-          resolveProvider(((req as unknown) as { provider?: string }).provider)
+          resolveProvider((req as unknown as { provider?: string }).provider)
         );
         return await p.saveCard(req);
       },
       listCards: async (req) => {
         const p = await getTenantProvider(
           tenantId,
-          resolveProvider(((req as unknown) as { provider?: string }).provider)
+          resolveProvider((req as unknown as { provider?: string }).provider)
         );
         return await p.listCards(req);
       },
       deleteCard: async (req) => {
         const p = await getTenantProvider(
           tenantId,
-          resolveProvider(((req as unknown) as { provider?: string }).provider)
+          resolveProvider((req as unknown as { provider?: string }).provider)
         );
         return await p.deleteCard(req);
       },
@@ -356,7 +356,7 @@ export function multiTenant(options: MultiTenantOptions): BetterPaymentPlugin {
       installmentInfo: async (req) => {
         const p = await getTenantProvider(
           tenantId,
-          resolveProvider(((req as unknown) as { provider?: string }).provider)
+          resolveProvider((req as unknown as { provider?: string }).provider)
         );
         return await p.installmentInfo(req);
       },
@@ -391,7 +391,7 @@ export function multiTenant(options: MultiTenantOptions): BetterPaymentPlugin {
                 ctx.request
               );
               if (res && typeof res === 'object') {
-                ((res as unknown) as Record<string, unknown>).tenantId = tenantId;
+                (res as unknown as Record<string, unknown>).tenantId = tenantId;
               }
               return { result: res };
             }
@@ -404,7 +404,7 @@ export function multiTenant(options: MultiTenantOptions): BetterPaymentPlugin {
           handler: async (ctx) => {
             const tenantId = await resolveTenantId(ctx as unknown as OperationContext);
             if (tenantId && ctx.result && typeof ctx.result === 'object') {
-              ((ctx.result as unknown) as Record<string, unknown>).tenantId = tenantId;
+              (ctx.result as unknown as Record<string, unknown>).tenantId = tenantId;
             }
           },
         },
