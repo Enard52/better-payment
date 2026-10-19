@@ -19,4 +19,12 @@ export {
   type NotificationEvent,
   type NotificationLocale,
 } from './notifications';
-export { mcp, ALL_MCP_TOOLS, WRITE_MCP_TOOLS, type McpOptions, type McpToolName } from './mcp';
+export {
+  mcp,
+  ALL_MCP_TOOLS,
+  WRITE_MCP_TOOLS,
+  MCP_PROTOCOL_VERSIONS,
+  type McpOptions,
+  type McpToolName,
+  type McpToolCallInfo,
+} from './mcp';
