@@ -1,9 +1,18 @@
 import {
   definePlugin,
+  type BetterPaymentLogger,
   type OperationResultContext,
 } from 'better-payment';
 
 export type CardMaskingStyle = 'first6last4' | 'last4' | 'none' | ((pan: string) => string);
+
+/**
+ * A logger we can wrap in place: the public {@link BetterPaymentLogger} surface
+ * with a marker flag that keeps `init` and `methods` from wrapping it twice.
+ */
+interface RedactableLogger extends BetterPaymentLogger {
+  __redactWrapped?: boolean;
+}
 
 export interface RedactOptions {
   /**
@@ -59,8 +68,8 @@ const DEFAULT_FIELDS: string[] = [
   'clientPassword',
 ];
 
-/** Matches credit/debit card numbers from 13 to 19 digits */
-const PAN_REGEX = /\b(?:\d[ -]*?){13,19}\b/g;
+/** Matches credit/debit card numbers from 13 to 19 digits, also when glued to a word character */
+const PAN_REGEX = /(?<!\d)(?:\d[ -]*?){13,19}(?!\d)/g;
 
 /** Matches 11-digit Turkish Identity Numbers (TCKN) */
 const TCKN_REGEX = /\b\d{11}\b/g;
@@ -115,7 +124,7 @@ export function createRedactor(options: RedactOptions = {}) {
     return result;
   };
 
-  const maskValue = (value: unknown, key = ''): unknown => {
+  const maskValue = (value: unknown, key = '', ancestors?: Set<object>): unknown => {
     if (value === null || value === undefined) return value;
 
     const lowerKey = key.toLowerCase();
@@ -135,26 +144,32 @@ export function createRedactor(options: RedactOptions = {}) {
       return maskStringValue(value);
     }
 
-    if (Array.isArray(value)) {
-      return value.map((item) => maskValue(item, key));
+    if (typeof value !== 'object') {
+      return value;
     }
 
-    if (value instanceof Error) {
+    // Break reference cycles: a value already on the current path is replaced
+    // with the mask instead of recursing into itself forever.
+    const seen = ancestors ?? new Set<object>();
+    if (seen.has(value)) return maskStr;
+    seen.add(value);
+
+    let masked: unknown;
+    if (Array.isArray(value)) {
+      masked = value.map((item) => maskValue(item, key, seen));
+    } else if (value instanceof Error) {
       const copy = new Error(maskStringValue(value.message));
       copy.name = value.name;
       if (value.stack) copy.stack = maskStringValue(value.stack);
-      return copy;
+      masked = copy;
+    } else {
+      masked = Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, maskValue(v, k, seen)])
+      );
     }
 
-    if (typeof value === 'object') {
-      const entries = Object.entries(value as Record<string, unknown>).map(([k, v]) => [
-        k,
-        maskValue(v, k),
-      ]);
-      return Object.fromEntries(entries);
-    }
-
-    return value;
+    seen.delete(value);
+    return masked;
   };
 
   return {
@@ -191,8 +206,8 @@ export const redact = (options: RedactOptions = {}) => {
   const redactLogger = options.redactLogger ?? true;
   const redactEvents = options.redactEvents ?? true;
 
-  const wrapLogger = (logger: any) => {
-    if (!logger || logger.__redactWrapped) return;
+  const wrapLogger = (logger: RedactableLogger) => {
+    if (logger.__redactWrapped) return;
     logger.__redactWrapped = true;
 
     const origDebug = logger.debug.bind(logger);

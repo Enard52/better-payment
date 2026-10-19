@@ -9,7 +9,7 @@ description: Kart hamili verilerini, CVV ve kişisel bilgileri loglarda, olaylar
 
 `redact` eklentisi, hassas kart ve kimlik verilerinin log çıktılarında, ödeme olaylarında ve denetim izlerinde otomatik olarak maskelenmesini sağlar; bu esnada ödeme sağlayıcısına (sanal POS) iletilen orijinal ödeme isteğine kesinlikle dokunmaz.
 
-## Kurulum
+## Kurulum [#setup]
 
 ```typescript
 import { betterPayment, iyzico } from 'better-payment';
@@ -21,30 +21,30 @@ const payment = betterPayment({
   },
   plugins: [
     redact({
-      // Kart numarası maskeleme stili
-      card: 'first6last4', // örn: 545454******5454
-      // Metin içerisindeki özel desenler (11 haneli TCKN varsayılan olarak maskelenir)
+      // Masking style for card numbers
+      card: 'first6last4', // e.g. 545454******5454
+      // Custom patterns to mask in string values (TCKN 11-digit numbers are masked by default)
       custom: [/\b\d{11}\b/g],
     }),
   ],
 });
 
-// Olay dinleyicileri maskelenmiş güvenli veriyi alır
+// Event listeners receive masked data
 payment.on('payment.succeeded', (event) => {
   // event.request.paymentCard.cardNumber === '545454******5454'
   // event.request.paymentCard.cvc === '***'
   // event.request.buyer.identityNumber === '<redacted>'
-  console.log('Ödeme tamamlandı:', event.request);
+  console.log('Payment completed for:', event.request);
 });
 ```
 
-## Nasıl Çalışır?
+## Nasıl Çalışır? [#how-it-works]
 
 1. **Banka / Sağlayıcıya Değişmeden İletim**: Gerçek kart ve müşteri verileri doğrudan ödeme sağlayıcısına iletilir, ödeme akışında hiçbir kesinti veya hata oluşmaz.
 2. **Olay Yükü Maskeleme**: `after` kancasında, olay dinleyicilerine (`payment.succeeded`, `payment.failed` vb.) iletilen `request` ve `result` nesnelerinin kopyaları maskelenir.
 3. **Logger Sarmalama**: `betterPayment({ logger })` ile bir logger yapılandırıldıysa, `debug`, `info` ve `error` metodları sarmalanarak loglanan tüm metin ve meta veriler hassas anahtarlara ve PAN desenlerine karşı filtrelenir.
 
-## Seçenekler
+## Seçenekler [#options]
 
 | Seçenek | Varsayılan | Açıklama |
 | ------- | ---------- | -------- |
@@ -55,21 +55,21 @@ payment.on('payment.succeeded', (event) => {
 | `redactLogger` | `true` | Log çıktılarını otomatik maskelemek için yapılandırılmış logger'ı sarmalar |
 | `redactEvents` | `true` | Olay dinleyicilerine gitmeden önce olay yükünü maskeler |
 
-## Manuel Maskeleme Yardımcısı
+## Manuel Maskeleme Yardımcısı [#manual-redaction-helper]
 
 Eklenti, uygulama kodunuzda kullanabilmeniz için ödeme nesnesine bir `redact` alanı ekler:
 
 ```typescript
-// Kart numarasını maskeleme
+// Mask card number
 payment.redact.maskCard('5528790000000008');
 // => '552879******0008'
 
-// İsteğe bağlı nesneleri veya logları maskeleme
+// Mask arbitrary objects or logs
 const safeObject = payment.redact.mask({
-  orderId: 'SIP-1',
+  orderId: 'ORD-1',
   cardNumber: '5528790000000008',
   cvc: '123',
   identityNumber: '12345678901',
 });
-// => { orderId: 'SIP-1', cardNumber: '552879******0008', cvc: '***', identityNumber: '<redacted>' }
+// => { orderId: 'ORD-1', cardNumber: '552879******0008', cvc: '***', identityNumber: '<redacted>' }
 ```

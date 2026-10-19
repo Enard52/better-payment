@@ -5,7 +5,7 @@ import {
   type PaymentRequest,
   type PaymentResponse,
 } from 'better-payment';
-import { redact } from 'better-payment/plugins';
+import { redact, createRedactor } from 'better-payment/plugins';
 import { MockProvider } from 'better-payment/testing';
 import { mockPaymentRequest } from '../../fixtures/payment-data';
 
@@ -200,5 +200,60 @@ describe('redact plugin', () => {
       identityNumber: '<redacted>',
       extra: 'Customer phone is <redacted>',
     });
+  });
+
+  it('masks a cyclic object without a stack overflow, replacing the back-reference', () => {
+    const redactor = createRedactor();
+    const cyclic: Record<string, unknown> = { cardNumber: '4111111111111111' };
+    cyclic.self = cyclic;
+
+    const masked = redactor.mask(cyclic) as Record<string, unknown>;
+    expect(masked.cardNumber).toBe('411111******1111');
+    expect(masked.self).toBe('<redacted>');
+    // The original input is never mutated.
+    expect(cyclic.self).toBe(cyclic);
+  });
+
+  it('masks a cyclic array without a stack overflow', () => {
+    const redactor = createRedactor();
+    const list: unknown[] = ['5454540000005454'];
+    list.push(list);
+
+    const masked = redactor.mask(list) as unknown[];
+    expect(masked[0]).toBe('545454******5454');
+    expect(masked[1]).toBe('<redacted>');
+  });
+
+  it('does not let a crafted __proto__ key pollute Object.prototype', () => {
+    const redactor = createRedactor();
+    const payload = JSON.parse(
+      '{"__proto__": {"polluted": "leak"}, "cardNumber": "5528790000000008"}'
+    ) as Record<string, unknown>;
+
+    const masked = redactor.mask(payload) as Record<string, unknown>;
+
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(Object.prototype.hasOwnProperty.call(masked, '__proto__')).toBe(true);
+    expect(masked.cardNumber).toBe('552879******0008');
+  });
+
+  it('catches a PAN embedded in a raw provider response, including glued to a word char', () => {
+    const redactor = createRedactor();
+    const masked = redactor.mask({
+      rawResponse: {
+        pan: '5528790000000008',
+        echo: 'charged card_5528790000000008 with TCKN 12345678901',
+        cardToken: 'tok_5454540000005454',
+        bin: '552879',
+        last4: '0008',
+      },
+    }) as { rawResponse: Record<string, string> };
+
+    expect(masked.rawResponse.pan).toBe('552879******0008');
+    expect(masked.rawResponse.echo).toBe('charged card_552879******0008 with TCKN <redacted>');
+    expect(masked.rawResponse.cardToken).toBe('tok_545454******5454');
+    // BIN (first 6) and last4 are the only fragments PCI allows to remain visible.
+    expect(masked.rawResponse.bin).toBe('552879');
+    expect(masked.rawResponse.last4).toBe('0008');
   });
 });
