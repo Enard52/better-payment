@@ -27,12 +27,12 @@ export default async function Layout({ children, params }: LayoutProps<"/[lang]/
       <DocsLayout
         tree={source.getPageTree(lang)}
         i18n
+        themeSwitch={{ enabled: false }}
         nav={{
           // The site navbar above already carries the logo
           title: <span className="sr-only">Better Payment</span>,
           url: localePath(lang, "/"),
         }}
-        githubUrl="https://github.com/czaydev/better-payment"
         sidebar={SHOW_VERSION_PICKER ? { banner: <VersionPicker lang={lang} beta={IS_BETA_DOCS} /> } : undefined}
       >
         {children}

@@ -291,7 +291,7 @@ export default function Navbar({
       <div
         aria-hidden
         className={cn(
-          "pointer-events-none fixed inset-x-0 top-16 bottom-0 -z-10 hidden bg-foreground/45 transition-opacity duration-(--bp-d-sm) lg:block",
+          "pointer-events-none fixed inset-x-0 top-16 bottom-0 -z-10 hidden bg-background/30 backdrop-blur-md transition-opacity duration-(--bp-d-sm) lg:block",
           active ? "opacity-100" : "opacity-0",
         )}
       />
