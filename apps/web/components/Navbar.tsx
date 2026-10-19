@@ -61,10 +61,13 @@ export default function Navbar({
   version,
   lang,
   t,
+  position = "fixed",
 }: {
   version: string;
   lang: Locale;
   t: Dictionary["nav"];
+  /** `sticky` keeps the bar in the page flow (docs), `fixed` floats it over the content (homepage) */
+  position?: "fixed" | "sticky";
 }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -179,7 +182,8 @@ export default function Navbar({
       ref={headerRef}
       onMouseLeave={hideSoon}
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 border-b transition-[background-color,border-color] duration-200",
+        position === "fixed" ? "fixed" : "sticky",
+        "top-0 left-0 right-0 z-50 border-b transition-[background-color,border-color] duration-200",
         active
           ? "border-border bg-card"
           : scrolled || open
