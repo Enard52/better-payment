@@ -80,7 +80,7 @@ Both endpoints are declared `privileged`, like refunds are on the [handler](/doc
 
 ## Client IP
 
-Providers require the customer IP on refunds and cancellations. The endpoint context only carries the request headers, so the plugin reads `cf-connecting-ip`, then `x-real-ip`, then the first entry of `x-forwarded-for`. Nothing validates those headers for you: a forwarding header is only trustworthy when your edge sets it and drops client-supplied copies, which is your deployment's job, not the library's. Override `getClientIp` when your platform exposes the IP another way. With no IP to read, a write tool is refused instead of being attributed to a placeholder address.
+Providers require the customer IP on refunds and cancellations. The endpoint context only carries the request headers, so by default the plugin reads `cf-connecting-ip`, then `x-real-ip` — headers an edge proxy overwrites rather than appends to. `x-forwarded-for` is deliberately not trusted by default: any client can put whatever it likes in that header. Nothing validates the two trusted headers for you either: they only mean something when your edge sets them and drops client-supplied copies, which is your deployment's job, not the library's. If your platform only exposes `x-forwarded-for` behind a proxy that sanitizes it, read it yourself in `getClientIp`. With no IP to read, a write tool is refused instead of being attributed to a placeholder address.
 
 ## Card data safety
 
@@ -105,7 +105,7 @@ Tool results are sanitized before they reach the model:
 | `tools` | `McpToolName[]` | all tools | Which tools the server exposes. |
 | `readOnly` | `boolean` | `false` | When `true`, omits write tools (`refund`, `cancel`). |
 | `authorize` | `(req, tool) => boolean \| Promise<boolean>` | — | Runs before every tool call; required for the write tools. |
-| `getClientIp` | `(req) => string \| undefined` | `cf-connecting-ip`, `x-real-ip`, `x-forwarded-for` | Resolves the IP passed to write operations. |
+| `getClientIp` | `(req) => string \| undefined` | `cf-connecting-ip`, then `x-real-ip` | Resolves the IP passed to write operations. |
 | `serverName` | `string` | `'better-payment-mcp'` | Name reported in `serverInfo`. |
 | `serverVersion` | `string` | Better Payment version | Version reported in `serverInfo`. |
 | `onToolCall` | `(details) => void` | — | Audit hook called after each tool invocation. |

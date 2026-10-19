@@ -79,10 +79,11 @@ export interface McpOptions {
   serverVersion?: string;
   /**
    * Resolves the IP handed to provider write operations (`refund`, `cancel`) and
-   * recorded in the audit trail. Defaults to the first value of `cf-connecting-ip`,
-   * `x-real-ip` or `x-forwarded-for`. Those headers only mean something if your
-   * edge sets them and strips client-supplied copies: that trust decision is yours,
-   * so override this when your platform exposes the IP another way.
+   * recorded in the audit trail. Defaults to `cf-connecting-ip`, then `x-real-ip`:
+   * headers an edge overwrites rather than appends to. `x-forwarded-for` is not
+   * read by default because a client can put whatever it likes in it; if your
+   * proxy sets it authoritatively (and strips incoming copies), resolve the IP
+   * from it here. That trust decision is yours, not the library's.
    */
   getClientIp?: (request: BetterPaymentRequest) => string | undefined;
   /**
@@ -246,7 +247,7 @@ function readHeader(request: BetterPaymentRequest, name: string): string | undef
   return key ? headers[key] : undefined;
 }
 
-const CLIENT_IP_HEADERS = ['cf-connecting-ip', 'x-real-ip', 'x-forwarded-for'];
+const CLIENT_IP_HEADERS = ['cf-connecting-ip', 'x-real-ip'];
 
 function defaultClientIp(request: BetterPaymentRequest): string | undefined {
   for (const header of CLIENT_IP_HEADERS) {

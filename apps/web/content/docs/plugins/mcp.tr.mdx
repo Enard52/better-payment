@@ -80,7 +80,7 @@ Her iki uç nokta da tıpkı iade işlemleri gibi [`privileged`](/docs/concepts/
 
 ## İstemci IP'si [#client-ip]
 
-Sağlayıcılar, iade ve iptal işlemlerinde müşteri IP'sini ister. Uç nokta bağlamı yalnızca istek başlıklarını taşıdığı için eklenti sırayla `cf-connecting-ip`, sonra `x-real-ip`, sonra `x-forwarded-for` listesinin ilk değerini okur. Bu başlıkları sizin yerinize doğrulayan bir mekanizma yoktur: bu başlıkları ancak kenar (edge) katmanınız onu ayarlayıp istemciden gelen kopyaları sildiğinde güvenilir sayılır; bu sizin dağıtımınızın sorumluluğudur. Platformunuz IP'yi başka bir yoldan veriyorsa `getClientIp` ile geçersiz kılın. Okunacak bir IP yoksa yazma aracı, uydurma bir adrese atılmak yerine reddedilir.
+Sağlayıcılar, iade ve iptal işlemlerinde müşteri IP'sini ister. Uç nokta bağlamı yalnızca istek başlıklarını taşıdığı için eklenti varsayılan olarak sırayla `cf-connecting-ip`, ardından `x-real-ip` başlıklarını okur — kenar (edge) proxy'nin sonuna eklemediği, üstüne yazdığı başlıklar. `x-forwarded-for` bilinçli olarak varsayılan güvenilir listede değildir: herhangi bir istemci bu başlığa istediği değeri yazabilir. Güvenilen bu iki başlığı da sizin yerinize doğrulayan bir mekanizma yoktur: ancak kenar katmanınız onu ayarlayıp istemciden gelen kopyaları sildiğinde güvenilir sayılırlar; bu sizin dağıtımınızın sorumluluğudur. Platformunuz IP'yi yalnızca temizleyen bir proxy arkasında `x-forwarded-for` içinde veriyorsa, onu `getClientIp` içinde kendiniz okuyun. Okunacak bir IP yoksa yazma aracı, uydurma bir adrese atılmak yerine reddedilir.
 
 ## Kart Verisi Güvenliği [#card-data-safety]
 
@@ -105,7 +105,7 @@ Araç sonuçları modele ulaşmadan önce temizlenir:
 | `tools` | `McpToolName[]` | tüm araçlar | Sunucunun hangi araçları açtığı. |
 | `readOnly` | `boolean` | `false` | `true` ise yalnızca güvenli okuma araçları sunulur (yazma araçları gizlenir). |
 | `authorize` | `(req, tool) => boolean \| Promise<boolean>` | — | Her araç çağrısından önce çalışır; yazma araçları için zorunludur. |
-| `getClientIp` | `(req) => string \| undefined` | `cf-connecting-ip`, `x-real-ip`, `x-forwarded-for` | Yazma işlemlerine geçirilecek IP'yi çözümler. |
+| `getClientIp` | `(req) => string \| undefined` | `cf-connecting-ip`, sonra `x-real-ip` | Yazma işlemlerine geçirilecek IP'yi çözümler. |
 | `serverName` | `string` | `'better-payment-mcp'` | `serverInfo` içinde bildirilen ad. |
 | `serverVersion` | `string` | Better Payment sürümü | `serverInfo` içinde bildirilen sürüm. |
 | `onToolCall` | `(details) => void` | — | Her araç çağrısından sonra tetiklenen denetim kancası. |

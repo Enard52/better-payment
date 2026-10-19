@@ -332,16 +332,28 @@ describe('mcp plugin', () => {
       expect(provider.refundRequests[0].ip).toBe('203.0.113.9');
 
       await callTool(payment, 'refund', { paymentId: created.paymentId, price: '5.00' }, 2, {
-        'x-forwarded-for': '198.51.100.7, 10.0.0.1',
+        'x-real-ip': '198.51.100.7',
       });
       expect(provider.refundRequests[1].ip).toBe('198.51.100.7');
+
+      // x-forwarded-for is client-appendable: it is never trusted by default
+      const spoofed = await callTool(
+        payment,
+        'refund',
+        { paymentId: created.paymentId, price: '5.00' },
+        3,
+        { 'x-forwarded-for': '203.0.113.9, 10.0.0.1' }
+      );
+      expect(rpcResult(spoofed).isError).toBe(true);
+      expect(contentText(rpcResult(spoofed))).toMatch(/getClientIp/);
+      expect(provider.refundRequests).toHaveLength(2);
 
       // With no IP to read, the write is refused instead of attributed to a fake address
       const refused = await callTool(
         payment,
         'refund',
         { paymentId: created.paymentId, price: '5.00' },
-        3
+        4
       );
       expect(rpcResult(refused).isError).toBe(true);
       expect(contentText(rpcResult(refused))).toMatch(/getClientIp/);
