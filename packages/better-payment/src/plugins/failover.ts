@@ -159,7 +159,10 @@ class CircuitBreaker {
     this.openUntilTimestamps.set(providerId, Date.now() + cooldown);
   }
 
-  status(providerIds: readonly string[] = [], now = Date.now()): Record<string, ProviderCircuitStatus> {
+  status(
+    providerIds: readonly string[] = [],
+    now = Date.now()
+  ): Record<string, ProviderCircuitStatus> {
     const allIds = new Set<string>([
       ...providerIds,
       ...this.failureTimestamps.keys(),
@@ -195,6 +198,18 @@ const DEFAULT_ON_CODES: (PaymentErrorCode | string)[] = [
 ];
 
 const DEFAULT_ALLOWED_OPERATIONS: PaymentOperation[] = ['createPayment', 'authorize'];
+
+/** Provider dispatch by operation name, like the core runs it in `run()` */
+type OperationFn = (request: unknown) => Promise<unknown>;
+
+/**
+ * Result types of the operations failover can route. BIN and installment lookups
+ * carry no charge outcome, so they are excluded.
+ */
+type FailoverResult = Extract<OperationResultContext['result'], { status: PaymentStatus }>;
+
+const isFailoverResult = (result: unknown): result is FailoverResult =>
+  typeof result === 'object' && result !== null && 'status' in result;
 
 /**
  * Automatically fails over to backup payment providers when the active provider
@@ -237,7 +252,7 @@ export const failover = (options: FailoverOptions = {}) => {
     return [...pluginCtx.providerIds];
   };
 
-  const isTransientFailure = (result: any): boolean => {
+  const isTransientFailure = (result: FailoverResult): boolean => {
     // CRITICAL: NEVER retry on pending status or NETWORK_ERROR (prevents double charges)
     if (result.status === PaymentStatus.PENDING) return false;
     if (result.code === PaymentErrorCode.NETWORK_ERROR) return false;
@@ -285,7 +300,7 @@ export const failover = (options: FailoverOptions = {}) => {
           matcher: (ctx) => allowedOps.has(ctx.operation) && ctx.routable,
           handler: async (ctx: OperationResultContext) => {
             const currentProvider = ctx.provider;
-            const res = ctx.result as any;
+            const res = isFailoverResult(ctx.result) ? ctx.result : undefined;
 
             if (!res || !isTransientFailure(res)) {
               if (res?.status === PaymentStatus.SUCCESS) {
@@ -304,7 +319,7 @@ export const failover = (options: FailoverOptions = {}) => {
               (p) => pluginCtx.providerIds.includes(p) && !tried.has(p) && !circuitBreaker.isOpen(p)
             );
 
-            let lastResult = res;
+            let lastResult: unknown = res;
             let attempt = 1;
 
             for (const backupProvider of backups) {
@@ -335,21 +350,25 @@ export const failover = (options: FailoverOptions = {}) => {
 
               try {
                 const backupInstance = pluginCtx.use(backupProvider);
-                const nextResult = await (backupInstance as any)[ctx.operation](ctx.request);
+                const nextResult = await (backupInstance[ctx.operation] as OperationFn).call(
+                  backupInstance,
+                  ctx.request
+                );
+                const outcome = isFailoverResult(nextResult) ? nextResult : undefined;
 
-                if (nextResult?.status === PaymentStatus.SUCCESS) {
+                if (outcome?.status === PaymentStatus.SUCCESS) {
                   circuitBreaker.recordSuccess(backupProvider);
                   return { result: nextResult };
                 }
 
                 // If non-transient or pending/unknown, do not retry further to avoid double-charging
-                if (!isTransientFailure(nextResult)) {
+                if (!outcome || !isTransientFailure(outcome)) {
                   return { result: nextResult };
                 }
 
                 // Backup also failed with a transient error
                 circuitBreaker.recordFailure(backupProvider);
-                lastResult = nextResult;
+                lastResult = outcome;
               } catch (err) {
                 pluginCtx.logger?.error(
                   `[failover] Backup provider '${backupProvider}' call failed`,

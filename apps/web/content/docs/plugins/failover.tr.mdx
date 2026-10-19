@@ -9,7 +9,7 @@ Birden fazla sanal POS veya ödeme kuruluşu ile çalışan işletmeler, birinci
 
 En önemlisi, failover **sıfır çift çekim garantisi** sunar: sonucu belirsiz olan işlemleri (`NETWORK_ERROR` veya bankanın çekimi yapmış olabileceği `pending` durumları) kesinlikle tekrar denemez.
 
-## Kurulum
+## Kurulum [#setup]
 
 ```typescript
 import { betterPayment, iyzico, paytr, parampos } from 'better-payment';
@@ -25,7 +25,7 @@ const payment = betterPayment({
   plugins: [
     failover({
       order: ['iyzico', 'paytr', 'parampos'],
-      // Yalnızca çekimin kesinlikle gerçekleşmediği altyapı hataları
+      // Only errors where the charge definitely did not take place
       on: ['PROVIDER_ERROR', 'PROVIDER_UNAVAILABLE', 'TIMEOUT_BEFORE_SEND'],
       circuitBreaker: {
         failures: 5,
@@ -33,29 +33,29 @@ const payment = betterPayment({
         cooldown: '5m',
       },
       onSwitch: ({ from, to, operation, attempt }) => {
-        console.warn(`[failover] ${operation} işlemi ${from} üzerinden ${to} sağlayıcısına aktarıldı (${attempt}. deneme)`);
+        console.warn(`[failover] Switched ${operation} from ${from} to ${to} (attempt ${attempt})`);
       },
     }),
   ],
 });
 
-// iyzico geçici bir hata verirse otomatik olarak paytr üzerinden tamamlanır
+// If iyzico returns a transient error, automatically executes on paytr
 const result = await payment.createPayment({
-  orderId: 'SIPARIS-101',
+  orderId: 'ORDER-101',
   amount: 250,
   currency: 'TRY',
   paymentCard: { ... },
 });
 ```
 
-## Nasıl Çalışır?
+## Nasıl Çalışır? [#how-it-works]
 
 1. **Before hook & Circuit Breaker kontrolü**: Seçili sağlayıcının devre kesicisi (circuit breaker) açıksa, gereksiz ve zaman alıcı bir HTTP çağrısı yapılmadan işlem doğrudan `order` listesindeki ilk sağlıklı sağlayıcıya yönlendirilir.
 2. **Çalıştırma**: Sağlayıcı çağrılır.
 3. **After hook & Yedek geçişi**: Sağlayıcı `on` listesindeki bir geçici hata ile dönerse, hata circuit breaker'a kaydedilir, sıradaki uygun yedek sağlayıcı çağrılır.
 4. **Güvenlik koruması**: Sonucu belirsiz (`status: 'pending'` veya `code: 'NETWORK_ERROR'`) işlemler asla tekrar denenmez. Müşteri kart retleri (`INSUFFICIENT_FUNDS`, `CARD_DECLINED`, `EXPIRED_CARD`) de ret olarak korunur, başka sağlayıcıya aktarılmaz.
 
-## Seçenekler
+## Seçenekler [#options]
 
 | Seçenek | Varsayılan | Açıklama |
 | ------- | ---------- | -------- |
@@ -65,22 +65,22 @@ const result = await payment.createPayment({
 | `circuitBreaker` | `{ failures: 5, window: '1m', cooldown: '5m' }` | Devre kesici eşiği, zaman penceresi ve bekleme süresi |
 | `onSwitch` | — | Sağlayıcı değiştiğinde tetiklenen geri çağırma fonksiyonu |
 
-## Devre Kesici Durumu ve Yönetimi
+## Devre Kesici Durumu ve Yönetimi [#circuit-breaker-status--management]
 
 Eklenti, ödeme nesnesine bir `failover` alanı ekler:
 
 ```typescript
-// Tüm sağlayıcıların devre kesici durumlarını inceleyin
+// Inspect circuit state across all providers
 const circuits = payment.failover.status();
 // {
 //   iyzico: { state: 'open', failures: 5, openUntil: 2026-10-18T04:10:00.000Z },
 //   paytr: { state: 'closed', failures: 0, openUntil: null }
 // }
 
-// Planlı bakım sırasında bir sağlayıcıyı manuel olarak devre dışı bırakın
+// Manually trip a provider during planned maintenance
 payment.failover.trip('iyzico', '15m');
 
-// Devre kesiciyi sıfırlayın
+// Manually reset a provider or all providers
 payment.failover.reset('iyzico');
 payment.failover.reset();
 ```
