@@ -22,8 +22,8 @@ export {
 export {
   refundApproval,
   MemoryRefundApprovalStore,
+  type RefundApprovalActor,
   type RefundApprovalOptions,
   type RefundApprovalRequest,
   type RefundApprovalStore,
 } from './refund-approval';
-

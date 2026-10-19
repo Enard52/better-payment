@@ -9,7 +9,7 @@ description: Belirli bir limitin üzerindeki iade ve iptal işlemlerini yetkili 
 
 `refundApproval` plugin'i, belirlenen limitin üzerindeki tüm iade ve iptal işlemlerini araya girerek durdurur, onay kuyruğuna kaydeder ve yetkili bir ekip arkadaşının onaylamasını bekler. Talep eden kişinin kendi iadesini onaylaması (görevler ayrılığı ilkesi gereğince) kesinlikle engellenir.
 
-## Kurulum
+## Kurulum [#setup]
 
 ```typescript
 import { betterPayment, iyzico } from 'better-payment';
@@ -21,17 +21,17 @@ const payment = betterPayment({
   },
   plugins: [
     refundApproval({
-      threshold: 1000, // 1.000 TL üzerindeki iadeler onay gerektirir
+      threshold: 1000, // Refunds over 1,000 TRY require approval
       approvers: (user) => user.role === 'finance' || user.role === 'manager',
       notify: async (req) => {
-        await sendSlackAlert(`${req.amount} ${req.currency} tutarındaki iade onay bekliyor: ${req.id}`);
+        await sendSlackAlert(`Refund of ${req.amount} ${req.currency} requires approval: ${req.id}`);
       },
     }),
   ],
 });
 ```
 
-## Nasıl Çalışır?
+## Nasıl Çalışır? [#how-it-works]
 
 1. **Limitin altı**: Eşik değerin altındaki iadeler doğrudan sağlayıcıya iletilerek tamamlanır.
 2. **Limitin üstü**: `before` hook'u araya girer, `status: 'pending'` ve `REFUND_APPROVAL_REQUIRED` koduyla bir `approvalId` döndürür.
@@ -39,22 +39,22 @@ const payment = betterPayment({
 4. **Reddetme**: `payment.refunds.reject(id, { by: user, reason })` çağrısı yapıldığında talep sağlayıcıya hiç gitmeden reddedilir.
 
 ```typescript
-// Bekleyen iadeleri listele
+// Review pending refunds
 const pending = await payment.refunds.list({ status: 'pending' });
 
-// İadeyi onayla (finans yöneticisi tarafından)
+// Approve a refund (executed by finance manager)
 await payment.refunds.approve(approvalId, {
   by: { id: 'usr_finance_1', role: 'finance' },
 });
 
-// İadeyi reddet
+// Reject a refund
 await payment.refunds.reject(approvalId, {
   by: { id: 'usr_finance_1', role: 'finance' },
-  reason: 'Ürün iade deposuna ulaşmadı',
+  reason: 'Product return inspection failed',
 });
 ```
 
-## Seçenekler
+## Seçenekler [#options]
 
 | Seçenek | Varsayılan | Açıklama |
 | ------- | ---------- | -------- |
@@ -63,7 +63,7 @@ await payment.refunds.reject(approvalId, {
 | `approvers` | Talep eden dışındaki herkes | Kullanıcının onay yetkisi olup olmadığını doğrulayan fonksiyon |
 | `notify` | — | Yeni onay talebi oluştuğunda tetiklenen bildirim fonksiyonu |
 
-## HTTP Uç Noktaları
+## HTTP Uç Noktaları [#http-endpoints]
 
 Plugin, yönetim panelleri ve iç araçlar için yetkili uç noktalar sunar:
 

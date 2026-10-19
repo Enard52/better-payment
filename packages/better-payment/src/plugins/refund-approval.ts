@@ -11,6 +11,42 @@ import {
   type RefundResponse,
 } from 'better-payment';
 
+/**
+ * Who created, approved or rejected an approval request: the caller can pass a
+ * user id string or the user object itself. The plugin never trusts it for
+ * authorization on its own (see the `approvers` option), it only reads an id out
+ * of it for the separation-of-duties check.
+ */
+export type RefundApprovalActor = string | Record<string, unknown>;
+
+/** A refund replayed after approval, carrying the `__approved` marker below */
+interface ApprovedRefundRequest extends RefundRequest {
+  __approved?: boolean;
+}
+
+/** A cancellation replayed after approval, carrying the `__approved` marker below */
+interface ApprovedCancelRequest extends CancelRequest {
+  __approved?: boolean;
+}
+
+/**
+ * How the `before` hook reads an incoming refund/cancel request. `ctx.request` is
+ * `unknown` there, and callers pass the plugin-specific extras this queue needs
+ * (`amount` as an alias of `price`, and the requester identity) next to the
+ * shared request fields.
+ */
+interface ApprovalRequestView {
+  paymentId?: string;
+  price?: string;
+  amount?: string | number;
+  currency?: string;
+  conversationId?: string;
+  requestedBy?: RefundApprovalActor;
+  by?: RefundApprovalActor;
+  userId?: RefundApprovalActor;
+  __approved?: boolean;
+}
+
 export interface RefundApprovalRequest {
   id: string;
   operation: 'refund' | 'cancel';
@@ -18,23 +54,23 @@ export interface RefundApprovalRequest {
   paymentId: string;
   amount: number;
   currency: string;
-  requestedBy?: string | Record<string, unknown>;
+  requestedBy?: RefundApprovalActor;
   status: 'pending' | 'approved' | 'rejected';
   request: RefundRequest | CancelRequest;
   createdAt: number;
   approvedAt?: number;
-  approvedBy?: string | Record<string, unknown>;
+  approvedBy?: RefundApprovalActor;
   rejectedAt?: number;
-  rejectedBy?: string | Record<string, unknown>;
+  rejectedBy?: RefundApprovalActor;
   rejectionReason?: string;
 }
 
 export interface RefundApprovalStore {
   save(request: RefundApprovalRequest): Promise<void> | void;
   get(id: string): Promise<RefundApprovalRequest | undefined> | RefundApprovalRequest | undefined;
-  list(filter?: { status?: 'pending' | 'approved' | 'rejected' }):
-    | Promise<RefundApprovalRequest[]>
-    | RefundApprovalRequest[];
+  list(filter?: {
+    status?: 'pending' | 'approved' | 'rejected';
+  }): Promise<RefundApprovalRequest[]> | RefundApprovalRequest[];
   delete(id: string): Promise<void> | void;
 }
 
@@ -74,14 +110,15 @@ export interface RefundApprovalOptions {
   notify?: (request: RefundApprovalRequest) => Promise<void> | void;
 }
 
-function getUserId(user: unknown): string | undefined {
+function getUserId(user: RefundApprovalActor | undefined): string | undefined {
   if (!user) return undefined;
   if (typeof user === 'string') return user;
-  if (typeof user === 'object') {
-    const obj = user as Record<string, unknown>;
-    return (obj.id as string) ?? (obj.userId as string) ?? (obj.username as string) ?? (obj.email as string);
-  }
-  return String(user);
+  return (
+    (user.id as string) ??
+    (user.userId as string) ??
+    (user.username as string) ??
+    (user.email as string)
+  );
 }
 
 /**
@@ -123,7 +160,7 @@ export function refundApproval(options: RefundApprovalOptions): BetterPaymentPlu
 
   const approve = async (
     id: string,
-    actionOptions: { by: unknown }
+    actionOptions: { by: RefundApprovalActor }
   ): Promise<RefundResponse | CancelResponse> => {
     const item = await store.get(id);
     if (!item) {
@@ -156,16 +193,21 @@ export function refundApproval(options: RefundApprovalOptions): BetterPaymentPlu
     const provider = pluginCtx.use(item.provider);
     let result: RefundResponse | CancelResponse;
 
-    (item.request as Record<string, unknown>).__approved = true;
+    // The `__approved` marker is what makes this plugin's own `before` hook let
+    // the request through; without it the approved refund would queue again.
     if (item.operation === 'refund') {
-      result = await provider.refund(item.request as RefundRequest);
+      const request = item.request as ApprovedRefundRequest;
+      request.__approved = true;
+      result = await provider.refund(request);
     } else {
-      result = await provider.cancel(item.request as CancelRequest);
+      const request = item.request as ApprovedCancelRequest;
+      request.__approved = true;
+      result = await provider.cancel(request);
     }
 
     item.status = 'approved';
     item.approvedAt = Date.now();
-    item.approvedBy = actionOptions.by as string | Record<string, unknown>;
+    item.approvedBy = actionOptions.by;
     await store.save(item);
 
     return result;
@@ -173,7 +215,7 @@ export function refundApproval(options: RefundApprovalOptions): BetterPaymentPlu
 
   const reject = async (
     id: string,
-    actionOptions: { by: unknown; reason?: string }
+    actionOptions: { by: RefundApprovalActor; reason?: string }
   ): Promise<RefundApprovalRequest> => {
     const item = await store.get(id);
     if (!item) {
@@ -218,13 +260,14 @@ export function refundApproval(options: RefundApprovalOptions): BetterPaymentPlu
         {
           matcher: (ctx) => ctx.operation === 'refund' || ctx.operation === 'cancel',
           handler: async (ctx) => {
-            const req = ctx.request as Record<string, unknown>;
+            const req = ctx.request as ApprovalRequestView;
             if (req.__approved) {
               return;
             }
 
             const rawPrice = req.price ?? req.amount;
-            const amount = typeof rawPrice === 'string' ? parseFloat(rawPrice) : Number(rawPrice ?? 0);
+            const amount =
+              typeof rawPrice === 'string' ? parseFloat(rawPrice) : Number(rawPrice ?? 0);
 
             // If below threshold, allow direct execution without approval
             if (amount <= threshold) {
@@ -238,10 +281,10 @@ export function refundApproval(options: RefundApprovalOptions): BetterPaymentPlu
               id,
               operation: ctx.operation as 'refund' | 'cancel',
               provider: ctx.provider ?? 'default',
-              paymentId: (req.paymentId as string) ?? '',
+              paymentId: req.paymentId ?? '',
               amount,
-              currency: (req.currency as string) ?? 'TRY',
-              requestedBy: requestedBy as string | Record<string, unknown>,
+              currency: req.currency ?? 'TRY',
+              requestedBy,
               status: 'pending',
               request: ctx.request as RefundRequest | CancelRequest,
               createdAt: Date.now(),
@@ -253,7 +296,10 @@ export function refundApproval(options: RefundApprovalOptions): BetterPaymentPlu
               try {
                 await options.notify(approvalRecord);
               } catch (notifyErr) {
-                pluginCtx.logger?.error('refundApproval: notify callback failed', notifyErr as Error);
+                pluginCtx.logger?.error(
+                  'refundApproval: notify callback failed',
+                  notifyErr as Error
+                );
               }
             }
 
@@ -305,7 +351,7 @@ export function refundApproval(options: RefundApprovalOptions): BetterPaymentPlu
         privileged: true,
         handler: async (ctx) => {
           pluginCtx = ctx;
-          const body = (ctx.body ?? {}) as { id?: string; by?: unknown };
+          const body = (ctx.body ?? {}) as { id?: string; by: RefundApprovalActor };
           if (!body.id) {
             return ctx.json({ status: 'error', errorMessage: 'Missing required field: id' }, 400);
           }
@@ -319,7 +365,11 @@ export function refundApproval(options: RefundApprovalOptions): BetterPaymentPlu
         privileged: true,
         handler: async (ctx) => {
           pluginCtx = ctx;
-          const body = (ctx.body ?? {}) as { id?: string; by?: unknown; reason?: string };
+          const body = (ctx.body ?? {}) as {
+            id?: string;
+            by: RefundApprovalActor;
+            reason?: string;
+          };
           if (!body.id) {
             return ctx.json({ status: 'error', errorMessage: 'Missing required field: id' }, 400);
           }
