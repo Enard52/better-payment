@@ -1,0 +1,58 @@
+// SQLite needs no server: `pnpm --filter next-shop setup` creates prisma/dev.db.
+// Amounts are stored in minor units (kuruş) as integers, never as floats, so the
+// server-side cart total is exact.
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Product {
+  id       String @id
+  name     String
+  detail   String
+  priceKurus Int
+  currency String @default("TRY")
+  items    OrderItem[]
+}
+
+model Order {
+  /// Demo order id; also the `conversationId` sent to the provider.
+  id         String   @id
+  status     String
+  /// Server-computed total in kuruş. The browser never sets this.
+  amountKurus Int
+  currency   String   @default("TRY")
+  installment Int     @default(1)
+  /// The provider's payment id, filled in by a payment event.
+  paymentId  String?
+  /// Normalized error code of a failed payment.
+  errorCode  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  items      OrderItem[]
+  refunds    Refund[]
+}
+
+model Refund {
+  id          String   @id
+  orderId     String
+  paymentId   String
+  amountKurus Int
+  createdAt   DateTime @default(now())
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model OrderItem {
+  id           String @id
+  orderId      String
+  productId    String
+  name         String
+  quantity     Int
+  unitPriceKurus Int
+  order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product      Product @relation(fields: [productId], references: [id])
+}
