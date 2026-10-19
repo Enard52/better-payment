@@ -51,6 +51,7 @@ describe('rateLimit plugin', () => {
         rateLimit({
           window: '1m',
           max: 2,
+          trustProxy: true,
         }),
       ],
       handler: { allowedActions: ['payment', 'bin-check', 'callback'] },
@@ -86,6 +87,7 @@ describe('rateLimit plugin', () => {
         rateLimit({
           window: '1m',
           max: 10,
+          trustProxy: true,
           rules: {
             '/payment': { window: '1m', max: 1 },
           },
@@ -124,6 +126,7 @@ describe('rateLimit plugin', () => {
         rateLimit({
           window: '1m',
           max: 1,
+          trustProxy: true,
           rules: {
             '/callback/*': false,
           },
@@ -151,6 +154,7 @@ describe('rateLimit plugin', () => {
         rateLimit({
           window: '30s',
           max: 1,
+          trustProxy: true,
         }),
       ],
       handler: { allowedActions: ['payment', 'bin-check', 'callback'] },
@@ -211,6 +215,7 @@ describe('rateLimit plugin', () => {
         rateLimit({
           window: '1m',
           max: 1,
+          trustProxy: true,
         }),
         localizedErrors({
           locale: 'tr',
@@ -245,6 +250,7 @@ describe('rateLimit plugin', () => {
         rateLimit({
           window: '1m',
           max: 1,
+          trustProxy: true,
         }),
       ],
       handler: { allowedActions: ['payment', 'bin-check', 'callback'] },
@@ -262,5 +268,155 @@ describe('rateLimit plugin', () => {
 
     // Allowed again
     expect((await clientReq()).status).toBe(200);
+  });
+
+  it('throws at construction when neither key nor trustProxy can produce a safe bucket', () => {
+    expect(() => rateLimit({ window: '1m', max: 60 })).toThrow(ConfigurationError);
+    expect(() => rateLimit({ trustProxy: false })).toThrow(ConfigurationError);
+    expect(() => rateLimit({ trustProxy: 0 })).toThrow(ConfigurationError);
+    expect(() => rateLimit({ trustProxy: 1.5 })).toThrow(ConfigurationError);
+  });
+
+  it('does not let clients dodge the limit by forging X-Forwarded-For when trustProxy is off', async () => {
+    const mockProvider = new MockProvider();
+    const payment = betterPayment({
+      providers: { mock: mockProvider },
+      plugins: [
+        rateLimit({
+          window: '1m',
+          max: 2,
+          // No trustProxy: the identity must come from data the app controls.
+          key: (r) => r.headers['x-api-key'] ?? 'anonymous',
+        }),
+      ],
+      handler: { allowedActions: ['payment', 'bin-check', 'callback'] },
+    });
+
+    const handler = payment.handler;
+
+    // Same anonymous client presents a fresh IP on every request...
+    expect(
+      (await handler.handle(req('/api/pay/mock/payment', { 'x-forwarded-for': '1.1.1.1' }))).status
+    ).toBe(200);
+    expect(
+      (
+        await handler.handle(
+          req('/api/pay/mock/payment', { 'x-forwarded-for': '2.2.2.2, 3.3.3.3' })
+        )
+      ).status
+    ).toBe(200);
+    // ...and still hits the shared bucket, because proxy headers are ignored.
+    expect(
+      (await handler.handle(req('/api/pay/mock/payment', { 'x-forwarded-for': '4.4.4.4' }))).status
+    ).toBe(429);
+  });
+
+  it('honours the forwarded identity from the trusted proxy hop when trustProxy is enabled', async () => {
+    const mockProvider = new MockProvider();
+    const payment = betterPayment({
+      providers: { mock: mockProvider },
+      plugins: [
+        rateLimit({
+          window: '1m',
+          max: 2,
+          trustProxy: true,
+        }),
+      ],
+      handler: { allowedActions: ['payment', 'bin-check', 'callback'] },
+    });
+
+    const handler = payment.handler;
+
+    // Real client 9.9.9.9 with forged prefix entries: all three land in one bucket.
+    expect(
+      (
+        await handler.handle(
+          req('/api/pay/mock/payment', { 'x-forwarded-for': '1.1.1.1, 9.9.9.9' })
+        )
+      ).status
+    ).toBe(200);
+    expect(
+      (
+        await handler.handle(
+          req('/api/pay/mock/payment', { 'x-forwarded-for': '2.2.2.2, 9.9.9.9' })
+        )
+      ).status
+    ).toBe(200);
+    expect(
+      (
+        await handler.handle(
+          req('/api/pay/mock/payment', { 'x-forwarded-for': '3.3.3.3, 9.9.9.9' })
+        )
+      ).status
+    ).toBe(429);
+
+    // A different real client (right-most entry) gets its own bucket.
+    expect(
+      (
+        await handler.handle(
+          req('/api/pay/mock/payment', { 'x-forwarded-for': '3.3.3.3, 8.8.8.8' })
+        )
+      ).status
+    ).toBe(200);
+  });
+
+  it('counts multiple hops from the right of X-Forwarded-For', async () => {
+    const mockProvider = new MockProvider();
+    const payment = betterPayment({
+      providers: { mock: mockProvider },
+      plugins: [
+        rateLimit({
+          window: '1m',
+          max: 1,
+          // Two trusted proxies in front of the app.
+          trustProxy: 2,
+        }),
+      ],
+      handler: { allowedActions: ['payment', 'bin-check', 'callback'] },
+    });
+
+    const handler = payment.handler;
+
+    // With 2 hops the second-to-last entry is the client; the last one is the outer proxy.
+    expect(
+      (
+        await handler.handle(
+          req('/api/pay/mock/payment', { 'x-forwarded-for': '1.1.1.1, 9.9.9.9, 203.0.113.1' })
+        )
+      ).status
+    ).toBe(200);
+    expect(
+      (
+        await handler.handle(
+          req('/api/pay/mock/payment', { 'x-forwarded-for': '2.2.2.2, 9.9.9.9, 203.0.113.2' })
+        )
+      ).status
+    ).toBe(429);
+  });
+
+  it('keeps the explicit key option in charge over trustProxy', async () => {
+    const mockProvider = new MockProvider();
+    const payment = betterPayment({
+      providers: { mock: mockProvider },
+      plugins: [
+        rateLimit({
+          window: '1m',
+          max: 1,
+          trustProxy: true,
+          key: () => 'explicit',
+        }),
+      ],
+      handler: { allowedActions: ['payment', 'bin-check', 'callback'] },
+    });
+
+    const handler = payment.handler;
+
+    // Distinct forwarded identities still share the single explicit bucket.
+    expect(
+      (await handler.handle(req('/api/pay/mock/payment', { 'x-forwarded-for': '9.9.9.9' }))).status
+    ).toBe(200);
+    expect(
+      (await handler.handle(req('/api/pay/mock/payment', { 'x-forwarded-for': '8.8.8.8' }))).status
+    ).toBe(429);
   });
 });

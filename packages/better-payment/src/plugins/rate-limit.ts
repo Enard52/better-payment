@@ -79,9 +79,18 @@ export interface RateLimitOptions {
   rules?: Record<string, RateLimitRule | false>;
   /**
    * Key function to identify the client (e.g. by IP address or API key).
-   * Default extracts client IP from X-Forwarded-For, X-Real-IP, CF-Connecting-IP.
+   * Required unless `trustProxy` is enabled: without one of the two the plugin
+   * cannot derive a client identity that the request sender cannot forge.
    */
   key?: (req: BetterPaymentRequest) => string | Promise<string>;
+  /**
+   * Trust proxy-set headers (`X-Forwarded-For`, `X-Real-IP`, `CF-Connecting-IP`)
+   * for the default key extraction. `true` means one trusted proxy hop, a number
+   * means that many hops; the right-most `X-Forwarded-For` entry(s) are used, so
+   * values the client prepends are ignored. Disabled by default, because
+   * unprotected runtimes let any client set these headers freely.
+   */
+  trustProxy?: boolean | number;
   /** Storage backend for rate limiting counters. Default: in-memory store */
   store?: RateLimitStore;
   /** Whether to exclude payment provider callbacks by default. Default: true */
@@ -130,17 +139,29 @@ function getHeader(request: BetterPaymentRequest, name: string): string | undefi
   return undefined;
 }
 
-function defaultKeyExtractor(req: BetterPaymentRequest): string {
-  const forwarded = getHeader(req, 'x-forwarded-for');
-  if (forwarded) {
-    const client = forwarded.split(',')[0].trim();
-    if (client) return client;
-  }
-  const realIp = getHeader(req, 'x-real-ip');
-  if (realIp?.trim()) return realIp.trim();
-  const cfIp = getHeader(req, 'cf-connecting-ip');
-  if (cfIp?.trim()) return cfIp.trim();
-  return 'unknown';
+/**
+ * Default key for `trustProxy` setups. A client can forge every `X-Forwarded-For`
+ * entry except the ones appended by the proxies it cannot control, so the chain is
+ * counted from the right: with N trusted hops the entry at `length - N` is the
+ * identity the closest proxy actually observed. Reading the first entry instead is
+ * only safe with proxies that overwrite the header rather than append to it.
+ */
+function forwardedKeyExtractor(hops: number): (req: BetterPaymentRequest) => string {
+  return (req) => {
+    const forwarded = getHeader(req, 'x-forwarded-for');
+    if (forwarded) {
+      const chain = forwarded
+        .split(',')
+        .map((ip) => ip.trim())
+        .filter(Boolean);
+      if (chain.length > 0) return chain[Math.max(0, chain.length - hops)];
+    }
+    const realIp = getHeader(req, 'x-real-ip');
+    if (realIp?.trim()) return realIp.trim();
+    const cfIp = getHeader(req, 'cf-connecting-ip');
+    if (cfIp?.trim()) return cfIp.trim();
+    return 'unknown';
+  };
 }
 
 function isCallbackPath(path: string): boolean {
@@ -195,13 +216,21 @@ function matchesRule(pattern: string, path: string): boolean {
  *     rateLimit({
  *       window: '1m',
  *       max: 30,
+ *       // Only when a reverse proxy you control sets X-Forwarded-For:
+ *       trustProxy: true,
  *       rules: {
  *         '/payment': { window: '1m', max: 5 },
  *         '/callback/*': false, // never limit callbacks
  *       },
- *       key: (req) => req.headers.get?.('x-forwarded-for') ?? 'unknown',
  *     }),
  *   ],
+ * });
+ * ```
+ *
+ * @example Without a trusted proxy, define the bucket from data the app controls:
+ * ```ts
+ * rateLimit({
+ *   key: (req) => req.headers['x-api-key'] ?? 'anonymous',
  * });
  * ```
  */
@@ -212,8 +241,25 @@ export function rateLimit(options: RateLimitOptions = {}): BetterPaymentPlugin {
     throw new ConfigurationError(`rateLimit: max must be a positive integer, got ${defaultMax}`);
   }
 
+  const trustProxy = options.trustProxy ?? false;
+  if (typeof trustProxy === 'number' && (!Number.isInteger(trustProxy) || trustProxy < 1)) {
+    throw new ConfigurationError(
+      `rateLimit: trustProxy must be true, false or a positive hop count, got ${trustProxy}`
+    );
+  }
+  // Proxy headers are attacker-controlled on any runtime without a trusted proxy in
+  // front, so there is no safe default key in that mode: fail at construction
+  // instead of silently shipping a limit every client can bypass per request.
+  if (!options.key && !trustProxy) {
+    throw new ConfigurationError(
+      'rateLimit: no trustworthy client identity. Set "trustProxy" when the app runs behind a ' +
+        'reverse proxy that sets X-Forwarded-For, or pass an explicit "key" function.'
+    );
+  }
+
   const store = options.store ?? new MemoryRateLimitStore();
-  const keyFn = options.key ?? defaultKeyExtractor;
+  const keyFn =
+    options.key ?? forwardedKeyExtractor(typeof trustProxy === 'number' ? trustProxy : 1);
   const excludeCallbacks = options.excludeCallbacks !== false;
   const rules = options.rules ?? {};
 
@@ -262,9 +308,11 @@ export function rateLimit(options: RateLimitOptions = {}): BetterPaymentPlugin {
       const windowMs = matchedRule?.window ? parseDuration(matchedRule.window) : defaultWindowMs;
       const limit = matchedRule?.max ?? defaultMax;
 
-      // Ensure req.headers has .get() helper if user passes a function using req.headers.get(...)
-      if (request.headers && typeof (request.headers as any).get !== 'function') {
-        (request.headers as any).get = (name: string) => getHeader(request, name);
+      // User key functions may call `req.headers.get(name)` in WHATWG style; the plain
+      // header bag has no such method, so attach one before handing the request over.
+      const headers = request.headers as Record<string, unknown>;
+      if (headers && typeof headers.get !== 'function') {
+        headers.get = (name: string) => getHeader(request, name);
       }
 
       const clientKey = await keyFn(request);
