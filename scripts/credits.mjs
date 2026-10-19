@@ -48,31 +48,31 @@ function addingCommit(id) {
   return '';
 }
 
+const credited = (login) => login && !login.endsWith('[bot]') && !NOT_CREDITED.has(login.toLowerCase());
+
 /**
  * `{ login, pull }` for the contributor of a changeset, or null when there is nobody to thank.
  * `pull` is the pull request number, when GitHub could tell.
+ *
+ * A commit can belong to several pull requests: on `beta`, a changeset that came from `main` is in
+ * the contributor's pull request and in the bot's "merge main into beta" one. The first pull
+ * request with someone to thank wins, so the sync pull request never hides the real author.
  */
 export async function creditFor(id) {
   const sha = addingCommit(id);
   if (!sha) return null;
 
-  let login = '';
-  let pull;
   const pulls = await github(`/commits/${sha}/pulls`);
-  if (Array.isArray(pulls) && pulls[0]) {
-    login = pulls[0].user?.login ?? '';
-    pull = pulls[0].number;
+  if (Array.isArray(pulls)) {
+    const pull = pulls.find((item) => credited(item.user?.login));
+    if (pull) return { login: pull.user.login, pull: pull.number };
   }
-  if (!login) {
-    const commit = await github(`/commits/${sha}`);
-    login = commit?.author?.login ?? '';
-  }
+
+  let login = (await github(`/commits/${sha}`))?.author?.login ?? '';
   if (!login) {
     // 12345+login@users.noreply.github.com, the address GitHub gives contributors who hide theirs
     const email = git('log', '-1', '--format=%ae', sha);
     login = /^(?:\d+\+)?([^@]+)@users\.noreply\.github\.com$/.exec(email)?.[1] ?? '';
   }
-
-  if (!login || login.endsWith('[bot]') || NOT_CREDITED.has(login.toLowerCase())) return null;
-  return { login, pull };
+  return credited(login) ? { login } : null;
 }
