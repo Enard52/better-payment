@@ -21,7 +21,7 @@ const payment = betterPayment({
     threeDSTimeout({
       after: '15m',
       onExpire: async (flow) => {
-        // Kilitlenen stokları serbest bırakın veya siparişi iptal edin
+        // Release locked inventory or cancel order
         await releaseOrderInventory(flow.conversationId);
       },
     }),
@@ -41,12 +41,12 @@ const payment = betterPayment({
 Terk edilmiş akışları zamanlanmış bir cron göreviyle periyodik temizleyin:
 
 ```typescript
-// Cron görevi veya API rotası üzerinden çağrılır
+// Call from a scheduled worker or API route
 const result = await payment.threeDS.expireStale();
-console.log(`${result.expired.length} adet terk edilmiş 3D ödeme zaman aşımına uğratıldı.`);
+console.log(`Expired ${result.expired.length} abandoned 3DS payments.`);
 ```
 
-### Next.js / Vercel Cron Örneği [#vercel-cron-example]
+### Next.js / Vercel Cron Örneği [#nextjs--vercel-cron-example]
 
 `app/api/cron/expire-3ds/route.ts`:
 
@@ -78,18 +78,18 @@ export async function GET(request: Request) {
 }
 ```
 
-### Node-cron / Express Örneği [#node-cron-example]
+### Node-cron / Express Örneği [#node-cron--express-example]
 
 ```typescript
 import cron from 'node-cron';
 
-// Her 10 dakikada bir çalıştır
+// Run every 10 minutes
 cron.schedule('*/10 * * * *', async () => {
   try {
     const { expired, resolved } = await payment.threeDS.expireStale();
-    console.log(`[cron] Süresi Dolan: ${expired.length}, Çözülen: ${resolved}`);
+    console.log(`[cron] Expired: ${expired.length}, Resolved: ${resolved}`);
   } catch (error) {
-    console.error('[cron] 3DS zaman aşımı temizleme hatası:', error);
+    console.error('[cron] Failed to expire stale 3DS payments:', error);
   }
 });
 ```
