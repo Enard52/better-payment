@@ -1,0 +1,161 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+import defaultMdxComponents from "fumadocs-ui/mdx";
+import PostCard from "@/components/PostCard";
+import RevealOnScroll from "@/components/RevealOnScroll";
+import { buttonVariants } from "@/lib/button-variants";
+import { GitHubIcon } from "@/components/icons";
+import { formatDate, getPost, getPosts, postSlug, readingMinutes } from "@/lib/blog";
+import { LOCALES, SITE_URL, alternates, isLocale, localePath } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/dictionary";
+import { getMDXComponents } from "@/lib/mdx-components";
+
+const REPOSITORY = "https://github.com/czaydev/better-payment";
+
+export function generateStaticParams() {
+  return LOCALES.flatMap((lang) => getPosts(lang).map((post) => ({ lang, slug: postSlug(post) })));
+}
+
+export async function generateMetadata({ params }: PageProps<"/[lang]/blog/[slug]">): Promise<Metadata> {
+  const { lang, slug } = await params;
+  if (!isLocale(lang)) notFound();
+  const post = getPost(slug, lang);
+  if (!post) notFound();
+  const t = getDictionary(lang);
+  const socialImage = {
+    url: new URL(`/brand/social/og-${lang}.png`, SITE_URL),
+    width: 1200,
+    height: 630,
+    alt: t.meta.socialImageAlt,
+  };
+
+  return {
+    title: post.data.title,
+    description: post.data.description,
+    alternates: alternates(`/blog/${slug}`, lang),
+    authors: [{ name: post.data.author }],
+    keywords: post.data.tags,
+    openGraph: {
+      type: "article",
+      locale: lang === "tr" ? "tr_TR" : "en_US",
+      siteName: "Better Payment",
+      title: post.data.title,
+      description: post.data.description,
+      publishedTime: post.data.date.toISOString(),
+      modifiedTime: (post.data.updated ?? post.data.date).toISOString(),
+      authors: [post.data.author],
+      tags: post.data.tags,
+      images: [socialImage],
+    },
+    twitter: { card: "summary_large_image", title: post.data.title, description: post.data.description, images: [socialImage] },
+  };
+}
+
+export default async function BlogPostPage({ params }: PageProps<"/[lang]/blog/[slug]">) {
+  const { lang, slug } = await params;
+  if (!isLocale(lang)) notFound();
+  const post = getPost(slug, lang);
+  if (!post) notFound();
+  const t = getDictionary(lang).blog;
+  const MDX = post.data.body;
+  const related = getPosts(lang)
+    .filter((other) => postSlug(other) !== slug)
+    .slice(0, 2);
+
+  const url = `${SITE_URL}${localePath(lang, `/blog/${slug}`)}`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.data.title,
+    description: post.data.description,
+    datePublished: post.data.date.toISOString(),
+    dateModified: (post.data.updated ?? post.data.date).toISOString(),
+    inLanguage: lang,
+    author: { "@type": "Organization", name: post.data.author, url: SITE_URL },
+    publisher: { "@type": "Organization", name: "Better Payment", url: SITE_URL },
+    mainEntityOfPage: url,
+    keywords: post.data.tags.join(", "),
+  };
+
+  return (
+    <article className="px-5 pt-12 pb-24 sm:px-8 md:pt-16 md:pb-28">
+      <script
+        type="application/ld+json"
+        // JSON-LD is static data built from the post's frontmatter
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
+      <div className="mx-auto max-w-3xl">
+        <Link
+          href={localePath(lang, "/blog")}
+          className="mb-8 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="size-3.5" />
+          {t.allPosts}
+        </Link>
+
+        <ul className="mb-4 flex flex-wrap gap-1.5">
+          {post.data.tags.map((tag) => (
+            <li key={tag} className="rounded-full bg-tint px-2.5 py-0.5 font-mono text-[11px] font-medium text-accent-text">
+              {tag}
+            </li>
+          ))}
+        </ul>
+        <h1 className="text-[2.25rem] leading-[1.08] font-extrabold tracking-[-0.03em] text-foreground sm:text-[3rem]">
+          {post.data.title}
+        </h1>
+        <p className="mt-5 text-lg leading-relaxed text-muted-foreground">{post.data.description}</p>
+        <p className="mt-6 flex flex-wrap items-center gap-x-2 border-b border-border pb-8 text-sm text-muted-foreground">
+          <span>
+            {t.by} <span className="font-medium text-foreground">{post.data.author}</span>
+          </span>
+          <span aria-hidden>·</span>
+          <time dateTime={post.data.date.toISOString()}>{formatDate(post.data.date, lang)}</time>
+          <span aria-hidden>·</span>
+          <span>
+            {readingMinutes(post)} {t.minutes}
+          </span>
+          {post.data.updated && (
+            <>
+              <span aria-hidden>·</span>
+              <span>
+                {t.updated} <time dateTime={post.data.updated.toISOString()}>{formatDate(post.data.updated, lang)}</time>
+              </span>
+            </>
+          )}
+        </p>
+
+        <div className="prose mt-10 max-w-none">
+          <MDX components={getMDXComponents(defaultMdxComponents, lang)} />
+        </div>
+
+        <aside className="mt-16 rounded-2xl border border-border bg-tint/60 p-8">
+          <h2 className="text-xl font-bold tracking-[-0.02em] text-foreground">{t.cta.title}</h2>
+          <p className="mt-2 text-muted-foreground">{t.cta.lead}</p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link href={localePath(lang, "/docs")} className={buttonVariants({ size: "sm" })}>
+              {t.cta.docs}
+            </Link>
+            <a href={REPOSITORY} target="_blank" rel="noopener noreferrer" className={buttonVariants({ variant: "outline", size: "sm" })}>
+              <GitHubIcon data-icon="brand" />
+              {t.cta.github}
+            </a>
+          </div>
+        </aside>
+      </div>
+
+      {related.length > 0 && (
+        <div className="mx-auto mt-20 max-w-7xl">
+          <h2 className="mb-6 text-2xl font-bold tracking-[-0.02em] text-foreground">{t.moreTitle}</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {related.map((other) => (
+              <PostCard key={other.url} post={other} lang={lang} t={t} />
+            ))}
+          </div>
+        </div>
+      )}
+      <RevealOnScroll />
+    </article>
+  );
+}

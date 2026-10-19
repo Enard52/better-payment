@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   AlertTriangle, ArrowUpRight, Bell, BookOpen, Box, Building2, Bug, ChevronDown, ChevronRight, Clock, Code2,
-  CreditCard, Download, FlaskConical, Globe, Layers, Lock, Menu, Package, Plug, Puzzle, Rocket, Route, Settings,
+  CreditCard, Download, FlaskConical, Globe, Layers, Lock, Menu, Package, PenLine, Plug, Puzzle, Rocket, Route, Settings,
   Shield, ShoppingBasket, Sparkles, Wallet, X, type LucideIcon,
 } from "lucide-react";
 import { GitHubIcon } from "@/components/icons";
@@ -28,7 +28,7 @@ const icons: Record<MenuIcon, LucideIcon | typeof GitHubIcon> = {
   layers: Layers, shield: Shield, wallet: Wallet, puzzle: Puzzle, rocket: Rocket, download: Download, globe: Globe,
   book: BookOpen, card: CreditCard, clock: Clock, sparkles: Sparkles, route: Route, alert: AlertTriangle, plug: Plug,
   github: GitHubIcon, basket: ShoppingBasket, lock: Lock, bell: Bell, flask: FlaskConical, code: Code2,
-  package: Package, settings: Settings, building: Building2, bug: Bug, box: Box,
+  package: Package, settings: Settings, building: Building2, bug: Bug, box: Box, pen: PenLine,
 };
 
 /** Switches the language and stays on the same page */

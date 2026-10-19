@@ -14,6 +14,7 @@ function footerLinks(t: Dictionary["footer"]) {
         { label: t.links.providers, href: "/#providers" },
         { label: t.links.quickStart, href: "/#quickstart" },
         { label: t.links.docs, href: "/docs" },
+        { label: t.links.blog, href: "/blog" },
       ],
     },
     {

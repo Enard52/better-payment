@@ -4,7 +4,7 @@ export const GITHUB_URL = "https://github.com/czaydev/better-payment";
 export type MenuIcon =
   | "layers" | "shield" | "wallet" | "puzzle" | "rocket" | "download" | "globe" | "book" | "card" | "clock"
   | "sparkles" | "route" | "alert" | "plug" | "github" | "basket" | "lock" | "bell" | "flask" | "code" | "package"
-  | "settings" | "building" | "bug" | "box";
+  | "settings" | "building" | "bug" | "box" | "pen";
 
 export type MenuKey = "product" | "providers" | "developers" | "resources";
 export const MENU_KEYS: MenuKey[] = ["product", "providers", "developers", "resources"];
@@ -112,6 +112,7 @@ export const menus: Record<MenuKey, { icon: MenuIcon; href: string; groups: read
       {
         id: "releases",
         items: [
+          { id: "blog", href: "/blog", icon: "pen" },
           { id: "changelog", href: "/docs/reference/changelog", icon: "clock" },
           { id: "whatsNew", href: "/docs/whats-new", icon: "sparkles" },
           { id: "migration", href: "/docs/guides/migration-0-5", icon: "route" },
