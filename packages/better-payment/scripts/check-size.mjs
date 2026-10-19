@@ -9,11 +9,12 @@ const budgets = [
   // 0.8.1 security fixes (Akbank order check, body limits, response filtering),
   // 31 kB since the Kuveyt Türk provider, 34 kB since the EST provider, 38 kB since
   // the Sipay provider, 40 kB since QNB, 42 kB with Yapı Kredi, 44 kB with VakıfBank,
-  // 46 kB with Albaraka Türk, 48 kB with Denizbank alongside the other providers
-  { file: 'dist/index.mjs', maxGzipKb: 48 },
-  { file: 'dist/index.js', maxGzipKb: 48 },
-  { file: 'dist/client/index.mjs', maxGzipKb: 3 },
-  { file: 'dist/client/index.js', maxGzipKb: 3 },
+  // 46 kB with Albaraka Türk, 48 kB with Denizbank, 49 kB with QNBpay alongside the
+  // other providers
+  { file: 'dist/index.mjs', maxGzipKb: 49 },
+  { file: 'dist/index.js', maxGzipKb: 49 },
+  { file: 'dist/client/index.mjs', maxGzipKb: 2 },
+  { file: 'dist/client/index.js', maxGzipKb: 2 },
   { file: 'dist/testing/index.mjs', maxGzipKb: 8 },
   { file: 'dist/testing/index.js', maxGzipKb: 8 },
   // Official plugins, with every built-in error message language. Raise this for new
