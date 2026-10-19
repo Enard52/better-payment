@@ -45,6 +45,8 @@ When a pending payment resolves:
 - If failed, it emits `payment.failed` with `event.resolvedFrom: 'pending'`.
 - If the payment exceeds `giveUpAfter`, it emits `payment.unresolved` so your support team can review it manually.
 
+A payment is only marked successful when the provider's status query confirms it; a timeout, an HTTP error or a still-pending answer keeps the payment in the queue for the next scheduled check. Overlapping calls to `payment.pending.resolve()` are also safe: each payment is claimed by exactly one resolver before the provider is queried, so it never resolves (and never emits a terminal event) twice. Durable stores can implement the optional `claim(id)` method of `PendingStore` to extend that guarantee across server instances.
+
 ```typescript
 payment.on('payment.succeeded', async (event) => {
   if (event.resolvedFrom === 'pending') {

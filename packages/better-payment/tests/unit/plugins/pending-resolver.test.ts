@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { betterPayment, PaymentStatus, PaymentErrorCode, type PaymentEvent } from 'better-payment';
+import {
+  betterPayment,
+  PaymentStatus,
+  PaymentErrorCode,
+  type PaymentEvent,
+  type PaymentResponse,
+} from 'better-payment';
 import { MockProvider, MOCK_CARDS } from 'better-payment/testing';
-import { pendingResolver } from 'better-payment/plugins';
+import { pendingResolver, type PendingPayment, type PendingStore } from 'better-payment/plugins';
 import { mockPaymentRequest } from '../../fixtures/payment-data';
 
 describe('pendingResolver plugin', () => {
@@ -178,5 +184,159 @@ describe('pendingResolver plugin', () => {
     await payment.pending.delete(res.paymentId!);
     const deleted = await payment.pending.get(res.paymentId!);
     expect(deleted).toBeUndefined();
+  });
+
+  it('resolves a payment exactly once when two resolvers run concurrently', async () => {
+    const mock = new MockProvider();
+    const succeededEvents: PaymentEvent[] = [];
+
+    const payment = betterPayment({
+      providers: { mock },
+      plugins: [
+        pendingResolver({
+          schedule: ['10s'],
+          giveUpAfter: '1h',
+        }),
+      ],
+    });
+
+    payment.on('payment.succeeded', (event) => {
+      succeededEvents.push(event);
+    });
+
+    mock.networkErrorNext('payment');
+    await payment.createPayment({ ...mockPaymentRequest, conversationId: 'ORDER-201' });
+
+    vi.advanceTimersByTime(11_000);
+    const [first, second] = await Promise.all([
+      payment.pending.resolve(),
+      payment.pending.resolve(),
+    ]);
+
+    expect(first.checked + second.checked).toBe(1);
+    expect(first.succeeded + second.succeeded).toBe(1);
+    expect(succeededEvents.length).toBe(1);
+    expect((await payment.pending.list()).length).toBe(0);
+  });
+
+  it('guards concurrent resolvers even when the store cannot claim', async () => {
+    const items = new Map<string, PendingPayment>();
+    const store: PendingStore = {
+      save: (payment) => {
+        items.set(payment.id, { ...payment });
+      },
+      get: (id) => items.get(id),
+      list: () => Array.from(items.values()).map((p) => ({ ...p })),
+      delete: (id) => {
+        items.delete(id);
+      },
+    };
+    expect(store.claim).toBeUndefined();
+
+    const mock = new MockProvider();
+    const succeededEvents: PaymentEvent[] = [];
+    const payment = betterPayment({
+      providers: { mock },
+      plugins: [pendingResolver({ store, schedule: ['10s'], giveUpAfter: '1h' })],
+    });
+    payment.on('payment.succeeded', (event) => {
+      succeededEvents.push(event);
+    });
+
+    mock.networkErrorNext('payment');
+    await payment.createPayment({ ...mockPaymentRequest, conversationId: 'ORDER-202' });
+
+    vi.advanceTimersByTime(11_000);
+    const [first, second] = await Promise.all([
+      payment.pending.resolve(),
+      payment.pending.resolve(),
+    ]);
+
+    expect(first.succeeded + second.succeeded).toBe(1);
+    expect(succeededEvents.length).toBe(1);
+    expect(items.size).toBe(0);
+  });
+
+  it('keeps the payment pending when the status query times out', async () => {
+    const mock = new MockProvider();
+    const succeededEvents: PaymentEvent[] = [];
+    const failedEvents: PaymentEvent[] = [];
+
+    const payment = betterPayment({
+      providers: { mock },
+      plugins: [pendingResolver({ schedule: ['10s', '1m'], giveUpAfter: '1h' })],
+    });
+    payment.on('payment.succeeded', (event) => {
+      succeededEvents.push(event);
+    });
+    payment.on('payment.failed', (event) => {
+      failedEvents.push(event);
+    });
+
+    mock.networkErrorNext('payment');
+    const initResult = await payment.createPayment({
+      ...mockPaymentRequest,
+      conversationId: 'ORDER-203',
+    });
+
+    const getPaymentSpy = vi.spyOn(mock, 'getPayment');
+    getPaymentSpy.mockRejectedValueOnce(new Error('request timed out'));
+
+    vi.advanceTimersByTime(11_000);
+    const summary = await payment.pending.resolve();
+
+    expect(summary.succeeded).toBe(0);
+    expect(summary.failed).toBe(0);
+    expect(summary.stillPending).toBe(1);
+    expect(succeededEvents.length).toBe(0);
+    expect(failedEvents.length).toBe(0);
+
+    const remaining = await payment.pending.list();
+    expect(remaining.length).toBe(1);
+    expect(remaining[0].attempts).toBe(1);
+    expect(remaining[0].lastError).toBe('request timed out');
+
+    // The retry is a read-only status query, never a new payment
+    vi.advanceTimersByTime(61_000);
+    const retry = await payment.pending.resolve();
+    expect(retry.succeeded).toBe(1);
+    expect(getPaymentSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps amounts as strings when the provider confirms success', async () => {
+    const mock = new MockProvider();
+    const succeededEvents: PaymentEvent[] = [];
+
+    const payment = betterPayment({
+      providers: { mock },
+      plugins: [pendingResolver({ schedule: ['10s'], giveUpAfter: '1h' })],
+    });
+    payment.on('payment.succeeded', (event) => {
+      succeededEvents.push(event);
+    });
+
+    mock.networkErrorNext('payment');
+    const initResult = await payment.createPayment({
+      ...mockPaymentRequest,
+      conversationId: 'ORDER-204',
+    });
+
+    // paidPrice as a number is not an authoritative amount: fall back to the
+    // string stored at capture time; a string currency is taken from the result
+    vi.spyOn(mock, 'getPayment').mockResolvedValueOnce({
+      status: PaymentStatus.SUCCESS,
+      paymentId: initResult.paymentId,
+      paidPrice: 1.2,
+      currency: 'TRY',
+    } as unknown as PaymentResponse);
+
+    vi.advanceTimersByTime(11_000);
+    const summary = await payment.pending.resolve();
+
+    expect(summary.succeeded).toBe(1);
+    expect(succeededEvents.length).toBe(1);
+    expect(succeededEvents[0].amount).toBe('1.2');
+    expect(typeof succeededEvents[0].amount).toBe('string');
+    expect(succeededEvents[0].currency).toBe('TRY');
   });
 });
