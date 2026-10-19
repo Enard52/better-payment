@@ -187,7 +187,7 @@ export default function Navbar({
           : "border-transparent bg-background/60 backdrop-blur-xl",
       )}
     >
-      <nav aria-label="Main" className="mx-auto flex h-16 max-w-[88rem] items-center px-5 sm:px-8 lg:px-10">
+      <nav aria-label="Main" className="mx-auto flex h-16 max-w-[84rem] items-center px-5 sm:px-8">
         {/* Logo */}
         <Link href={localePath(lang, "/")} className="group flex items-center gap-2.5 lg:flex-1">
           <Image
@@ -243,7 +243,7 @@ export default function Navbar({
         </div>
 
         {/* Desktop actions */}
-        <div className="hidden flex-1 items-center justify-end gap-1.5 lg:flex" onMouseEnter={hideSoon}>
+        <div className="hidden flex-1 items-center justify-end gap-1.5 pl-6 lg:flex" onMouseEnter={hideSoon}>
           <ThemeToggle label={t.theme} />
           <LanguageSwitch lang={lang} label={t.language} />
           <Separator orientation="vertical" className="mx-1 h-4 data-vertical:self-center" />
@@ -282,7 +282,7 @@ export default function Navbar({
           active ? "visible translate-y-0 opacity-100" : "pointer-events-none invisible -translate-y-1 opacity-0",
         )}
       >
-        <div className="mx-auto max-w-[88rem] px-5 sm:px-8 lg:px-10">{active && renderPanel(active)}</div>
+        <div className="mx-auto max-w-[84rem] px-5 sm:px-8">{active && renderPanel(active)}</div>
       </div>
       <div
         aria-hidden

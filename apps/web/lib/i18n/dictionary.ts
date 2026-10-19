@@ -79,6 +79,17 @@ const en = {
     lead: "gives iyzico, PayTR, Sipay, Parampos and seven banks one type-safe interface, with signature-verified callbacks and a secure-by-default HTTP handler.",
     getStarted: "Get Started",
     star: "Star on GitHub",
+    badge: "See what's new",
+    proof: {
+      label: "One API for",
+      more: "+2 more",
+      stats: [
+        { value: "11", label: "providers, one interface" },
+        { value: "0", label: "runtime dependencies" },
+        { value: "MIT", label: "open source license" },
+        { value: "Node + Edge", label: "runs anywhere JS runs" },
+      ],
+    },
     network: {
       label: "How a payment moves through Better Payment",
       request: "request",
@@ -402,6 +413,17 @@ const tr: Dictionary = {
     lead: "iyzico, PayTR, Sipay, Parampos ve yedi bankayı tek bir tip güvenli arayüzde toplar; imzası doğrulanan callback'ler ve varsayılan olarak güvenli bir HTTP handler sunar.",
     getStarted: "Başlayın",
     star: "GitHub'da yıldızlayın",
+    badge: "Yenilikleri görün",
+    proof: {
+      label: "Tek API ile",
+      more: "+2 daha",
+      stats: [
+        { value: "11", label: "sağlayıcı, tek arayüz" },
+        { value: "0", label: "çalışma zamanı bağımlılığı" },
+        { value: "MIT", label: "açık kaynak lisansı" },
+        { value: "Node + Edge", label: "JS'in çalıştığı her yerde" },
+      ],
+    },
     network: {
       label: "Bir ödemenin Better Payment içindeki yolu",
       request: "istek",

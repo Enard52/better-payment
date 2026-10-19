@@ -41,7 +41,7 @@ export default function Integrations({
 
   return (
     <section id="providers" className="scroll-mt-20 px-5 py-24 sm:px-8 md:py-28">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-7xl">
         <SectionHeading line1={compare.titleLine1} line2={compare.titleLine2} lead={compare.lead} />
 
         <div className="bp-reveal mb-5 rounded-2xl border border-border bg-card p-4 sm:p-5">

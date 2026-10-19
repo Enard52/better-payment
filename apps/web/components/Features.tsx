@@ -14,7 +14,7 @@ export default function Features({ t }: { t: Dictionary["features"] }) {
   const features = layout.map((item) => ({ ...item, ...t.items[item.key] }));
   return (
     <section id="features" className="scroll-mt-20 px-5 py-24 sm:px-8 md:py-28">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-7xl">
         <h2 className="bp-reveal mb-12 max-w-2xl text-[2rem] leading-[1.08] font-extrabold tracking-[-0.03em] text-foreground sm:text-[2.5rem]">
           {t.titleLine1}
           <br />

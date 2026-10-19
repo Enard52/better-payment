@@ -13,7 +13,7 @@ export default function Contributors({ lang, t }: { lang: Locale; t: Dictionary[
   const guide = `${repository}/blob/main/CONTRIBUTING${lang === "tr" ? ".tr" : ""}.md`;
   return (
     <section id="contribute" className="scroll-mt-24 border-y border-border bg-card px-5 py-24 sm:px-8 md:py-28">
-      <div className="mx-auto grid max-w-6xl gap-14 lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-20">
+      <div className="mx-auto grid max-w-7xl gap-14 lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-20">
         <div>
           <SectionHeading line1={t.titleLine1} line2={t.titleLine2} lead={t.lead} className="mb-8" />
           <div className="bp-reveal flex flex-wrap gap-3">

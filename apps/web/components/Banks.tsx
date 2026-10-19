@@ -159,7 +159,7 @@ export default function Banks({ lang, t }: { lang: Locale; t: Dictionary["banks"
   const highlights = t.highlights.map((h, i) => ({ ...h, icon: highlightIcons[i] }));
   return (
     <section id="banks" className="scroll-mt-20 overflow-x-clip px-5 py-24 sm:px-8 md:py-28">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-7xl">
         <SectionHeading line1={t.titleLine1} line2={t.titleLine2} lead={t.lead} />
 
         <div className="bp-reveal grid gap-3">
