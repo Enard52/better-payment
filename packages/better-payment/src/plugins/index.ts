@@ -12,6 +12,18 @@ export {
 } from './localized-errors';
 export { chaos, type ChaosOptions, type ChaosRule } from './chaos';
 export {
+  telemetry,
+  type TelemetryOptions,
+  type TelemetryAttributes,
+  type TelemetryAttributeValue,
+  type TelemetryCounter,
+  type TelemetryHistogram,
+  type TelemetryMeter,
+  type TelemetrySpan,
+  type TelemetrySpanOptions,
+  type TelemetryTracer,
+} from './telemetry';
+export {
   notifications,
   formatNotification,
   type NotificationsOptions,
