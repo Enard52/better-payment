@@ -23,6 +23,12 @@ const budgets = [
   // drop the plugins an application does not import.
   { file: 'dist/plugins/index.mjs', maxGzipKb: 7 },
   { file: 'dist/plugins/index.js', maxGzipKb: 7 },
+  // Fraud rules and card testing protection, shipped as the better-payment/fraud
+  // subpath so that importing better-payment/plugins stays free of it. Budget is
+  // the measured build (3.90 kB gzip, 4.5 kB with room for the rules engine to
+  // grow): only the apps that import it pay for it.
+  { file: 'dist/fraud/index.mjs', maxGzipKb: 4.5 },
+  { file: 'dist/fraud/index.js', maxGzipKb: 4.5 },
   { file: 'dist/next/index.mjs', maxGzipKb: 1 },
   { file: 'dist/next/index.js', maxGzipKb: 1 },
   { file: 'dist/express/index.mjs', maxGzipKb: 1 },

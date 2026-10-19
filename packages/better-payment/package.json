@@ -26,6 +26,11 @@
       "import": "./dist/plugins/index.mjs",
       "require": "./dist/plugins/index.js"
     },
+    "./fraud": {
+      "types": "./dist/fraud/index.d.ts",
+      "import": "./dist/fraud/index.mjs",
+      "require": "./dist/fraud/index.js"
+    },
     "./next": {
       "types": "./dist/next/index.d.ts",
       "import": "./dist/next/index.mjs",

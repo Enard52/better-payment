@@ -3,6 +3,7 @@
   "icon": "plugins",
   "pages": [
     "localized-errors",
+    "fraud-rules",
     "chaos",
     "notifications"
   ]
