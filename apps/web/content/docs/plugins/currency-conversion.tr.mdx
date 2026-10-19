@@ -22,12 +22,12 @@ export const payment = betterPayment({
   },
   plugins: [
     currencyConversion({
-      source: 'tcmb', // varsayılan: TCMB today.xml
-      rate: 'forex-selling', // varsayılan: Döviz Satış
-      markup: 0.01, // isteğe bağlı %1 kâr marjı
+      source: 'tcmb', // default: today.xml from TCMB
+      rate: 'forex-selling', // default: 'forex-selling'
+      markup: 0.01, // optional 1% margin
       target: {
-        parampos: 'TRY', // Parampos için TRY'ye çevir
-        iyzico: ['TRY', 'USD', 'EUR'], // desteklenen para birimleri; liste dışındaysa ilkine çevirir
+        parampos: 'TRY', // convert to TRY for Parampos
+        iyzico: ['TRY', 'USD', 'EUR'], // allowed currencies; converts only if outside list
       },
       cache: { ttl: '1h' },
     }),
@@ -73,13 +73,13 @@ Ertesi gün döviz kurları yükselirse veya düşerse, güncel kur üzerinden i
 Dönüştürülmüş bir ödeme için iade başlattığınızda, eklenti otomatik olarak o ödemenin orijinal kurunu hatırlar ve iade tutarını o kurla çevirir:
 
 ```typescript
-// 50 USD'lik siparişin 25 USD'sini iade et:
+// Refund $25 of the original $50 payment:
 await payment.mock.refund({
   paymentId: result.paymentId,
   price: '25.00',
   currency: 'USD',
 });
-// Güncel kur ne olursa olsun 25 * 34.5 = 862.50 TRY ile iade edilir
+// Charged with 25 * 34.5 = 862.50 TRY, regardless of today's rate
 ```
 
 ## Seçenekler [#options]
