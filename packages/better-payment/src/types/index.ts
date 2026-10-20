@@ -397,16 +397,24 @@ export interface CheckoutFormRetrieveResponse {
  * Hosted checkout request (`createCheckout()`): the order without any card.
  * The customer enters the card on the provider's page, so no field here
  * accepts card data; card data never touches your server.
+ *
+ * Card storage is up to the hosted page: there is no `saveCard` field, because
+ * the provider decides whether the customer can save the card. iyzico returns
+ * the tokens of a card saved on its form in `getCheckoutResult().storedCard`.
  */
-export interface CheckoutRequest extends Omit<PaymentRequest, 'paymentCard' | 'storedCard'> {
+export interface CheckoutRequest extends Omit<
+  PaymentRequest,
+  'paymentCard' | 'storedCard' | 'saveCard' | 'callbackUrl'
+> {
   /**
    * URL the customer's browser returns to (iyzico `callbackUrl`, PayTR
-   * `merchant_ok_url`). It is NOT a payment confirmation: the query parameters
-   * of this redirect are not signed. Only a verified provider callback or
-   * `getCheckoutResult()` may mark an order as paid.
+   * `merchant_ok_url`, EST `okUrl`). It is NOT a payment confirmation: the
+   * query parameters of this redirect are not signed. Only a verified provider
+   * callback (through `completeThreeDSPayment()`) or `getCheckoutResult()` may
+   * mark an order as paid.
    */
   returnUrl: string;
-  /** Fail return URL where the provider has a separate one (PayTR `merchant_fail_url`). Default: `returnUrl`. */
+  /** Fail return URL where the provider has a separate one (PayTR `merchant_fail_url`, EST `failUrl`). Default: `returnUrl` */
   failUrl?: string;
   /**
    * Allowed installment counts, e.g. `[1, 3, 6]` (iyzico `enabledInstallments`).
@@ -418,22 +426,25 @@ export interface CheckoutRequest extends Omit<PaymentRequest, 'paymentCard' | 's
 }
 
 /**
- * Hosted checkout initialization (`createCheckout()` result). Use `url` to
- * redirect the customer, `iframeUrl` to embed the page, or render
- * `htmlContent`. `token` is the handle for `getCheckoutResult()`.
+ * Hosted checkout initialization (`createCheckout()` result). Send the customer
+ * to `redirectUrl`, embed `iframeUrl`, or render `html` (auto-submitting form).
+ * `token` is the handle for `getCheckoutResult()`.
+ *
+ * A `pending` status means the page is ready; it does not mean the customer
+ * paid. The payment is confirmed only by a verified provider callback or by a
+ * `success` from `getCheckoutResult()`.
  */
 export interface CheckoutInitResponse {
   status: PaymentStatus;
-  /** Redirect the customer to this hosted payment page */
-  url?: string;
+  /** Redirect the customer to this hosted payment page (iyzico, PayTR) */
+  redirectUrl?: string;
   /** The same page for embedding in an iframe (iyzico, PayTR) */
   iframeUrl?: string;
-  /** HTML to render in the customer's browser (auto-submit form or iframe) */
-  htmlContent?: string;
+  /** HTML to render in the customer's browser: an auto-submitting form to the bank's page (EST) or an iframe */
+  html?: string;
   /**
-   * Handle for `getCheckoutResult()`. iyzico: the checkout form token; PayTR:
-   * the merchant order id (the iFrame token is only embedded in `url`); mock:
-   * the hosted page token.
+   * Handle for `getCheckoutResult()`. iyzico: the checkout form token; PayTR and
+   * EST: the order id (PayTR's iFrame token is only part of `redirectUrl`).
    */
   token?: string;
   /** Time the token expires, when the provider reports it (iyzico) */

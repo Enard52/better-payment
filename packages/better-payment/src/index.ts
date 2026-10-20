@@ -111,6 +111,8 @@ export {
   PaymentResponse,
   ThreeDSPaymentRequest,
   ThreeDSInitResponse,
+  CheckoutRequest,
+  CheckoutInitResponse,
   RefundRequest,
   RefundResponse,
   CancelRequest,

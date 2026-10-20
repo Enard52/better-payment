@@ -720,9 +720,10 @@ export class Iyzico extends PaymentProvider<IyzicoConfig> {
    * Hosted checkout: iyzico's Checkout Form. The card is entered on iyzico's
    * page, so card data never touches your server. `returnUrl` becomes iyzico's
    * `callbackUrl`: the customer's browser returns there with UNSIGNED query
-   * parameters — it is not a payment confirmation. Verify with
-   * `getCheckoutResult(token)` or the checkout form's callback POST processed
-   * through the handler's verified-callback flow.
+   * parameters — it is not a payment confirmation. iyzico has no separate
+   * failure URL, so `failUrl` is ignored. Verify with `getCheckoutResult(token)`
+   * or the checkout form's callback POST processed through the handler's
+   * verified-callback flow.
    */
   async createCheckout(request: CheckoutRequest): Promise<CheckoutInitResponse> {
     const form = await this.initCheckoutForm({
@@ -730,7 +731,7 @@ export class Iyzico extends PaymentProvider<IyzicoConfig> {
       paidPrice: request.paidPrice,
       currency: request.currency,
       basketId: request.basketId,
-      callbackUrl: request.returnUrl || request.callbackUrl || '',
+      callbackUrl: request.returnUrl,
       enabledInstallments: request.installments,
       locale: request.locale,
       buyer: request.buyer,
@@ -741,10 +742,11 @@ export class Iyzico extends PaymentProvider<IyzicoConfig> {
     });
 
     return this.withErrorCode({
-      status: form.status,
-      url: form.paymentPageUrl,
+      // The init call's `success` means the page is ready, not that the customer paid
+      status: form.status === PaymentStatus.SUCCESS ? PaymentStatus.PENDING : form.status,
+      redirectUrl: form.paymentPageUrl,
       iframeUrl: form.paymentPageUrl,
-      htmlContent: form.checkoutFormContent,
+      html: form.checkoutFormContent,
       token: form.token,
       tokenExpireTime: form.tokenExpireTime,
       conversationId: form.conversationId,

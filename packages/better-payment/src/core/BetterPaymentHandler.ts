@@ -11,6 +11,7 @@ import { errorMessage } from './utils';
 import { NETWORK_ERROR_CODE } from './failure';
 import { fingerprint, MemoryIdempotencyStore, type IdempotencyStore } from './idempotency';
 import type {
+  CheckoutRequest,
   PWIPaymentRequest,
   InstallmentInfoRequest,
   SubscriptionInitializeRequest,
@@ -745,7 +746,9 @@ export class BetterPaymentHandler {
 
       case 'checkout/init':
         this.requireMethod(ctx, 'POST');
-        return this.resultResponse(await provider.createCheckout(this.requireBody(ctx)));
+        return this.resultResponse(
+          await provider.createCheckout(this.requireBody<CheckoutRequest>(ctx))
+        );
 
       case 'checkout/retrieve': {
         this.requireMethod(ctx, 'POST');

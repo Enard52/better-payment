@@ -152,7 +152,8 @@ class ProviderClient {
 
   /**
    * Hosted checkout page (`POST /:provider/checkout/init`). The request has no
-   * card data; redirect the customer to `url` or embed `iframeUrl`.
+   * card data; redirect the customer to `redirectUrl`, embed `iframeUrl`, or
+   * render `html`.
    *
    * @example
    * ```typescript
@@ -163,7 +164,7 @@ class ProviderClient {
    *   returnUrl: 'https://shop.example/orders/42',
    *   // ... order fields (buyer, addresses, basketItems)
    * });
-   * window.location.href = checkout.url;
+   * window.location.href = checkout.redirectUrl!;
    * ```
    */
   async createCheckout(request: CheckoutRequest): Promise<CheckoutInitResponse> {
