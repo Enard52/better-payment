@@ -346,9 +346,7 @@ export interface IyzicoInstallmentInfoResponse extends IyzicoResponse {
 
 /** iyzico sub-merchant types */
 export type IyzicoSubMerchantType =
-  | 'PERSONAL'
-  | 'PRIVATE_COMPANY'
-  | 'LIMITED_OR_JOINT_STOCK_COMPANY';
+  'PERSONAL' | 'PRIVATE_COMPANY' | 'LIMITED_OR_JOINT_STOCK_COMPANY';
 
 /**
  * Body of POST/PUT /onboarding/submerchant and POST /onboarding/submerchant/detail.

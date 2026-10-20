@@ -779,7 +779,8 @@ export class Iyzico extends PaymentProvider<IyzicoConfig> {
       v.add('subMerchantKey', 'is required');
     }
     const type = Iyzico.subMerchantTypeOf(request?.type);
-    if (!type) v.add('type', 'must be individual, private_company or limited_or_joint_stock_company');
+    if (!type)
+      v.add('type', 'must be individual, private_company or limited_or_joint_stock_company');
     if (String(request?.externalId ?? '').trim() === '') {
       v.add('externalId', 'is required: iyzico identifies the seller by this id');
     }
@@ -925,9 +926,11 @@ export class Iyzico extends PaymentProvider<IyzicoConfig> {
   ): Promise<PayoutResponse> {
     try {
       if (String(request?.paymentTransactionId ?? '').trim() === '') {
-        throw new ValidationError('paymentTransactionId is required for a marketplace payout', 'Iyzico', [
-          { path: 'paymentTransactionId', message: 'is required' },
-        ]);
+        throw new ValidationError(
+          'paymentTransactionId is required for a marketplace payout',
+          'Iyzico',
+          [{ path: 'paymentTransactionId', message: 'is required' }]
+        );
       }
       const body: IyzicoPayoutRequest = {
         locale: request.locale || this.config.locale || 'tr',
