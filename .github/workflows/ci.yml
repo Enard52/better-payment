@@ -150,3 +150,21 @@ jobs:
             done
           done
           npm pack --dry-run
+
+  next-shop:
+    name: next-shop example (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      # The example imports the workspace package's built `exports`, so build it first.
+      - run: pnpm --filter better-payment build
+      - run: pnpm --filter next-shop exec playwright install --with-deps chromium
+      # Playwright's webServer runs the example's own `dev` script, which also
+      # proves `prisma generate` and `prisma db push` work on a clean checkout.
+      - run: pnpm --filter next-shop test:e2e
