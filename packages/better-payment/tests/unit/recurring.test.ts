@@ -1,21 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
 import crypto from 'crypto';
-import {
-  addBillingMonths,
-  billingOrderId,
-  betterPayment,
-  iyzico as iyzicoProvider,
-  paytr as paytrProvider,
-} from '../../../src';
-import { Iyzico } from '../../../src/providers/iyzico';
-import { PayTR } from '../../../src/providers/paytr';
-import { Parampos } from '../../../src/providers/parampos';
-import { BetterPaymentHandler } from '../../../src/core/BetterPaymentHandler';
-import { PaymentErrorCode } from '../../../src/core/error-codes';
-import { PaymentStatus, type PaymentEvent, type RecurringPaymentRequest } from '../../../src/types';
-import { MockProvider } from '../../../src/testing';
-import { fakePayment } from '../../helpers/fake-payment';
-import { mockPaymentRequest } from '../../fixtures/payment-data';
+import { addBillingMonths, billingOrderId, betterPayment } from '../../src';
+import { Iyzico } from '../../src/providers/iyzico';
+import { PayTR } from '../../src/providers/paytr';
+import { Parampos } from '../../src/providers/parampos';
+import { BetterPaymentHandler } from '../../src/core/BetterPaymentHandler';
+import { PaymentErrorCode } from '../../src/core/error-codes';
+import { PaymentStatus, type PaymentEvent, type RecurringPaymentRequest } from '../../src/types';
+import { MockProvider } from '../../src/testing';
+import { fakePayment } from '../helpers/fake-payment';
+import { mockPaymentRequest } from '../fixtures/payment-data';
 
 const storedCard = { customerToken: 'USERKEY', cardToken: 'CARDTOKEN' };
 const { paymentCard: _card, ...order } = mockPaymentRequest;
