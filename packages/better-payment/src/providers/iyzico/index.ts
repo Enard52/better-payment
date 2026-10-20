@@ -6,8 +6,9 @@ import {
 } from '../../core/BetterPaymentConfig';
 import type { HttpClient, HttpRequestConfig } from '../../core/http';
 import { fromBase64, randomHex } from '../../core/crypto';
-import { PaymentProvider, PaymentProviderConfig } from '../../core/PaymentProvider';
-import { ConfigurationError } from '../../core/errors';
+import { PaymentProvider, type PaymentProviderConfig } from '../../core/PaymentProvider';
+import type { ProviderCapabilities } from '../../core/PaymentProvider';
+import { ConfigurationError, ValidationError } from '../../core/errors';
 import { failureResult, FailureResult } from '../../core/failure';
 import type { PaymentValidationRules } from '../../core/validation';
 import { IYZICO_ERROR_CODES } from './error-codes';
@@ -112,6 +113,21 @@ const IYZICO_CARD_PAYMENT_RULES: PaymentValidationRules = {
   saveCard: true,
 };
 
+/**
+ * Direct (NON-3D) payments additionally accept `recurring: true`: iyzico
+ * documents paying with a stored card without 3DS ("Create Payment with Stored
+ * Card (NON3D)", suitable for subscription cycles), marking the payment with
+ * `paymentGroup: "SUBSCRIPTION"`.
+ * https://docs.iyzico.com/en/advanced/card-storage
+ */
+const IYZICO_DIRECT_PAYMENT_RULES: PaymentValidationRules = {
+  ...IYZICO_CARD_PAYMENT_RULES,
+  recurring: true,
+};
+
+/** Installment counts a stored-card (COF) payment accepts */
+const IYZICO_SAVED_CARD_INSTALLMENTS = [1, 2, 3, 6, 9, 12];
+
 export interface IyzicoConfig extends PaymentProviderConfig {
   apiKey: string;
   secretKey: string;
@@ -158,6 +174,12 @@ export class Iyzico extends PaymentProvider<IyzicoConfig> {
     if (!this.config.baseUrl) {
       throw new ConfigurationError('iyzico baseUrl is required', 'iyzico');
     }
+  }
+
+  get capabilities(): ProviderCapabilities {
+    // Stored-card NON-3D and 3DS payments, recurring (MIT) included:
+    // https://docs.iyzico.com/en/advanced/card-storage
+    return { storedCard: true, recurring: true };
   }
 
   protected errorCodeTable(): Record<string, PaymentErrorCode> {
@@ -267,7 +289,10 @@ export class Iyzico extends PaymentProvider<IyzicoConfig> {
       installment: 1,
       basketId: request.basketId,
       paymentChannel: 'WEB',
-      paymentGroup: 'PRODUCT',
+      // `recurring: true` marks a subscription-period charge; iyzico documents
+      // paymentGroup SUBSCRIPTION for stored-card recurring payments.
+      // https://docs.iyzico.com/en/advanced/card-storage
+      paymentGroup: request.recurring ? 'SUBSCRIPTION' : 'PRODUCT',
       paymentCard: this.mapPaymentCard(request),
       buyer: {
         id: request.buyer.id,
@@ -364,7 +389,7 @@ export class Iyzico extends PaymentProvider<IyzicoConfig> {
    * Direct payment (without 3D Secure)
    */
   async createPayment(request: PaymentRequest): Promise<PaymentResponse> {
-    return this.cardPayment('/payment/auth', request, 'Payment failed');
+    return this.cardPayment('/payment/auth', request, 'Payment failed', IYZICO_DIRECT_PAYMENT_RULES);
   }
 
   /** Pre-authorization (`/payment/preauth`): blocks the amount without charging it */
@@ -375,10 +400,14 @@ export class Iyzico extends PaymentProvider<IyzicoConfig> {
   private async cardPayment(
     path: string,
     request: PaymentRequest,
-    fallback: string
+    fallback: string,
+    rules: PaymentValidationRules = IYZICO_CARD_PAYMENT_RULES
   ): Promise<PaymentResponse> {
     try {
-      this.validatePayment(request, IYZICO_CARD_PAYMENT_RULES);
+      this.validatePayment(request, rules);
+      if (request.recurring && request.installment) {
+        this.assertSavedCardInstallment(request.installment);
+      }
       const iyzicoRequest = this.mapToIyzicoRequest(request);
       const response = await this.sendRequest<IyzicoPaymentResponse>(path, iyzicoRequest);
 
@@ -395,6 +424,19 @@ export class Iyzico extends PaymentProvider<IyzicoConfig> {
     } catch (error) {
       return this.failure(error, fallback);
     }
+  }
+
+  /**
+   * Stored-card (card-on-file) payments only support these installment counts.
+   * https://docs.iyzico.com/en/advanced/card-storage (installment enum 1,2,3,6,9,12)
+   */
+  private assertSavedCardInstallment(installment: number): void {
+    if (IYZICO_SAVED_CARD_INSTALLMENTS.includes(installment)) return;
+    throw new ValidationError(
+      `Stored-card payments support ${IYZICO_SAVED_CARD_INSTALLMENTS.join(', ')} installments, got ${installment}`,
+      'iyzico',
+      [{ path: 'installment', message: `must be one of ${IYZICO_SAVED_CARD_INSTALLMENTS.join(', ')}` }]
+    );
   }
 
   /**

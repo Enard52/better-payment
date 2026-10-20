@@ -52,6 +52,22 @@ export interface PaymentProviderConfig {
 }
 
 /**
+ * Capabilities a provider declares for provider-independent code.
+ * Verified against each provider's official integration docs.
+ */
+export interface ProviderCapabilities {
+  /** Charges a stored card by token (`storedCard` in a payment request) */
+  storedCard: boolean;
+  /**
+   * Charges a stored card without the cardholder present (`recurring: true`,
+   * merchant-initiated / COF). Providers that document it: iyzico
+   * (https://docs.iyzico.com/en/advanced/card-storage), PayTR
+   * (https://dev.paytr.com/direkt-api/kart-saklama-api/kayitli-kart-tekrarlayan-odeme).
+   */
+  recurring: boolean;
+}
+
+/**
  * Abstract base class for all payment providers
  */
 export abstract class PaymentProvider<
@@ -71,6 +87,16 @@ export abstract class PaymentProvider<
    * Validate the configuration. Each provider checks its own required fields.
    */
   protected validateConfig(): void {}
+
+  /**
+   * What this provider can do, for provider-independent code such as
+   * `chargeStoredCard()`. Custom providers override this; the defaults are the
+   * safest values (unsupported), so a provider that does not declare a feature
+   * never receives a request that needs it.
+   */
+  get capabilities(): ProviderCapabilities {
+    return { storedCard: false, recurring: false };
+  }
 
   /**
    * The provider's documented error codes mapped to PaymentErrorCode.
