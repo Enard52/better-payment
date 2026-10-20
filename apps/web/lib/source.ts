@@ -5,7 +5,7 @@ import { toFumadocsSource } from "fumadocs-mdx/runtime/server";
 import { i18n, type Locale } from "@/lib/i18n/config";
 import { releaseStatus } from "@/lib/release";
 import { withBasePath } from "@/lib/base-path";
-import { pageIcon } from "@/lib/docs-page-icons";
+import { logoIcon, pageIcon } from "@/lib/docs-page-icons";
 
 /**
  * Sidebar group icons from the brand's frosted-glass set
@@ -85,7 +85,13 @@ function releaseBadgesPlugin(): LoaderPlugin {
 }
 
 /** The banks on the shared EST page, listed in the sidebar one by one (alphabetical, like the navbar) */
-const EST_BANKS = ["Halkbank", "İş Bankası", "Şekerbank", "TEB", "Ziraat Bankası"];
+const EST_BANKS = [
+  { name: "Halkbank", logo: "banks-halkbank.png" },
+  { name: "İş Bankası", logo: "banks-isbank.png" },
+  { name: "Şekerbank", logo: "banks-sekerbank.png" },
+  { name: "TEB", logo: "banks-teb.png" },
+  { name: "Ziraat Bankası", logo: "banks-ziraat.png" },
+];
 
 /**
  * EST is one page, but the sidebar shows each of its banks as its own entry ("Halkbank (EST)"),
@@ -104,8 +110,9 @@ function estBanksPlugin(): LoaderPlugin {
                 const entry = {
                   // String keys only: Fumadocs' internal symbol keys can't reach client components
                   ...Object.fromEntries(Object.entries(child)),
-                  $id: `${child.$id}:${bank}`,
-                  name: `${bank} (EST)`,
+                  $id: `${child.$id}:${bank.name}`,
+                  name: `${bank.name} (EST)`,
+                  icon: logoIcon(bank.logo),
                 } as typeof child;
                 expanded.add(entry);
                 return entry;
