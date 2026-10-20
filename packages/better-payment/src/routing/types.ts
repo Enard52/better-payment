@@ -10,19 +10,11 @@ export type RoutingCardOrigin = 'domestic' | 'foreign';
 
 /** Operations that start a charge and can be routed by a rule */
 export type RoutingChargeOperation =
-  | 'createPayment'
-  | 'authorize'
-  | 'initThreeDSPayment'
-  | 'initThreeDSAuthorize';
+  'createPayment' | 'authorize' | 'initThreeDSPayment' | 'initThreeDSAuthorize';
 
 /** Operations that must reach the provider that handled the payment */
 export type RoutingFollowUpOperation =
-  | 'completeThreeDSPayment'
-  | 'refund'
-  | 'cancel'
-  | 'capture'
-  | 'voidAuthorization'
-  | 'getPayment';
+  'completeThreeDSPayment' | 'refund' | 'cancel' | 'capture' | 'voidAuthorization' | 'getPayment';
 
 /**
  * Where a rule (or the default) sends a payment:
@@ -31,9 +23,7 @@ export type RoutingFollowUpOperation =
  * - `{ weights }`: a deterministic weighted split.
  */
 export type RoutingTarget =
-  | string
-  | readonly string[]
-  | { readonly weights: Readonly<Record<string, number>> };
+  string | readonly string[] | { readonly weights: Readonly<Record<string, number>> };
 
 /**
  * Card classification injected by `binResolver` or carried by the request.
@@ -235,9 +225,7 @@ export interface RoutingExplainOptions {
 }
 
 /** Audit listener, called for every routing decision before the provider call */
-export type RoutingDecisionListener = (
-  decision: RoutingDecision
-) => void | Promise<void>;
+export type RoutingDecisionListener = (decision: RoutingDecision) => void | Promise<void>;
 
 /** @internal Everything the engine needs besides the rule options */
 export interface RoutingEngineContext {

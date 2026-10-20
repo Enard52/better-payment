@@ -160,7 +160,11 @@ function assertWhen(when: unknown, where: string): asserts when is RoutingWhen {
     const value = record[field];
     if (value === undefined) continue;
     const list = listOf(value as string | readonly string[]);
-    if (!list || list.length === 0 || list.some((entry) => typeof entry !== 'string' || !entry.trim())) {
+    if (
+      !list ||
+      list.length === 0 ||
+      list.some((entry) => typeof entry !== 'string' || !entry.trim())
+    ) {
       fail(`${where}.when.${field} must be a non-empty string or an array of them`);
     }
   }
@@ -201,7 +205,10 @@ function assertWhen(when: unknown, where: string): asserts when is RoutingWhen {
       if (!range) fail(`${where}.when.installment must be a number or { min, max }`);
       for (const key of ['min', 'max']) {
         const bound = range[key];
-        if (bound !== undefined && (typeof bound !== 'number' || !Number.isInteger(bound) || bound < 1)) {
+        if (
+          bound !== undefined &&
+          (typeof bound !== 'number' || !Number.isInteger(bound) || bound < 1)
+        ) {
           fail(`${where}.when.installment.${key} must be an integer of at least 1`);
         }
       }
@@ -271,7 +278,8 @@ function assertOptions(options: RoutingOptions): void {
     if (rule.strategy === undefined) {
       if (rule.use === undefined) fail(`${where} needs use or strategy`);
     } else if (typeof rule.strategy === 'string') {
-      if (!strategies?.[rule.strategy]) fail(`${where}.strategy '${rule.strategy}' is not in strategies`);
+      if (!strategies?.[rule.strategy])
+        fail(`${where}.strategy '${rule.strategy}' is not in strategies`);
     } else if (
       !asRecord(rule.strategy) ||
       typeof (rule.strategy as RoutingStrategy).choose !== 'function'
@@ -282,7 +290,10 @@ function assertOptions(options: RoutingOptions): void {
   if (options.default !== undefined) assertTarget(options.default, 'default');
 }
 
-function matches(value: string | undefined, expected: string | readonly string[] | undefined): boolean {
+function matches(
+  value: string | undefined,
+  expected: string | readonly string[] | undefined
+): boolean {
   if (expected === undefined) return true;
   if (value === undefined) return false;
   const wanted = typeof expected === 'string' ? [expected] : expected;
@@ -323,8 +334,10 @@ function matchesWhen(when: RoutingWhen | undefined, ctx: RoutingContext, where: 
     if (typeof when.installment === 'number') {
       if (ctx.installment !== when.installment) return false;
     } else {
-      if (when.installment.min !== undefined && ctx.installment < when.installment.min) return false;
-      if (when.installment.max !== undefined && ctx.installment > when.installment.max) return false;
+      if (when.installment.min !== undefined && ctx.installment < when.installment.min)
+        return false;
+      if (when.installment.max !== undefined && ctx.installment > when.installment.max)
+        return false;
     }
   }
   if (when.amount !== undefined) {
@@ -344,7 +357,9 @@ function matchesWhen(when: RoutingWhen | undefined, ctx: RoutingContext, where: 
     try {
       matched = when.predicate(ctx) === true;
     } catch (cause) {
-      fail(`${where}.when.predicate threw: ${cause instanceof Error ? cause.message : String(cause)}`);
+      fail(
+        `${where}.when.predicate threw: ${cause instanceof Error ? cause.message : String(cause)}`
+      );
     }
     if (!matched) return false;
   }
@@ -409,15 +424,22 @@ export class RoutingEngine {
     operation: PaymentOperation,
     request: unknown,
     skipped: RoutingSkip[] = [],
-    reason: RoutingReason = 'default'
+    reason: RoutingReason = 'default',
+    applyHealth = true
   ): Promise<RoutingDecision> {
-    return this.fallbackFor(await this.contextFor(operation, request), skipped, reason);
+    return this.fallbackFor(
+      await this.contextFor(operation, request),
+      skipped,
+      reason,
+      applyHealth
+    );
   }
 
   private async fallbackFor(
     ctx: RoutingContext,
     skipped: RoutingSkip[] = [],
-    reason: RoutingReason = 'default'
+    reason: RoutingReason = 'default',
+    applyHealth = true
   ): Promise<RoutingDecision> {
     const target = this.options.default ?? this.defaultProvider;
     if (target === undefined) {
@@ -431,7 +453,7 @@ export class RoutingEngine {
         detail: 'no rule matched and no default target is configured',
       };
     }
-    const selection = await this.selectTarget(target, ctx);
+    const selection = await this.selectTarget(target, ctx, applyHealth);
     mergeSkips(skipped, selection.skipped);
     return {
       provider: selection.provider ?? null,
@@ -472,12 +494,16 @@ export class RoutingEngine {
     return this.selectTarget(rule.use, ctx);
   }
 
-  private async selectTarget(target: RoutingTarget, ctx: RoutingContext): Promise<Selection> {
+  private async selectTarget(
+    target: RoutingTarget,
+    ctx: RoutingContext,
+    applyHealth = true
+  ): Promise<Selection> {
     const skipped: RoutingSkip[] = [];
     if (typeof target === 'string' || Array.isArray(target)) {
       const ids = [...new Set(targetIds(target))];
       for (const provider of ids) {
-        const reason = await this.ineligibility(provider);
+        const reason = await this.ineligibility(provider, applyHealth);
         if (reason) {
           pushSkip(skipped, provider, reason);
           continue;
@@ -491,7 +517,7 @@ export class RoutingEngine {
     const eligible: { provider: string; weight: number }[] = [];
     for (const [provider, weight] of Object.entries(weights)) {
       if (weight <= 0) continue;
-      const reason = await this.ineligibility(provider);
+      const reason = await this.ineligibility(provider, applyHealth);
       if (reason) {
         pushSkip(skipped, provider, reason);
         continue;
@@ -523,10 +549,13 @@ export class RoutingEngine {
     return { eligible, skipped };
   }
 
-  private async ineligibility(provider: string): Promise<RoutingSkip['reason'] | undefined> {
+  private async ineligibility(
+    provider: string,
+    applyHealth = true
+  ): Promise<RoutingSkip['reason'] | undefined> {
     if (!this.providerIds.includes(provider)) return 'not-enabled';
     const health: RoutingHealth['isAvailable'] = this.options.health?.isAvailable;
-    if (!health) return undefined;
+    if (!health || !applyHealth) return undefined;
     try {
       if ((await health(provider)) === false) return 'unhealthy';
       return undefined;
@@ -539,10 +568,7 @@ export class RoutingEngine {
     }
   }
 
-  private async contextFor(
-    operation: PaymentOperation,
-    request: unknown
-  ): Promise<RoutingContext> {
+  private async contextFor(operation: PaymentOperation, request: unknown): Promise<RoutingContext> {
     const record = asRecord(request);
     const card = asRecord(record?.card);
     const paymentCard = asRecord(record?.paymentCard);
@@ -591,7 +617,13 @@ export class RoutingEngine {
       installment,
       threeDS,
       bin,
-      bank: pick(record?.bank, record?.bankName, card?.bank, resolvedCard.bank, resolvedCard.bankName),
+      bank: pick(
+        record?.bank,
+        record?.bankName,
+        card?.bank,
+        resolvedCard.bank,
+        resolvedCard.bankName
+      ),
       cardFamily: pick(record?.cardFamily, card?.cardFamily, resolvedCard.cardFamily),
       cardType: cardTypeOf(pick(record?.cardType, card?.cardType, resolvedCard.cardType)),
       cardOrigin: cardOriginOf(pick(record?.cardOrigin, card?.cardOrigin, resolvedCard.cardOrigin)),

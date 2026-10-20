@@ -149,7 +149,10 @@ export function routing(options: RoutingOptions = {}) {
     try {
       await store.set(key, provider, ROUTING_TTL_SECONDS);
     } catch (cause) {
-      logError('[routing] routing store write failed; a follow-up may not find its provider', cause);
+      logError(
+        '[routing] routing store write failed; a follow-up may not find its provider',
+        cause
+      );
     }
   }
 
@@ -228,8 +231,9 @@ export function routing(options: RoutingOptions = {}) {
       };
     }
     // Unknown payment: use the default, but never invent a provider to make the
-    // call succeed. explain() reports the fallback as 'unknown-payment'.
-    return rules.fallback(operation, request, [], 'unknown-payment');
+    // call succeed. Health only keeps new charges away, so it is not applied to
+    // a refund or a status call of a payment whose provider is unknown.
+    return rules.fallback(operation, request, [], 'unknown-payment', false);
   }
 
   async function decide(operation: PaymentOperation, request: unknown): Promise<RoutingDecision> {
@@ -253,7 +257,10 @@ export function routing(options: RoutingOptions = {}) {
   }
 
   function status(): RoutingStatus {
-    return { counts: Object.fromEntries(counts), total: [...counts.values()].reduce((a, b) => a + b, 0) };
+    return {
+      counts: Object.fromEntries(counts),
+      total: [...counts.values()].reduce((a, b) => a + b, 0),
+    };
   }
 
   return definePlugin({
@@ -279,7 +286,21 @@ export function routing(options: RoutingOptions = {}) {
               if (attempt) await remember(ATTEMPT_KEY + attempt, decision.provider);
             }
             await publish(decision);
-            if (!decision.provider || decision.provider === ctx.provider) return undefined;
+            if (!decision.provider) {
+              // Never let a rejected provider be used through the library's
+              // default: fail before the charge instead.
+              if (context?.defaultProvider) {
+                const reasons = decision.skipped
+                  .map((skip) => `${skip.provider} (${skip.reason})`)
+                  .join(', ');
+                throw new ConfigurationError(
+                  `routing: no provider is eligible for this ${ctx.operation}` +
+                    (reasons ? `: ${reasons}` : '')
+                );
+              }
+              return undefined;
+            }
+            if (decision.provider === ctx.provider) return undefined;
             context?.logger?.info(
               `[routing] ${ctx.operation} is routed to '${decision.provider}' (${decision.reason})`
             );

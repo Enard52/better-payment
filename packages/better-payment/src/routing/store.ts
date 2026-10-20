@@ -37,7 +37,11 @@ export class MemoryRoutingStore implements RoutingStore {
     return entry.value;
   }
 
-  set(key: string, value: string, ttlSeconds = this.options.ttlSeconds ?? ROUTING_TTL_SECONDS): void {
+  set(
+    key: string,
+    value: string,
+    ttlSeconds = this.options.ttlSeconds ?? ROUTING_TTL_SECONDS
+  ): void {
     const now = (this.options.now ?? Date.now)();
     this.entries.delete(key);
     this.entries.set(key, { value, expiresAt: now + ttlSeconds * 1000 });
