@@ -18,7 +18,7 @@ const entries = Object.keys(manifest.exports).map((subpath) => {
     'src',
     name === 'index'
       ? 'index.ts'
-      : ['client', 'testing', 'plugins'].includes(name)
+      : ['client', 'testing', 'plugins', 'commission-router'].includes(name)
         ? `${name}/index.ts`
         : `adapters/${name}.ts`,
   );

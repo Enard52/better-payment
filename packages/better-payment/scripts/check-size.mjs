@@ -23,6 +23,10 @@ const budgets = [
   // drop the plugins an application does not import.
   { file: 'dist/plugins/index.mjs', maxGzipKb: 7 },
   { file: 'dist/plugins/index.js', maxGzipKb: 7 },
+  // The commission router is a separate subpath so applications that do not
+  // import it never pay for its rate tables, ranking and quote code.
+  { file: 'dist/commission-router/index.mjs', maxGzipKb: 8 },
+  { file: 'dist/commission-router/index.js', maxGzipKb: 8 },
   { file: 'dist/next/index.mjs', maxGzipKb: 1 },
   { file: 'dist/next/index.js', maxGzipKb: 1 },
   { file: 'dist/express/index.mjs', maxGzipKb: 1 },

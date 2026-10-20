@@ -852,7 +852,9 @@ export const commissionRouter = (options: CommissionRouterOptions) => {
                   .slice(0, MAX_ATTEMPTS - 1)
               );
             }
-            if (capPerMillion !== null) share.record(chosen.provider);
+            // Record every routing decision, not only when a cap is configured:
+            // `router.status()` reports what the router actually did.
+            share.record(chosen.provider);
             if (chosen.provider !== ctx.provider) {
               context?.logger?.info(
                 `[commission-router] ${operation} is routed to '${chosen.provider}'` +
