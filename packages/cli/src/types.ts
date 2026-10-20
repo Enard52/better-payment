@@ -59,6 +59,11 @@ export interface CliIo {
   loadModule(path: string): Promise<Record<string, unknown>>;
   /** Runs an external command (`npm`, `pnpm`, ...) */
   run(command: string, args: string[]): Promise<RunResult>;
+  /**
+   * `fetch` used by `doctor` for the provider probes. Tests inject a fake so no
+   * request ever leaves the process.
+   */
+  fetch: typeof fetch;
   /** Interactive question with a default answer */
   prompt(question: string, fallback: string): Promise<string>;
   /** Epoch milliseconds, for durations in the `listen` log */

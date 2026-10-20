@@ -106,6 +106,7 @@ export function createNodeIo(cwd: string = process.cwd()): CliIo {
     stderr: (line) => process.stderr.write(`${line}\n`),
     loadModule: loadModuleByPath,
     run: runCommand,
+    fetch: (input, init) => globalThis.fetch(input, init),
     prompt: askQuestion,
     now: () => Date.now(),
   };

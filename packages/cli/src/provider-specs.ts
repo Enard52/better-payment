@@ -23,6 +23,8 @@ export interface ProviderSpec {
   factory: string;
   /** `ProviderType` key of `PROVIDER_DEFAULT_URLS`, when the provider has one */
   urlKey?: string;
+  /** Optional env var overriding the base URL (for proxies and mock servers) */
+  baseUrlEnv?: string;
   /** Credentials: config field -> environment variable */
   fields: { field: string; env: string; secret: boolean }[];
   /** How the built-in handler verifies the provider's callback */
@@ -40,6 +42,7 @@ export const PROVIDER_SPECS: Record<string, ProviderSpec> = {
     id: 'iyzico',
     factory: 'iyzico',
     urlKey: 'iyzico',
+    baseUrlEnv: 'IYZICO_BASE_URL',
     fields: [field('apiKey', 'IYZICO_API_KEY'), field('secretKey', 'IYZICO_SECRET_KEY', true)],
     callbackVerification: 'remote',
     docs: '/docs/providers/iyzico',
@@ -48,6 +51,7 @@ export const PROVIDER_SPECS: Record<string, ProviderSpec> = {
     id: 'paytr',
     factory: 'paytr',
     urlKey: 'paytr',
+    baseUrlEnv: 'PAYTR_BASE_URL',
     fields: [
       field('merchantId', 'PAYTR_MERCHANT_ID'),
       field('merchantKey', 'PAYTR_MERCHANT_KEY', true),
@@ -60,6 +64,7 @@ export const PROVIDER_SPECS: Record<string, ProviderSpec> = {
     id: 'parampos',
     factory: 'parampos',
     urlKey: 'parampos',
+    baseUrlEnv: 'PARAMPOS_BASE_URL',
     fields: [
       field('clientCode', 'PARAMPOS_CLIENT_CODE'),
       field('clientUsername', 'PARAMPOS_CLIENT_USERNAME'),
@@ -73,6 +78,7 @@ export const PROVIDER_SPECS: Record<string, ProviderSpec> = {
     id: 'akbank',
     factory: 'akbank',
     urlKey: 'akbank',
+    baseUrlEnv: 'AKBANK_BASE_URL',
     fields: [
       field('merchantSafeId', 'AKBANK_MERCHANT_SAFE_ID'),
       field('terminalSafeId', 'AKBANK_TERMINAL_SAFE_ID'),

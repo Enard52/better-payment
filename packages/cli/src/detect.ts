@@ -7,14 +7,7 @@ import { join } from 'node:path';
 import type { CliIo } from './types';
 
 export type Framework =
-  | 'next-app'
-  | 'next-pages'
-  | 'express'
-  | 'fastify'
-  | 'hono'
-  | 'elysia'
-  | 'react-router'
-  | 'node';
+  'next-app' | 'next-pages' | 'express' | 'fastify' | 'hono' | 'elysia' | 'react-router' | 'node';
 
 export type PackageManager = 'npm' | 'pnpm' | 'yarn' | 'bun';
 

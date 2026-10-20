@@ -161,7 +161,11 @@ export function parseArgs(argv: string[], specs: Record<string, OptionSpec>): Pa
 }
 
 /** Reads a string option, falling back to `fallback` */
-export function stringOption(args: ParsedArgs, name: string, fallback?: string): string | undefined {
+export function stringOption(
+  args: ParsedArgs,
+  name: string,
+  fallback?: string
+): string | undefined {
   const value = args.options[name];
   return typeof value === 'string' && value !== '' ? value : fallback;
 }
