@@ -56,12 +56,17 @@ async function buildRequestFromDatabase(ctx: HandlerContext): Promise<object> {
   const order = await getOrder(String(ctx.body?.orderId));
   if (!order || !isPayable(order.status)) throw new Error('Order is not payable');
 
+  const total = formatKurus(order.amountKurus);
+  const paymentCard = readCard(ctx.body?.paymentCard);
+  // For installments > 1, ask the provider what it will charge.
+  const paidPrice = await quotedPaidPrice(paymentCard.cardNumber, total, order.id, order.installment);
+
   return {
-    price: formatKurus(order.amountKurus), // never a browser value
-    paidPrice: formatKurus(order.amountKurus),
+    price: total, // never a browser value
+    paidPrice,
     currency: order.currency,
     installment: order.installment,
-    paymentCard: readCard(ctx.body?.paymentCard),
+    paymentCard,
     buyer: demoBuyer(order.id),
     basketItems: order.items.map(toBasketItem),
     callbackUrl: `${new URL(ctx.request.url).origin}/api/pay/${PROVIDER_ID}/payment/complete-3ds`,
