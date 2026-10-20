@@ -49,11 +49,11 @@ without starting the dev server; `dev`, `setup` and `build` already run it.
 Copy `.env.example` to `.env.local` (git-ignored). Every value in the example
 file is a placeholder:
 
-| Variable | Required | Meaning |
-| --- | --- | --- |
-| `IYZICO_API_KEY` | no | iyzico sandbox API key. Empty selects `MockProvider`. |
-| `IYZICO_SECRET_KEY` | no | iyzico sandbox secret key. Must be set together with the API key. |
-| `DEMO_ADMIN_KEY` | no | Key for the demo `/admin` login. Default: `demo-admin`. |
+| Variable            | Required | Meaning                                                           |
+| ------------------- | -------- | ----------------------------------------------------------------- |
+| `IYZICO_API_KEY`    | no       | iyzico sandbox API key. Empty selects `MockProvider`.             |
+| `IYZICO_SECRET_KEY` | no       | iyzico sandbox secret key. Must be set together with the API key. |
+| `DEMO_ADMIN_KEY`    | no       | Key for the demo `/admin` login. Default: `demo-admin`.           |
 
 Which providers need credentials:
 
@@ -72,26 +72,26 @@ The provider is chosen once at server start in `lib/payment.ts`, so restart
 
 ## What each file does
 
-| File | Purpose |
-| --- | --- |
-| `app/page.tsx` | Product list; "Add to cart" is a server action. |
-| `app/cart/page.tsx` | Cart with unit prices and totals read from the database. |
-| `app/checkout/[orderId]/page.tsx` | Card form for an order that already exists. |
-| `app/orders/[orderId]/page.tsx` | Return page; shows the **database** status, not the query string. |
-| `app/admin/page.tsx` | Demo admin login and order list with a refund button. |
-| `app/api/pay/[...path]/route.ts` | `toNextJsHandler(getBetterPayment)` — the whole payment API. |
-| `app/api/orders/installment/route.ts` | Saves the installment count the shopper picked. |
-| `components/CheckoutForm.tsx` | Card fields, installment quote, calls `payment/init-3ds`. |
-| `components/RefundButton.tsx` | Calls the privileged `refund` action and refreshes. |
-| `lib/payment.ts` | `betterPayment` singleton: providers, `transformRequest`, `authorize`, payment events. |
-| `lib/orders.ts` | Server-side order creation and status helpers. |
-| `lib/cart.ts` | Cookie cart that only stores product ids and quantities. |
-| `lib/cart-actions.ts` | Server actions: add/update cart, create order, demo admin login. |
-| `lib/products.ts`, `lib/catalog.ts` | Demo catalog and price formatting. |
-| `lib/admin.ts` | Demo admin cookie checked by the handler's `authorize` hook. |
-| `lib/db.ts` | One Prisma client per process. |
-| `prisma/schema.prisma` | Product, Order, OrderItem and Refund tables. |
-| `e2e/shop.spec.ts` | Playwright happy path: cart, 3DS, paid order, refund. |
+| File                                  | Purpose                                                                                |
+| ------------------------------------- | -------------------------------------------------------------------------------------- |
+| `app/page.tsx`                        | Product list; "Add to cart" is a server action.                                        |
+| `app/cart/page.tsx`                   | Cart with unit prices and totals read from the database.                               |
+| `app/checkout/[orderId]/page.tsx`     | Card form for an order that already exists.                                            |
+| `app/orders/[orderId]/page.tsx`       | Return page; shows the **database** status, not the query string.                      |
+| `app/admin/page.tsx`                  | Demo admin login and order list with a refund button.                                  |
+| `app/api/pay/[...path]/route.ts`      | `toNextJsHandler(getBetterPayment)` — the whole payment API.                           |
+| `app/api/orders/installment/route.ts` | Saves the installment count the shopper picked.                                        |
+| `components/CheckoutForm.tsx`         | Card fields, installment quote, calls `payment/init-3ds`.                              |
+| `components/RefundButton.tsx`         | Calls the privileged `refund` action and refreshes.                                    |
+| `lib/payment.ts`                      | `betterPayment` singleton: providers, `transformRequest`, `authorize`, payment events. |
+| `lib/orders.ts`                       | Server-side order creation and status helpers.                                         |
+| `lib/cart.ts`                         | Cookie cart that only stores product ids and quantities.                               |
+| `lib/cart-actions.ts`                 | Server actions: add/update cart, create order, demo admin login.                       |
+| `lib/products.ts`, `lib/catalog.ts`   | Demo catalog and price formatting.                                                     |
+| `lib/admin.ts`                        | Demo admin cookie checked by the handler's `authorize` hook.                           |
+| `lib/db.ts`                           | One Prisma client per process.                                                         |
+| `prisma/schema.prisma`                | Product, Order, OrderItem and Refund tables.                                           |
+| `e2e/shop.spec.ts`                    | Playwright happy path: cart, 3DS, paid order, refund.                                  |
 
 ## How the flow uses better-payment
 

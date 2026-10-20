@@ -1,4 +1,4 @@
-// SQLite needs no server: `pnpm --filter next-shop setup` creates prisma/dev.db.
+// SQLite needs no server: `pnpm --filter next-shop run setup` creates prisma/dev.db.
 // Amounts are stored in minor units (kuruş) as integers, never as floats, so the
 // server-side cart total is exact.
 datasource db {

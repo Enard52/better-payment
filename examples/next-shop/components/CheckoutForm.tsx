@@ -137,7 +137,11 @@ export function CheckoutForm({ orderId, providerId, totalLabel }: CheckoutFormPr
 
         <label>
           Card holder name
-          <input value={cardHolderName} onChange={(e) => setCardHolderName(e.target.value)} required />
+          <input
+            value={cardHolderName}
+            onChange={(e) => setCardHolderName(e.target.value)}
+            required
+          />
         </label>
         <label>
           Card number
@@ -195,9 +199,8 @@ export function CheckoutForm({ orderId, providerId, totalLabel }: CheckoutFormPr
             <select value={installment} onChange={(e) => void onInstallmentChange(e.target.value)}>
               {installments.map((option) => (
                 <option key={option.installmentNumber} value={String(option.installmentNumber)}>
-                  {option.installmentNumber}x ·{' '}
-                  {option.installmentPrice.toFixed(2)} per month (total{' '}
-                  {option.totalPrice.toFixed(2)}, commission {option.commissionRate}%)
+                  {option.installmentNumber}x · {option.installmentPrice.toFixed(2)} per month
+                  (total {option.totalPrice.toFixed(2)}, commission {option.commissionRate}%)
                 </option>
               ))}
             </select>

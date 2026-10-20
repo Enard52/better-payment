@@ -28,8 +28,7 @@ export function verifyDemoAdminKey(key: string): boolean {
 
 /** Header keys are matched case-insensitively: frameworks normalize differently */
 export function hasDemoAdmin(headers: Record<string, string>): boolean {
-  const cookie = Object.entries(headers)
-    .find(([name]) => name.toLowerCase() === 'cookie')?.[1];
+  const cookie = Object.entries(headers).find(([name]) => name.toLowerCase() === 'cookie')?.[1];
   if (!cookie) return false;
   return cookie
     .split(';')

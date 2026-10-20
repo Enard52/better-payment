@@ -34,9 +34,7 @@ export default async function OrderPage({
       <h1>Order {order.id}</h1>
       <p>
         Status: <span className={`pill ${order.status}`}>{order.status}</span>
-        {order.errorCode ? (
-          <span className="muted"> · last error: {order.errorCode}</span>
-        ) : null}
+        {order.errorCode ? <span className="muted"> · last error: {order.errorCode}</span> : null}
       </p>
 
       {payment === 'success' ? <p className="ok">Payment confirmed by the provider.</p> : null}

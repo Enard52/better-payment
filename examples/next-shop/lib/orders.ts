@@ -84,5 +84,9 @@ export async function setInstallment(id: string, installment: number): Promise<b
 }
 
 export async function listOrders(limit = 50) {
-  return prisma.order.findMany({ orderBy: { createdAt: 'desc' }, take: limit, include: { items: true } });
+  return prisma.order.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    include: { items: true },
+  });
 }
