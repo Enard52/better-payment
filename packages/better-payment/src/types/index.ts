@@ -333,6 +333,8 @@ export interface CheckoutFormRequest {
   billingAddress: Address;
   basketItems: BasketItem[];
   conversationId?: string;
+  /** Language of the checkout form. Default: the provider's configured locale. */
+  locale?: string;
 }
 
 /**
@@ -380,6 +382,63 @@ export interface CheckoutFormRetrieveResponse {
   iyziCommissionRateAmount?: number;
   iyziCommissionFee?: number;
   paymentTransactionId?: string;
+  conversationId?: string;
+  /** Normalized error code, set on failures */
+  code?: PaymentErrorCode;
+  /** The provider's raw error code */
+  errorCode?: string;
+  errorMessage?: string;
+  /** The original message when a plugin replaced `errorMessage` (e.g. `localizedErrors`) */
+  providerMessage?: string;
+  rawResponse?: unknown;
+}
+
+/**
+ * Hosted checkout request (`createCheckout()`): the order without any card.
+ * The customer enters the card on the provider's page, so no field here
+ * accepts card data; card data never touches your server.
+ */
+export interface CheckoutRequest extends Omit<PaymentRequest, 'paymentCard' | 'storedCard'> {
+  /**
+   * URL the customer's browser returns to (iyzico `callbackUrl`, PayTR
+   * `merchant_ok_url`). It is NOT a payment confirmation: the query parameters
+   * of this redirect are not signed. Only a verified provider callback or
+   * `getCheckoutResult()` may mark an order as paid.
+   */
+  returnUrl: string;
+  /** Fail return URL where the provider has a separate one (PayTR `merchant_fail_url`). Default: `returnUrl`. */
+  failUrl?: string;
+  /**
+   * Allowed installment counts, e.g. `[1, 3, 6]` (iyzico `enabledInstallments`).
+   * Providers that only support an installment maximum use the highest value.
+   */
+  installments?: number[];
+  /** Language of the hosted page. Default: the provider's configured locale. */
+  locale?: string;
+}
+
+/**
+ * Hosted checkout initialization (`createCheckout()` result). Use `url` to
+ * redirect the customer, `iframeUrl` to embed the page, or render
+ * `htmlContent`. `token` is the handle for `getCheckoutResult()`.
+ */
+export interface CheckoutInitResponse {
+  status: PaymentStatus;
+  /** Redirect the customer to this hosted payment page */
+  url?: string;
+  /** The same page for embedding in an iframe (iyzico, PayTR) */
+  iframeUrl?: string;
+  /** HTML to render in the customer's browser (auto-submit form or iframe) */
+  htmlContent?: string;
+  /**
+   * Handle for `getCheckoutResult()`. iyzico: the checkout form token; PayTR:
+   * the merchant order id (the iFrame token is only embedded in `url`); mock:
+   * the hosted page token.
+   */
+  token?: string;
+  /** Time the token expires, when the provider reports it (iyzico) */
+  tokenExpireTime?: number;
+  paymentId?: string;
   conversationId?: string;
   /** Normalized error code, set on failures */
   code?: PaymentErrorCode;
