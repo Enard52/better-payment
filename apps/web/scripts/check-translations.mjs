@@ -1,5 +1,6 @@
 // Checks that the translated docs stay in sync with the English ones, for every
-// language registered in lib/i18n/locales.json:
+// language enabled in lib/i18n/locales.json (declared-but-disabled languages must not
+// have content files yet):
 //
 // - languages with docs "required" (Turkish today): every page (x.mdx) has a translation
 //   (x.tr.mdx) and vice versa; same for meta.json
@@ -19,7 +20,13 @@ import { readLocaleRegistry } from './locales.mjs';
 
 const ROOT = fileURLToPath(new URL('../content/docs/', import.meta.url));
 const FIX = process.argv.includes('--fix');
-const registry = readLocaleRegistry();
+let registry;
+try {
+  registry = readLocaleRegistry();
+} catch (error) {
+  console.error(`✗ ${error.message}`);
+  process.exit(1);
+}
 
 function walk(dir) {
   return readdirSync(dir).flatMap((name) => {
@@ -88,11 +95,26 @@ const problems = [];
 const files = walk(ROOT).map((path) => relative(ROOT, path)).filter((file) => /\.(mdx|json)$/.test(file));
 let fixed = 0;
 
-/** English pages: the content files without any registered locale suffix */
+/** Locale suffix of a content file name, whether the locale is enabled or not */
+function suffixOf(file) {
+  return /\.([a-z0-9-]+)\.(mdx|json)$/.exec(file.replaceAll('\\', '/'))?.[1] ?? null;
+}
+
+/** English pages: the content files without any declared locale suffix */
 const baseFiles = files.filter((file) => {
-  const match = /\.([a-z0-9-]{2,8})\.(mdx|json)$/.exec(file);
-  return !match || !registry.codes.includes(match[1]);
+  const suffix = suffixOf(file);
+  return suffix === null || !registry.declared.includes(suffix);
 });
+
+/** A disabled language must not have content: its files would be built as default-language pages */
+for (const locale of registry.disabled) {
+  for (const file of files) {
+    if (suffixOf(file) === locale)
+      problems.push(
+        `${file}: "${locale}" is disabled in locales.json; enable it before adding translations (see TRANSLATIONS.md)`
+      );
+  }
+}
 
 const progress = [];
 
@@ -118,6 +140,17 @@ for (const locale of registry.translated) {
     existsSync(join(ROOT, file.replace(/\.mdx$/, `.${locale}.mdx`)))
   );
   progress.push(`${locale}: ${translatedPages.length}/${basePages.length} pages`);
+
+  if (required) {
+    const missing = baseFiles.filter(
+      (file) => !existsSync(join(ROOT, file.replace(/\.(mdx|json)$/, `.${locale}.$1`)))
+    );
+    if (missing.length)
+      problems.push(
+        `${locale}: ${translatedPages.length}/${basePages.length} pages translated; ` +
+          `${missing.length} required file(s) missing (docs: "required")`
+      );
+  }
 
   for (const file of translatedPages) {
     const trFile = file.replace(/\.mdx$/, `.${locale}.mdx`);
@@ -183,12 +216,16 @@ if (problems.length) {
   console.error(`\n${problems.length} translation problem(s). See CONTRIBUTING.md → Translations.`);
   process.exit(1);
 }
-const nameOf = (code) => registry.settings[code].name;
+const nameOf = (code) => registry.settings[code].nativeName;
 const partialCodes = registry.translated.filter((code) => !registry.required.includes(code));
-console.log(
-  `✓ Every docs page is available in ${registry.required.map(nameOf).join(', ')}, ` +
-    'with matching code blocks and heading ids' +
-    (partialCodes.length
-      ? `; ${partialCodes.join(', ')} ${partialCodes.length === 1 ? 'is' : 'are'} partial and checked page by page.`
-      : '.')
-);
+const summary = [
+  `Every docs page is available in ${registry.required.map(nameOf).join(', ')}, ` +
+    'with matching code blocks and heading ids',
+];
+if (partialCodes.length)
+  summary.push(
+    `${partialCodes.map(nameOf).join(', ')} ${partialCodes.length === 1 ? 'is' : 'are'} partial and checked page by page`
+  );
+if (registry.disabled.length)
+  summary.push(`${registry.disabled.join(', ')} ${registry.disabled.length === 1 ? 'is' : 'are'} declared but disabled`);
+console.log(`✓ ${summary.join('; ')}.`);

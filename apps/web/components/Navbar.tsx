@@ -16,7 +16,7 @@ import { GitHubIcon } from "@/components/icons";
 import ThemeToggle from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
 import type { Dictionary } from "@/lib/i18n/dictionary";
-import { LOCALES, LOCALE_NAMES, localePath, type Locale } from "@/lib/i18n/config";
+import { LOCALES, localeName, localePath, type Locale } from "@/lib/i18n/config";
 import { switchLocale, switchLocalePath } from "@/lib/i18n/switch";
 import { withBasePath } from "@/lib/base-path";
 import { GITHUB_URL, MENU_KEYS, menus, type MenuIcon, type MenuKey } from "@/lib/nav-menu";
@@ -74,7 +74,7 @@ function LanguageMenu({ lang, label }: { lang: Locale; label: string }) {
         )}
       >
         <span className="font-mono uppercase">{target}</span>
-        <span>{LOCALE_NAMES[target]}</span>
+        <span>{localeName(target, lang)}</span>
         {current && <Check className="size-3.5 shrink-0 text-primary" />}
       </Link>
     );

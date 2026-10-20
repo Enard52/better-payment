@@ -85,7 +85,7 @@ const index = [
   "",
 ];
 for (const lang of registry.codes) {
-  index.push(`## ${registry.settings[lang].name} documentation`, "");
+  index.push(`## ${registry.settings[lang].nativeName} documentation`, "");
   for (const page of pages.filter((p) => p.lang === lang)) {
     const path = `llms/${lang}/${page.slug || "index"}.md`;
     await mkdir(resolve(output, path, ".."), { recursive: true });

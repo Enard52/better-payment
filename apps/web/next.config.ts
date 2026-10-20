@@ -2,8 +2,13 @@ import type { NextConfig } from "next";
 import { createMDX } from "fumadocs-mdx/next";
 import locales from "./lib/i18n/locales.json";
 
-/** URL prefixes of the non-default languages ("/", "/tr", …) for the moved-docs redirects */
-const localePrefixes = ["", ...Object.keys(locales.languages).filter((code) => code !== locales.defaultLanguage).map((code) => `/${code}`)];
+/** URL prefixes of the enabled non-default languages ("/", "/tr", …) for the moved-docs redirects */
+const localePrefixes = [
+  "",
+  ...Object.entries(locales.languages)
+    .filter(([code, settings]) => settings.enabled && code !== locales.defaultLanguage)
+    .map(([code]) => `/${code}`),
+];
 
 /** Docs pages that moved when the sidebar was reorganized: old path → new path */
 const movedDocs: Record<string, string> = {

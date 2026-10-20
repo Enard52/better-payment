@@ -5,7 +5,7 @@ import { Card, Cards } from "fumadocs-ui/components/card";
 import DocsCallout from "@/components/docs/DocsCallout";
 import DocsCodeBlock from "@/components/docs/DocsCodeBlock";
 import { Since, type SinceProps } from "@/components/docs/Since";
-import { localePath, type Locale } from "@/lib/i18n/config";
+import { DEFAULT_LOCALE, localePath, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/dictionary";
 import { withBasePath } from "@/lib/base-path";
 

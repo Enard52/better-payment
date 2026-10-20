@@ -348,8 +348,7 @@ const en = {
     builtWith: "Built with Next.js, Tailwind CSS & shadcn/ui",
   },
   docs: {
-    fallbackNotice:
-      "This page has not been translated into English yet, so it is shown in Turkish.",
+    fallbackNotice: "This page has not been translated yet, so the English version is shown.",
     apiReference: "Open the generated API reference",
     betaNotice: {
       title: "You are viewing the beta docs",
@@ -727,8 +726,9 @@ const tr: Dictionary = {
 
 /**
  * A dictionary may list only the keys a language has translated so far; every other key
- * falls back to English. Only the languages with `docs: "required"` in locales.json must
- * be typed as a full `Dictionary` (like `tr` above) so the compiler enforces completeness.
+ * falls back to English. Only the enabled languages with `docs: "required"` in
+ * locales.json must be typed as a full `Dictionary` (like `tr` above) so the compiler
+ * enforces completeness.
  */
 type DeepPartial<T> = T extends readonly unknown[]
   ? T
@@ -739,21 +739,9 @@ type DeepPartial<T> = T extends readonly unknown[]
 /** Locale code -> partial dictionary. A language missing here is served fully in English. */
 export type PartialDictionary = DeepPartial<Dictionary>;
 
-const de: PartialDictionary = {
-  meta: {
-    title: "Better Payment — Einheitliches Zahlungs-Gateway für Node.js",
-    description:
-      "Eine typsichere, einheitliche Zahlungs-Bibliothek für Node.js und Edge-Runtimes.",
-  },
-  docs: {
-    fallbackNotice:
-      "Diese Seite wurde noch nicht ins Deutsche übersetzt; sie wird auf Englisch angezeigt.",
-  },
-};
-
-const translations: Partial<Record<Locale, DeepPartial<Dictionary>>> = {
+/** Enabled languages with their own copy. A language may be added per key, not all at once. */
+const translations: Partial<Record<Locale, PartialDictionary>> = {
   tr,
-  de,
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {

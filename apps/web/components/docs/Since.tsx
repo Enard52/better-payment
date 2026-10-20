@@ -1,5 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
-import { localeText } from "@/lib/i18n/config";
+import { DEFAULT_LOCALE, localeText, type Locale } from "@/lib/i18n/config";
 import { releaseStatus, type ReleaseStatus } from "@/lib/release";
 
 export interface SinceProps {
@@ -29,7 +28,7 @@ const STYLES: Record<ReleaseStatus, string> = {
   unreleased: "border-warning/30 bg-warning-soft text-warning",
 };
 
-export function Since({ version, lang = "en" }: SinceProps) {
+export function Since({ version, lang = DEFAULT_LOCALE }: SinceProps) {
   const status = releaseStatus(version);
 
   return (

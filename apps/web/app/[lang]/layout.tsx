@@ -73,7 +73,7 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[la
   return (
     <html
       lang={lang}
-      // dir comes from the registry (locales.json `rtl`); mirroring the layouts for RTL is a follow-up
+      // Text direction comes from the registry (locales.json `dir`); mirroring the layouts for RTL is a follow-up
       dir={isRtl(lang) ? "rtl" : "ltr"}
       className={`${manrope.variable} ${inter.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning

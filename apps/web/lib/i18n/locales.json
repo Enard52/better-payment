@@ -1,19 +1,71 @@
 {
   "$comment": [
-    "Single source of truth for the website's languages. To add a language:",
-    "1. add one entry here (key = locale code used in URLs and file names, e.g. intro.de.mdx);",
-    "2. add an optional partial dictionary in lib/i18n/dictionary.ts (missing keys fall back to English);",
-    "3. translate docs pages as <path>.<code>.mdx. With docs: \"optional\" a language may start with zero pages:",
-    "   untranslated pages fall back to English with a notice. Set docs: \"required\" only when every page must exist.",
-    "ogLocale is the Open Graph tag (en_US), intlLocale is the BCP 47 tag used for dates (en-US),",
-    "rtl marks right-to-left scripts and sets dir=\"rtl\" on <html> (layout mirroring for RTL is tracked separately),",
-    "contribGuide is true only when this repo has a CONTRIBUTING.<code>.md for the language;",
-    "without it the homepage contribution button links to the English guide."
+    "Single source of truth for the website's languages. URLs, redirects, the navbar switcher,",
+    "sitemap and hreflang alternates, metadata, the docs sidebar fallback and the translation",
+    "checks all derive from this file. scripts/locales.mjs validates every entry.",
+    "To add a language: add one entry here, then follow TRANSLATIONS.md → Adding a language.",
+    "  code: must equal the key; used in URLs (/de/...) and content file names (intro.de.mdx).",
+    "  names.en / names.tr: how the switcher labels this language in the English and Turkish UIs.",
+    "  nativeName: the language's own name (docs UI, llms.txt).",
+    "  dir: ltr or rtl. rtl sets dir=\"rtl\" on <html>; mirroring the layouts is a follow-up.",
+    "  enabled: false declares a prepared language without routing or listing it. A disabled",
+    "    language may not have content files yet; enable it when its translation lands (#112-#114).",
+    "  docs: required = every page must exist; optional = missing pages fall back to English.",
+    "  contribGuide: true only for a translated CONTRIBUTING.<code>.md; socialImage overrides",
+    "    the default og-<code>.png preview."
   ],
   "defaultLanguage": "en",
   "languages": {
-    "en": { "name": "English", "ogLocale": "en_US", "intlLocale": "en-US", "rtl": false, "docs": "required" },
-    "tr": { "name": "Türkçe", "ogLocale": "tr_TR", "intlLocale": "tr-TR", "rtl": false, "docs": "required", "contribGuide": true },
-    "de": { "name": "Deutsch", "ogLocale": "de_DE", "intlLocale": "de-DE", "rtl": false, "docs": "optional" }
+    "en": {
+      "code": "en",
+      "names": { "en": "English", "tr": "İngilizce" },
+      "nativeName": "English",
+      "dir": "ltr",
+      "enabled": true,
+      "ogLocale": "en_US",
+      "intlLocale": "en-US",
+      "docs": "required"
+    },
+    "tr": {
+      "code": "tr",
+      "names": { "en": "Turkish", "tr": "Türkçe" },
+      "nativeName": "Türkçe",
+      "dir": "ltr",
+      "enabled": true,
+      "ogLocale": "tr_TR",
+      "intlLocale": "tr-TR",
+      "docs": "required",
+      "contribGuide": true
+    },
+    "de": {
+      "code": "de",
+      "names": { "en": "German", "tr": "Almanca" },
+      "nativeName": "Deutsch",
+      "dir": "ltr",
+      "enabled": false,
+      "ogLocale": "de_DE",
+      "intlLocale": "de-DE",
+      "docs": "optional"
+    },
+    "ru": {
+      "code": "ru",
+      "names": { "en": "Russian", "tr": "Rusça" },
+      "nativeName": "Русский",
+      "dir": "ltr",
+      "enabled": false,
+      "ogLocale": "ru_RU",
+      "intlLocale": "ru-RU",
+      "docs": "optional"
+    },
+    "ar": {
+      "code": "ar",
+      "names": { "en": "Arabic", "tr": "Arapça" },
+      "nativeName": "العربية",
+      "dir": "rtl",
+      "enabled": false,
+      "ogLocale": "ar_SA",
+      "intlLocale": "ar-SA",
+      "docs": "optional"
+    }
   }
 }

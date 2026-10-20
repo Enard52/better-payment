@@ -1,7 +1,9 @@
 # Docs translations / Doküman çevirileri
 
 The website and docs are published in English (default, `/docs/...`) and Turkish (`/tr/docs/...`).
-More languages are supported: everything the site knows about languages comes from one registry file, `lib/i18n/locales.json`. URLs, redirects, the navbar language menu, the sitemap, hreflang alternates, the generated docs and the CI checks are all derived from it.
+More languages are supported: everything the site knows about languages comes from one registry file, `lib/i18n/locales.json`. URLs, redirects, the navbar language menu, the sitemap, hreflang alternates, metadata, the docs sidebar fallback, the generated docs and the CI checks are all derived from it.
+
+German, Russian and Arabic are already declared in the registry with `enabled: false` (see the translation issues #112-#114). They are not routed, listed or checked until their content lands; enabling one is a one-line change plus translated pages.
 
 ## Files
 
@@ -17,16 +19,20 @@ More languages are supported: everything the site knows about languages comes fr
 
 Adding a language is a config change, not a code change:
 
-1. **`lib/i18n/locales.json`** — add one entry under `languages`, keyed by the locale code used in URLs and file names (`"de": { … }`):
-   - `name`: the language's own name (`"Deutsch"`); it feeds the navbar switcher and the generated `llms.txt`.
+1. **`lib/i18n/locales.json`** — add one entry under `languages`, keyed by the locale code used in URLs and file names (`"de": { … }`), validated by `scripts/locales.mjs`:
+   - `code`: must equal the key (`"de"`).
+   - `names`: how the navbar switcher labels the language in the English and Turkish UIs, e.g. `{ "en": "German", "tr": "Almanca" }`.
+   - `nativeName`: the language's own name (`"Deutsch"`); it feeds the docs UI and the generated `llms.txt`.
+   - `dir`: `"ltr"` or `"rtl"`. `"rtl"` sets `dir="rtl"` on `<html>`; mirroring the homepage and docs layouts is a follow-up. Code blocks stay LTR.
+   - `enabled`: `true` to route, list and check the language. A prepared language stays `false` until its content lands — a disabled language must not have content files yet.
    - `ogLocale`: the Open Graph tag (`"de_DE"`); `intlLocale`: the BCP 47 tag used for dates (`"de-DE"`).
-   - `rtl`: `true` for right-to-left scripts (Arabic). It sets `dir="rtl"` on `<html>`; docs are written LTR regardless. Mirroring the homepage and docs layouts for RTL is a separate follow-up.
-   - `docs`: `"required"` means every page must have a translation (Turkish today). `"optional"` — the usual choice to start — lets a language ship with zero or a few pages: untranslated pages fall back to English with the existing notice, and the pages that do exist are checked just as strictly.
+   - `docs`: `"required"` means every page must have a translation (English and Turkish today). `"optional"` — the usual choice to start — lets a language ship with zero or a few pages: untranslated pages fall back to English with the existing notice, and the pages that do exist are checked just as strictly.
+   - Optional: `contribGuide: true` when a `CONTRIBUTING.<code>.md` exists, and `socialImage` to reuse another language's preview (`"og-en.png"`).
 2. **`lib/i18n/dictionary.ts`** — add a partial dictionary and register it in `translations`. Keys you omit fall back to English per key, so you can translate the homepage later. Always provide `docs.fallbackNotice` (readers of a not-yet-translated page see it) and the `meta` block (page titles and descriptions).
-3. **Translate pages** as `content/docs/<path>.<code>.mdx` (plus `meta.<code>.json`), one directory at a time. Progress per language is printed by `node scripts/check-translations.mjs` (`de: 12/38 pages`).
+3. **Translate pages** as `content/docs/<path>.<code>.mdx` (plus `meta.<code>.json`), one directory at a time. Progress per language is printed by `node scripts/check-translations.mjs` (`de: 12/38 pages`). Sidebar titles and order fall back to the English `meta.json` until a `meta.<code>.json` exists.
 4. Optional: docs UI labels (search, "On this page", …) in `lib/i18n/ui.ts`; languages without entries keep fumadocs' English defaults.
 
-No other file has to change. Flip `docs` to `"required"` when the language is fully translated; CI then enforces page parity like it does for Turkish.
+No other file has to change. Flip `enabled` to `true` when the language should go live, and `docs` to `"required"` once it is complete; CI then enforces page parity like it does for Turkish. A language configured as `docs: "required"` fails `check-translations.mjs` with a per-language missing-page summary.
 
 ## Rules
 
@@ -40,6 +46,7 @@ No other file has to change. Flip `docs` to `"required"` when the language is fu
 cd apps/web
 node scripts/check-translations.mjs        # what CI runs
 node scripts/check-translations.mjs --fix  # add/fix heading ids
+corepack pnpm docs:test                    # MDX conversion and registry tests
 ```
 
 ## Glossary / Terimler

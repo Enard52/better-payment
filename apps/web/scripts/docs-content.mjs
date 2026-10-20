@@ -138,11 +138,18 @@ export async function collectPages(root, origin) {
     ).flat();
   }
   const files = (await walk(root)).filter((file) => file.endsWith('.mdx')).sort();
+  const disabled = new Set(registry.disabled);
   const seen = new Set();
   return Promise.all(
     files.map(async (file) => {
+      const relativeFile = relative(root, file);
+      const suffix = /\.([a-z0-9-]+)\.mdx$/.exec(relativeFile.replaceAll('\\', '/'))?.[1];
+      if (suffix && disabled.has(suffix))
+        throw new Error(
+          `${relativeFile}: "${suffix}" is disabled in locales.json; enable it before adding translations`
+        );
       const { data, content } = matter(await readFile(file, 'utf8'));
-      const page = pageRoute(relative(root, file));
+      const page = pageRoute(relativeFile);
       if (seen.has(page.route)) throw new Error(`Duplicate docs route: ${page.route}`);
       seen.add(page.route);
       if (typeof data.title !== 'string') throw new Error(`Missing title: ${file}`);
