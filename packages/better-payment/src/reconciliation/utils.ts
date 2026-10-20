@@ -1,5 +1,5 @@
 import { BetterPaymentError, toBase64, hmac } from 'better-payment';
-import type { ReconciliationFieldCandidates } from './types';
+import type { ReconciliationFieldCandidates } from '../types/reconciliation';
 
 /**
  * Error raised by reconciliation sources. The message never contains response
@@ -37,7 +37,10 @@ export function isIsoDate(value: unknown): value is string {
 
 export function assertIsoDate(value: string, field: string): string {
   if (!isIsoDate(value)) {
-    throw new ReconciliationError(`Invalid ${field} '${value}': expected YYYY-MM-DD`, 'reconciliation');
+    throw new ReconciliationError(
+      `Invalid ${field} '${value}': expected YYYY-MM-DD`,
+      'reconciliation'
+    );
   }
   return value;
 }
@@ -111,7 +114,7 @@ export function normalizeDate(value: unknown, fallback?: string): string | undef
   // Day first with dots (Turkish): 19.10.2026[ ...]
   m = /^(\d{2})\.(\d{2})\.(\d{4})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/.exec(raw);
   if (m) {
-    const date = `${m[3]}-${m[1]}-${m[2]}`;
+    const date = `${m[3]}-${m[2]}-${m[1]}`;
     return m[4] ? `${date}T${m[4]}:${m[5]}:${m[6] ?? '00'}` : date;
   }
 
@@ -135,10 +138,7 @@ export function assertQueryRange(
   assertIsoDate(to, 'to');
   const days = isoDaysBetween(from, to);
   if (days < 0) {
-    throw new ReconciliationError(
-      `Invalid range: from ${from} is after to ${to}`,
-      provider
-    );
+    throw new ReconciliationError(`Invalid range: from ${from} is after to ${to}`, provider);
   }
   if (days + 1 > maxDays) {
     throw new ReconciliationError(
@@ -199,10 +199,7 @@ const CURRENCY_BY_NUMERIC_CODE: Record<string, string> = {
   '360': 'IDR',
 };
 
-export function normalizeCurrency(
-  value: unknown,
-  fallback = 'TRY'
-): string {
+export function normalizeCurrency(value: unknown, fallback = 'TRY'): string {
   if (typeof value === 'number' && Number.isFinite(value)) value = String(value);
   if (typeof value !== 'string') return fallback;
   const raw = value.trim().toUpperCase();
@@ -213,16 +210,13 @@ export function normalizeCurrency(
   return /^[A-Z]{3}$/.test(raw) ? raw : fallback;
 }
 
-export function currencyDecimals(
-  currency: string,
-  overrides?: Record<string, number>
-): number {
+export function currencyDecimals(currency: string, overrides?: Record<string, number>): number {
   const value = overrides?.[currency] ?? DEFAULT_CURRENCY_DECIMALS[currency] ?? 2;
   return Number.isInteger(value) && value >= 0 && value <= 4 ? value : 2;
 }
 
 function expandExponential(s: string): string | undefined {
-  const m = /^(-?)(\d+)(?:\.(\d+))?e([+-]\d+)$/i.exec(s);
+  const m = /^(-?)(\d+)(?:\.(\d+))?e([+-]?\d+)$/i.exec(s);
   if (!m) return undefined;
   const [, sign, int, frac = '', expRaw] = m;
   const digits = int + frac;
@@ -306,7 +300,9 @@ export function normalizeAmountString(
   const parsed = parseDecimalLike(value);
   if (parsed === undefined) return undefined;
   const minor = decimalToMinor(parsed, currencyDecimals(currency, overrides));
-  return minor === undefined ? undefined : minorToDecimal(minor, currencyDecimals(currency, overrides));
+  return minor === undefined
+    ? undefined
+    : minorToDecimal(minor, currencyDecimals(currency, overrides));
 }
 
 /** Add two decimal strings in the same currency (integer math). */

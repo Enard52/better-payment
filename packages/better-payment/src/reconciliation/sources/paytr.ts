@@ -19,29 +19,29 @@ import type {
   ReconciliationSource,
   ReconciliationSourceOptions,
   ReconciledTransaction,
-} from '../types';
+} from '../../types/reconciliation';
 
 /**
- * PayTR daily transaction list via the resmi İşlem Dökümü report.
+ * PayTR daily transaction list via the official İşlem Dökümü report.
  *
- * Official documentation:
- * - Endpoint, parameters and response fields: https://dev.paytr.com/en/islem-dokumu
- *   (POST https://www.paytr.com/rapor/islem-dokumu, form fields merchant_id,
- *   start_date, end_date, paytr_token; at most 3 days per request)
- * - Token formula verified against PayTR's official Postman collection
- *   (https://github.com/paytr/paytr-postman, "İşlem Dökümü" pre-request script):
- *   paytr_token = base64(HMAC-SHA256(merchant_id + start_date + end_date +
- *   merchant_salt, merchant_key))
+ * Official documentation: https://dev.paytr.com/en/islem-dokumu
+ * - POST https://www.paytr.com/rapor/islem-dokumu, form fields merchant_id,
+ *   start_date, end_date, paytr_token; at most 3 days per request.
+ * - Token formula from the same page's sample code and PayTR's official Postman
+ *   collection (https://github.com/paytr/paytr-postman, "İşlem Dökümü"
+ *   pre-request script): base64(HMAC-SHA256(merchant_id + start_date +
+ *   end_date + merchant_salt, merchant_key)).
+ * - Row fields: islem_tipi (S = sale, I = return), net_tutar, kesinti_tutari,
+ *   kesinti_orani, islem_tutari, odeme_tutari, islem_tarihi, para_birimi,
+ *   taksit, kart_marka, kart_no, siparis_no, odeme_tipi.
+ * - `status` is `success`, `failed` (no transaction in the range) or `error`
+ *   (check `err_msg`). The page does not show a JSON sample, so the rows array
+ *   is read from `data`, `transactions` or the top-level array.
  *
- * Not verifiable without a PayTR sandbox report account (the issue's provider
- * credentials are payment keys; the report shares them, but no test merchant
- * exists): the documented response row fields are
- * islem_tipi / islem_tutari / odeme_tutari / kesinti_tutari / islem_tarihi /
- * para_birimi / siparis_no, and the docs do not show a wrapper object or a
- * unique transaction id per row. Rows are therefore read through configurable
- * `fields`, the rows array is looked up at `data` (or the top-level array), and
- * the transaction id falls back to a deterministic composite of the documented
- * row fields.
+ * The rows carry no unique transaction id, so the id is a deterministic
+ * composite of the documented fields; the same row delivered by two overlapping
+ * windows therefore deduplicates. Without sandbox report credentials this has
+ * not been verified against a live PayTR account.
  */
 export interface PayTRReconciliationConfig extends ReconciliationSourceOptions {
   merchantId: string;
@@ -65,15 +65,18 @@ const DEFAULT_FIELDS: ReconciliationFieldCandidates = {
 function mapPayTRType(value: string | undefined): ReconciledTransaction['type'] {
   if (value === undefined) return 'sale';
   const v = foldTurkish(value);
-  if (v.includes('iade')) return 'refund';
+  // The report's own values are S (sales) and I (returns); the word forms are
+  // accepted too, for accounts whose row labels differ.
+  if (v === 'i' || v.includes('iade')) return 'refund';
+  if (v === 's' || v.includes('sat') || v.includes('odeme') || v.includes('payment')) return 'sale';
   if (v.includes('iptal')) return 'void';
-  if (v.includes('sat') || v.includes('odeme') || v.includes('payment')) return 'sale';
   return 'other';
 }
 
 function rowsOf(body: unknown): unknown[] {
   const root = fieldsOf(body);
   if (Array.isArray(root.data)) return root.data;
+  if (Array.isArray(root.transactions)) return root.transactions;
   if (Array.isArray(body)) return body as unknown[];
   return [];
 }
@@ -100,9 +103,7 @@ export function paytrReconciliation(config: PayTRReconciliationConfig): Reconcil
     retry: config.retry,
   });
 
-  const listTransactions = async (
-    query: ReconciliationQuery
-  ): Promise<ReconciledTransaction[]> => {
+  const listTransactions = async (query: ReconciliationQuery): Promise<ReconciledTransaction[]> => {
     const { from, to } = assertQueryRange(query, 'paytr');
     const out: ReconciledTransaction[] = [];
     const seen = new Set<string>();
@@ -134,7 +135,12 @@ export function paytrReconciliation(config: PayTRReconciliationConfig): Reconcil
       }
 
       const root = fieldsOf(body);
-      if (root.status !== undefined && root.status !== 'success') {
+      const reportStatus = pickString(root, ['status']);
+      if (reportStatus === 'failed') {
+        // Documented: "no transaction in the given date range". Not an error.
+        continue;
+      }
+      if (reportStatus !== undefined && reportStatus !== 'success') {
         // Only error codes travel into the message: bodies carry order data.
         throw new ReconciliationError(
           `PayTR report failed (${pickString(root, ['err_no', 'error_code']) ?? 'unknown error'})`,
@@ -146,17 +152,26 @@ export function paytrReconciliation(config: PayTRReconciliationConfig): Reconcil
         const row = fieldsOf(rawRow);
         const orderId = pickString(row, fields.orderId);
         const currency = normalizeCurrency(pickString(row, fields.currency));
-        const amount = normalizeAmountString(pickRaw(row, fields.amount), currency, config.currencyDecimals);
+        const amount = normalizeAmountString(
+          pickRaw(row, fields.amount),
+          currency,
+          config.currencyDecimals
+        );
         if (amount === undefined) continue; // a row without an amount cannot be reconciled
-        const fee = normalizeAmountString(pickRaw(row, fields.fee), currency, config.currencyDecimals);
+        const fee = normalizeAmountString(
+          pickRaw(row, fields.fee),
+          currency,
+          config.currencyDecimals
+        );
         const type = mapPayTRType(pickString(row, fields.type));
         const statusField = pickString(row, fields.status);
         const foldedStatus = statusField === undefined ? undefined : foldTurkish(statusField);
         const status: ReconciledTransaction['status'] =
           foldedStatus === undefined
-            ? // The İşlem Dökümü lists processed sales and refunds; without a
-              // status column the row is reported as unconfirmed on purpose.
-              'unknown'
+            ? // The İşlem Dökümü lists the sales and returns that were made (with
+              // their deduction), so a row is the provider's confirmation. Failed
+              // attempts never get a row.
+              'success'
             : /basarisiz|hata|fail/i.test(foldedStatus)
               ? 'failure'
               : /basarili|success|odendi/i.test(foldedStatus)

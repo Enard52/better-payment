@@ -7,6 +7,7 @@ import {
   normalizeCurrency,
 } from './utils';
 import type {
+  ReconcileOptions,
   ReconcilableOrder,
   ReconciledTransaction,
   ReconciliationAmbiguous,
@@ -15,12 +16,7 @@ import type {
   ReconciliationReport,
   ReconciliationQuery,
   ReconciliationTotals,
-} from './types';
-
-export interface ReconcileOptions {
-  /** Minor units per currency, merged over the built-in table. */
-  currencyDecimals?: Record<string, number>;
-}
+} from '../types/reconciliation';
 
 /** Types that represent money movement against an order. */
 const ORDER_TYPES: ReadonlySet<string> = new Set(['sale', 'refund', 'void']);
@@ -104,7 +100,8 @@ function classifyOrder(
   const sameMoney = (row: ReconciledTransaction): boolean =>
     row.currency === currency &&
     orderMinor !== undefined &&
-    orderMinor === decimalToMinor(row.amount, currencyDecimals(row.currency, options.currencyDecimals));
+    orderMinor ===
+      decimalToMinor(row.amount, currencyDecimals(row.currency, options.currencyDecimals));
 
   if (successSales.length > 1 || (successSales.length === 0 && unknownSales.length > 1)) {
     // Several candidate sales for one order id: a possible double charge or a
@@ -139,7 +136,9 @@ function classifyOrder(
       if (order.status === 'refunded') {
         const refundMinor = refundRows.reduce(
           (sum, t) =>
-            sum + (decimalToMinor(t.amount, currencyDecimals(t.currency, options.currencyDecimals)) ?? 0n),
+            sum +
+            (decimalToMinor(t.amount, currencyDecimals(t.currency, options.currencyDecimals)) ??
+              0n),
           0n
         );
         if ((orderMinor ?? 0n) > refundMinor) {
@@ -212,7 +211,9 @@ export function reconcile(
       throw new ValidationError('reconcile: every order needs a non-empty orderId');
     }
     if (orderIndex.has(order.orderId)) {
-      throw new ValidationError(`reconcile: duplicate order id '${order.orderId}' in the order list`);
+      throw new ValidationError(
+        `reconcile: duplicate order id '${order.orderId}' in the order list`
+      );
     }
     orderIndex.set(order.orderId, order);
   }
@@ -246,22 +247,24 @@ export function reconcile(
   const totals: Record<string, ReconciliationTotals> = {};
   for (const tx of unique) {
     const currency = tx.currency;
-    const entry = (totals[currency] ??= { sales: '0', refunds: '0', fees: '0', transactionCount: 0 });
+    const entry = (totals[currency] ??= {
+      sales: '0',
+      refunds: '0',
+      fees: '0',
+      transactionCount: 0,
+    });
     entry.transactionCount += 1;
-    if (tx.type === 'sale') entry.sales = addAmounts(entry.sales, tx.amount, currency, options.currencyDecimals);
-    if (tx.type === 'refund') entry.refunds = addAmounts(entry.refunds, tx.amount, currency, options.currencyDecimals);
-    if (tx.fee !== undefined) entry.fees = addAmounts(entry.fees, tx.fee, currency, options.currencyDecimals);
+    if (tx.type === 'sale')
+      entry.sales = addAmounts(entry.sales, tx.amount, currency, options.currencyDecimals);
+    if (tx.type === 'refund')
+      entry.refunds = addAmounts(entry.refunds, tx.amount, currency, options.currencyDecimals);
+    if (tx.fee !== undefined)
+      entry.fees = addAmounts(entry.fees, tx.fee, currency, options.currencyDecimals);
   }
   for (const [currency, entry] of Object.entries(totals)) {
     const decimals = currencyDecimals(currency, options.currencyDecimals);
-    entry.sales = minorToDecimal(
-      decimalToMinor(entry.sales, decimals) ?? 0n,
-      decimals
-    );
-    entry.refunds = minorToDecimal(
-      decimalToMinor(entry.refunds, decimals) ?? 0n,
-      decimals
-    );
+    entry.sales = minorToDecimal(decimalToMinor(entry.sales, decimals) ?? 0n, decimals);
+    entry.refunds = minorToDecimal(decimalToMinor(entry.refunds, decimals) ?? 0n, decimals);
     entry.fees = minorToDecimal(decimalToMinor(entry.fees, decimals) ?? 0n, decimals);
   }
 

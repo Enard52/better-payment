@@ -1,18 +1,13 @@
 import { ProviderNotEnabledError, ValidationError } from 'better-payment';
 import { dedupeTransactions, reconcile } from './reconcile';
-import type { ReconcileOptions } from './reconcile';
 import type {
+  ReconcileOptions,
   ReconcilableOrder,
   ReconciledTransaction,
-  ReconciliationQuery,
+  ReconciliationListRequest,
   ReconciliationReport,
   ReconciliationSource,
-} from './types';
-
-export interface ReconciliationListQuery extends ReconciliationQuery {
-  /** Only ask this provider; every configured source when omitted. */
-  provider?: string;
-}
+} from '../types/reconciliation';
 
 /**
  * The facade over a set of configured sources: one `listTransactions` for all
@@ -22,10 +17,10 @@ export interface ReconciliationListQuery extends ReconciliationQuery {
  */
 export interface Reconciliation {
   readonly sources: readonly ReconciliationSource[];
-  listTransactions(query: ReconciliationListQuery): Promise<ReconciledTransaction[]>;
+  listTransactions(query: ReconciliationListRequest): Promise<ReconciledTransaction[]>;
   reconcile(
     orders: readonly ReconcilableOrder[],
-    query: ReconciliationListQuery,
+    query: ReconciliationListRequest,
     options?: ReconcileOptions
   ): Promise<ReconciliationReport>;
 }
@@ -49,7 +44,7 @@ export function createReconciliation(options: CreateReconciliationOptions): Reco
   }
 
   const listTransactions = async (
-    query: ReconciliationListQuery
+    query: ReconciliationListRequest
   ): Promise<ReconciledTransaction[]> => {
     const selected = query.provider ? [byId.get(query.provider)] : sources;
     if (selected.some((source) => !source)) {

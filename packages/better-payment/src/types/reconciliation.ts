@@ -1,4 +1,4 @@
-import type { RetryConfig } from 'better-payment';
+import type { RetryConfig } from '../core/retry';
 
 /**
  * A transaction as the provider's daily list reports it, normalized into one
@@ -45,6 +45,29 @@ export type ReconciliationTransactionStatus = 'success' | 'failure' | 'pending' 
 export interface ReconciliationQuery {
   from: string;
   to: string;
+}
+
+/** Request of `listTransactions()` / `payment.listTransactions()`. */
+export interface ReconciliationListRequest extends ReconciliationQuery {
+  /**
+   * Only ask this source. When omitted, a call on the payment object asks every
+   * configured source and a call on a provider asks only that provider.
+   */
+  provider?: string;
+}
+
+/** Request of `reconcile()` / `payment.reconcile()`. */
+export interface ReconciliationRunRequest extends ReconciliationListRequest {
+  /** The merchant's own orders for the period */
+  orders: readonly ReconcilableOrder[];
+  /** Minor units per currency, merged over the built-in table */
+  options?: ReconcileOptions;
+}
+
+/** Options of `reconcile`. */
+export interface ReconcileOptions {
+  /** Minor units per currency, merged over the built-in table. */
+  currencyDecimals?: Record<string, number>;
 }
 
 /** A provider's daily transaction list, normalized. Read-only by contract. */
@@ -96,12 +119,7 @@ export interface ReconcilableOrder {
   status: ReconciliationOrderStatus;
 }
 
-export type ReconciliationOrderStatus =
-  | 'success'
-  | 'refunded'
-  | 'cancelled'
-  | 'pending'
-  | 'failed';
+export type ReconciliationOrderStatus = 'success' | 'refunded' | 'cancelled' | 'pending' | 'failed';
 
 export interface ReconciliationMatch {
   orderId: string;

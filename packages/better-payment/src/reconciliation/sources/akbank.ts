@@ -26,7 +26,7 @@ import type {
   ReconciliationSource,
   ReconciliationSourceOptions,
   ReconciledTransaction,
-} from '../types';
+} from '../../types/reconciliation';
 
 /**
  * Akbank Sanal POS daily transaction history via txnCode 1009.
@@ -202,9 +202,7 @@ export function akbankReconciliation(config: AkbankReconciliationConfig): Reconc
     }
   }
 
-  const listTransactions = async (
-    query: ReconciliationQuery
-  ): Promise<ReconciledTransaction[]> => {
+  const listTransactions = async (query: ReconciliationQuery): Promise<ReconciledTransaction[]> => {
     const { from, to } = assertQueryRange(query, 'akbank');
     const out: ReconciledTransaction[] = [];
     const seen = new Set<string>();
@@ -222,7 +220,11 @@ export function akbankReconciliation(config: AkbankReconciliationConfig): Reconc
           config.currencyDecimals
         );
         if (amount === undefined) continue;
-        const fee = normalizeAmountString(pickRaw(row, fields.fee), currency, config.currencyDecimals);
+        const fee = normalizeAmountString(
+          pickRaw(row, fields.fee),
+          currency,
+          config.currencyDecimals
+        );
         const orderId = pickString(row, fields.orderId);
         const txnCode = pickString(row, fields.type);
         const mapped = txnCode === undefined ? undefined : TYPE_BY_TXN_CODE[txnCode];

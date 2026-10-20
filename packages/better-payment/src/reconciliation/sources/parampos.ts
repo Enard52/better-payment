@@ -23,7 +23,7 @@ import type {
   ReconciliationSource,
   ReconciliationSourceOptions,
   ReconciledTransaction,
-} from '../types';
+} from '../../types/reconciliation';
 
 /**
  * Param (TurkPOS) daily transactions via the TP_Islem_Izleme SOAP operation.
@@ -68,7 +68,7 @@ const DEFAULT_FIELDS: ReconciliationFieldCandidates = {
   currency: ['PB', 'Currency'],
   date: ['Tarih', 'Islem_Tarih'],
   type: ['Tip_Str'],
-  status: ['Sonuc', 'Islem_Durum'],
+  status: ['Sonuc_Str', 'Sonuc', 'Islem_Durum'],
 };
 
 function mapParamType(value: string | undefined): ReconciledTransaction['type'] {
@@ -119,9 +119,7 @@ export function paramposReconciliation(config: ParamposReconciliationConfig): Re
     retry: config.retry,
   });
 
-  const listTransactions = async (
-    query: ReconciliationQuery
-  ): Promise<ReconciledTransaction[]> => {
+  const listTransactions = async (query: ReconciliationQuery): Promise<ReconciledTransaction[]> => {
     const { from, to } = assertQueryRange(query, 'parampos');
 
     const requestFields: Record<string, XmlValue> = {
@@ -139,11 +137,15 @@ export function paramposReconciliation(config: ParamposReconciliationConfig): Re
 
     let xml: string;
     try {
-      const response = await client.post('', buildParamposSoapEnvelope('TP_Islem_Izleme', requestFields), {
-        headers: { SOAPAction: 'https://turkpos.com.tr/TP_Islem_Izleme' },
-        retryable: true,
-        responseType: 'text',
-      });
+      const response = await client.post(
+        '',
+        buildParamposSoapEnvelope('TP_Islem_Izleme', requestFields),
+        {
+          headers: { SOAPAction: 'https://turkpos.com.tr/TP_Islem_Izleme' },
+          retryable: true,
+          responseType: 'text',
+        }
+      );
       xml = String(response.data);
     } catch (error) {
       throw new ReconciliationError('Param transaction list request failed', 'parampos', {
@@ -155,9 +157,13 @@ export function paramposReconciliation(config: ParamposReconciliationConfig): Re
     try {
       result = parseParamposSoapResponse<Record<string, string>>(xml, 'TP_Islem_IzlemeResult');
     } catch (error) {
-      throw new ReconciliationError('Param returned an unusable TP_Islem_Izleme response', 'parampos', {
-        cause: error,
-      });
+      throw new ReconciliationError(
+        'Param returned an unusable TP_Islem_Izleme response',
+        'parampos',
+        {
+          cause: error,
+        }
+      );
     }
     // Param's result codes: > 0 means success (same rule the provider uses).
     // Note: the flat parse keeps the first `Sonuc` occurrence, which is a row
@@ -180,7 +186,11 @@ export function paramposReconciliation(config: ParamposReconciliationConfig): Re
         config.currencyDecimals
       );
       if (amount === undefined) continue;
-      const fee = normalizeAmountString(pickRaw(row, fields.fee), currency, config.currencyDecimals);
+      const fee = normalizeAmountString(
+        pickRaw(row, fields.fee),
+        currency,
+        config.currencyDecimals
+      );
       const orderId = pickString(row, fields.orderId);
       const transactionId =
         pickString(row, fields.transactionId) ?? `param|${orderId ?? ''}|${index}`;
