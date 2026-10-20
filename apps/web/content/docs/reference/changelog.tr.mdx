@@ -90,7 +90,7 @@ Sepet yardımcısı, Arapça hata mesajları ve iyzico'da `paymentId` ile iade. 
 ### Eklenenler [#added-6]
 
 - **[`buildBasket()`](/docs/payments/basket):** indirimleri ve kargoyu sepet kalemlerine dağıtır; kalemlerin toplamı ödeme tutarını kuruşu kuruşuna tutar.
-- **[Hata mesajları için dil desteği](/docs/plugins/localized-errors):** Arapça (`ar`). Handler'da `Accept-Language: ar` Arapça'yı seçer. Katkısı için [@poyrazavsever](https://github.com/poyrazavsever)'e teşekkürler.
+- **[Hata mesajları için dil desteği](/docs/plugins/i18n):** Arapça (`ar`). Handler'da `Accept-Language: ar` Arapça'yı seçer. Katkısı için [@poyrazavsever](https://github.com/poyrazavsever)'e teşekkürler.
 
 ## 0.6.0
 
@@ -102,13 +102,13 @@ Sepet yardımcısı, Arapça hata mesajları ve iyzico'da `paymentId` ile iade. 
 
 ### Eklenenler [#added-8]
 
-- **[Hata mesajları için dil desteği](/docs/plugins/localized-errors):** Rusça (`ru`). Handler'da `Accept-Language: ru-RU` Rusça'yı seçer. Katkısı için [@ius-sharma](https://github.com/ius-sharma)'ya teşekkürler.
+- **[Hata mesajları için dil desteği](/docs/plugins/i18n):** Rusça (`ru`). Handler'da `Accept-Language: ru-RU` Rusça'yı seçer. Katkısı için [@ius-sharma](https://github.com/ius-sharma)'ya teşekkürler.
 
 ## 0.5.1
 
 ### Eklenenler [#added-9]
 
-- **[Hata mesajları için dil desteği](/docs/plugins/localized-errors):** Almanca (`de`). Handler'da `Accept-Language: de-DE` Almanca'yı seçer. Katkısı için [@ius-sharma](https://github.com/ius-sharma)'ya teşekkürler.
+- **[Hata mesajları için dil desteği](/docs/plugins/i18n):** Almanca (`de`). Handler'da `Accept-Language: de-DE` Almanca'yı seçer. Katkısı için [@ius-sharma](https://github.com/ius-sharma)'ya teşekkürler.
 
 ### Değişenler [#changed]
 
@@ -127,7 +127,7 @@ Plugin'ler ve tipli ödeme olayları. **Geriye uyumsuz:** `new BetterPayment()` 
 
 - **[Plugin'ler](/docs/concepts/plugins):** sağlayıcı işlemleri için before/after hook'ları, tipli metotlar, handler endpoint'leri ve hata kodları. [Kendi plugin'inizi](/docs/guides/writing-plugins) birkaç satırda yazın.
 - **[Ödeme olayları](/docs/concepts/events):** her sağlayıcı ve akış için tek bir tipli dinleyici; yalnızca doğrulanmış sonuçlar için yayınlanır.
-- **[Hata mesajları için dil desteği](/docs/plugins/localized-errors):** `better-payment/plugins` altındaki ilk resmi plugin. Müşteriye yönelik İngilizce ve Türkçe mesajlar.
+- **[Hata mesajları için dil desteği](/docs/plugins/i18n):** `better-payment/plugins` altındaki ilk resmi plugin. Müşteriye yönelik İngilizce ve Türkçe mesajlar.
 - `defineProvider()` ile **[özel sağlayıcılar](/docs/guides/custom-providers)** ve imzalama için WebCrypto yardımcıları.
 
 ## 0.4.0
