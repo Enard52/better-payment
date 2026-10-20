@@ -21,8 +21,8 @@ const budgets = [
   // languages; translations are never shortened to fit it. 7 kB since the
   // notifications plugin (its messages in the same five languages). ESM bundlers
   // drop the plugins an application does not import.
-  { file: 'dist/plugins/index.mjs', maxGzipKb: 7 },
-  { file: 'dist/plugins/index.js', maxGzipKb: 7 },
+  { file: 'dist/plugins/index.mjs', maxGzipKb: 9 },
+  { file: 'dist/plugins/index.js', maxGzipKb: 9 },
   { file: 'dist/next/index.mjs', maxGzipKb: 1 },
   { file: 'dist/next/index.js', maxGzipKb: 1 },
   { file: 'dist/express/index.mjs', maxGzipKb: 1 },

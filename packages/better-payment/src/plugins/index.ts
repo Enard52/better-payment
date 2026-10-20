@@ -19,3 +19,4 @@ export {
   type NotificationEvent,
   type NotificationLocale,
 } from './notifications';
+export { openAPI, buildOpenAPISpec, type OpenAPIOptions, type OpenAPISpec } from './openapi';
