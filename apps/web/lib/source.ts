@@ -92,18 +92,24 @@ const EST_BANKS = ["Halkbank", "İş Bankası", "Şekerbank", "TEB", "Ziraat Ban
  * all linking to that page.
  */
 function estBanksPlugin(): LoaderPlugin {
+  // The Banks folder is listed inside Providers, so a parent folder sees the entries again
+  const expanded = new WeakSet<object>();
   return {
     name: "better-payment:est-banks",
     transformPageTree: {
       folder(node) {
         node.children = node.children.flatMap((child) =>
-          child.type === "page" && /\/docs\/banks\/est$/.test(child.url)
-            ? EST_BANKS.map((bank) => ({
-                // String keys only: Fumadocs' internal symbol keys can't reach client components
-                ...Object.fromEntries(Object.entries(child)),
-                $id: `${child.$id}:${bank}`,
-                name: `${bank} (EST)`,
-              }) as typeof child)
+          child.type === "page" && !expanded.has(child) && /\/docs\/banks\/est$/.test(child.url)
+            ? EST_BANKS.map((bank) => {
+                const entry = {
+                  // String keys only: Fumadocs' internal symbol keys can't reach client components
+                  ...Object.fromEntries(Object.entries(child)),
+                  $id: `${child.$id}:${bank}`,
+                  name: `${bank} (EST)`,
+                } as typeof child;
+                expanded.add(entry);
+                return entry;
+              })
             : [child],
         );
         return node;
