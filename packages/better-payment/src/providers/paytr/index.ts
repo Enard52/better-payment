@@ -136,14 +136,20 @@ export class PayTR extends PaymentProvider<PayTRConfig> {
   }
 
   /**
-   * PayTR's marketplace (pazaryeri) sub-merchants and transfers are managed in
-   * the PayTR merchant panel; PayTR documents no public HTTP API for onboarding
-   * sellers or sending them their share, so a split basket cannot be sent.
+   * PayTR has no sub-merchant fields in its payment API: the full amount is
+   * collected by the marketplace, and sellers are paid afterwards through the
+   * Platform Transfer Request API, which needs the seller's IBAN and amount for
+   * every transfer. It also has no public seller-onboarding endpoint, so the
+   * shared split-basket model cannot be honored. See
+   * https://dev.paytr.com/platform-transfer-talebi
    */
   protected marketplaceDetail(): string {
     return (
-      'PayTR manages marketplace sub-merchants and seller transfers in its merchant panel, ' +
-      'with no public HTTP API for them; see issue #88'
+      'PayTR does not accept sub-merchant fields in a payment; the whole amount is collected by ' +
+      'the marketplace, and sellers are paid afterwards with the Platform Transfer Request API ' +
+      '(per-transfer IBAN and amount, https://dev.paytr.com/platform-transfer-talebi). ' +
+      'Seller onboarding is done in the PayTR merchant panel, which does not fit the shared ' +
+      'sub-merchant/payout model'
     );
   }
 

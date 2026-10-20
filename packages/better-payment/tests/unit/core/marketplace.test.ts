@@ -86,6 +86,7 @@ describe('providers without a marketplace API', () => {
 
     expect(result.status).toBe(PaymentStatus.FAILURE);
     expect(result.errorCode).toBe(PaymentErrorCode.NOT_SUPPORTED);
+    expect(result.errorMessage).toContain('Platform Transfer Request');
     expect(result.errorMessage).toContain('merchant panel');
     expect(post).not.toHaveBeenCalled();
   });
