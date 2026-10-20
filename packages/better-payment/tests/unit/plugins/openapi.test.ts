@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { betterPayment, definePlugin } from 'better-payment';
+import { betterPayment, definePlugin, type PluginContext } from 'better-payment';
 import { MockProvider } from 'better-payment/testing';
 import { openAPI, buildOpenAPISpec } from 'better-payment/plugins';
 
@@ -18,24 +18,15 @@ describe('openAPI plugin', () => {
     expect(spec.info.version).toBe('2.0.0');
     expect(spec.info.description).toBe('Payment handler documentation');
 
-    // Core routes present
-    expect(spec.paths['/{provider}/payment'].post).toBeDefined();
-    expect(spec.paths['/{provider}/payment/init-3ds'].post).toBeDefined();
-    expect(spec.paths['/{provider}/payment/complete-3ds'].post).toBeDefined();
-    expect(spec.paths['/{provider}/payment/{paymentId}'].get).toBeDefined();
-    expect(spec.paths['/{provider}/refund'].post).toBeDefined();
-    expect(spec.paths['/{provider}/cancel'].post).toBeDefined();
-    expect(spec.paths['/{provider}/authorize'].post).toBeDefined();
-    expect(spec.paths['/{provider}/capture'].post).toBeDefined();
-    expect(spec.paths['/{provider}/void'].post).toBeDefined();
-    expect(spec.paths['/{provider}/installment'].post).toBeDefined();
-    expect(spec.paths['/{provider}/bin-check'].post).toBeDefined();
-    expect(spec.paths['/{provider}/cards/save'].post).toBeDefined();
-    expect(spec.paths['/health'].get).toBeDefined();
-
-    // Privileged routes have bearerAuth security
-    expect(spec.paths['/{provider}/refund'].post.security).toEqual([{ bearerAuth: [] }]);
-    expect(spec.paths['/{provider}/capture'].post.security).toEqual([{ bearerAuth: [] }]);
+    // Without a handler, the handler defaults are documented
+    expect(spec.servers).toEqual([{ url: '/api/pay' }]);
+    expect(Object.keys(spec.paths).sort()).toEqual([
+      '/health',
+      '/{provider}/bin-check',
+      '/{provider}/callback',
+      '/{provider}/installment',
+      '/{provider}/payment/complete-3ds',
+    ]);
 
     // Components include securitySchemes
     expect(spec.components.securitySchemes.bearerAuth).toBeDefined();
@@ -43,6 +34,7 @@ describe('openAPI plugin', () => {
 
   it('serves Scalar reference HTML and openapi.json through the handler', async () => {
     const payment = betterPayment({
+      mode: 'sandbox',
       providers: { mock: new MockProvider() },
       plugins: [
         openAPI({
@@ -101,6 +93,7 @@ describe('openAPI plugin', () => {
     });
 
     const payment = betterPayment({
+      mode: 'sandbox',
       providers: { mock: new MockProvider() },
       plugins: [
         customPlugin,
@@ -133,6 +126,7 @@ describe('openAPI plugin', () => {
 
   it('returns 404 when disabled option is true', async () => {
     const payment = betterPayment({
+      mode: 'sandbox',
       providers: { mock: new MockProvider() },
       plugins: [
         openAPI({
@@ -162,6 +156,7 @@ describe('openAPI plugin', () => {
 
   it('supports custom path option', async () => {
     const payment = betterPayment({
+      mode: 'sandbox',
       providers: { mock: new MockProvider() },
       plugins: [
         openAPI({
@@ -203,6 +198,7 @@ describe('openAPI plugin', () => {
     });
 
     const payment = betterPayment({
+      mode: 'sandbox',
       providers: { mock: new MockProvider() },
       plugins: [quotePlugin, openAPI()],
       handler: { basePath: '/api/pay' },
@@ -229,6 +225,7 @@ describe('openAPI plugin', () => {
 
   it('escapes the page title', async () => {
     const payment = betterPayment({
+      mode: 'sandbox',
       providers: { mock: new MockProvider() },
       plugins: [openAPI({ info: { title: `Tom & Jerry's "API"` } })],
       handler: { basePath: '/api/pay' },
@@ -245,6 +242,7 @@ describe('openAPI plugin', () => {
 
   it('pins the Scalar script and accepts a self-hosted URL', async () => {
     const payment = betterPayment({
+      mode: 'sandbox',
       providers: { mock: new MockProvider() },
       plugins: [openAPI()],
       handler: { basePath: '/api/pay' },
@@ -260,6 +258,7 @@ describe('openAPI plugin', () => {
     );
 
     const selfHosted = betterPayment({
+      mode: 'sandbox',
       providers: { mock: new MockProvider() },
       plugins: [openAPI({ scalarScriptUrl: '/assets/scalar.js' })],
       handler: { basePath: '/api/pay' },
@@ -272,5 +271,146 @@ describe('openAPI plugin', () => {
     });
     expect(ownRes.body as string).toContain('<script src="/assets/scalar.js"></script>');
     expect(ownRes.body as string).not.toContain('jsdelivr');
+  });
+
+  it('documents only the actions the handler serves, under its basePath', async () => {
+    const payment = betterPayment({
+      mode: 'sandbox',
+      providers: { mock: new MockProvider() },
+      plugins: [openAPI()],
+      handler: { basePath: '/shop/pay', allowedActions: 'all', authorize: () => true },
+    });
+
+    const res = await payment.handler.handle({
+      method: 'GET',
+      url: 'http://localhost/shop/pay/reference/openapi.json',
+      headers: {},
+    });
+    const spec = res.body as ReturnType<typeof buildOpenAPISpec>;
+
+    expect(spec.servers).toEqual([{ url: '/shop/pay' }]);
+    expect(spec.paths['/{provider}/payment'].post).toBeDefined();
+    expect(spec.paths['/{provider}/cards/save'].post).toBeDefined();
+
+    // Privileged actions carry bearerAuth, the others don't
+    expect(spec.paths['/{provider}/refund'].post).toMatchObject({ security: [{ bearerAuth: [] }] });
+    expect(spec.paths['/{provider}/payment/{paymentId}'].get).toMatchObject({
+      security: [{ bearerAuth: [] }],
+    });
+    expect(spec.paths['/{provider}/cards/list'].post).toMatchObject({
+      security: [{ bearerAuth: [] }],
+    });
+    expect((spec.paths['/{provider}/payment'].post as Record<string, unknown>).security).toBe(
+      undefined
+    );
+  });
+
+  it('leaves out the routes that are not enabled', async () => {
+    const payment = betterPayment({
+      mode: 'sandbox',
+      providers: { mock: new MockProvider() },
+      plugins: [openAPI()],
+      handler: { allowedActions: ['payment', 'payment/init-3ds', 'payment/complete-3ds'] },
+    });
+
+    const res = await payment.handler.handle({
+      method: 'GET',
+      url: 'http://localhost/api/pay/reference/openapi.json',
+      headers: {},
+    });
+    const spec = res.body as ReturnType<typeof buildOpenAPISpec>;
+
+    expect(Object.keys(spec.paths).sort()).toEqual([
+      '/health',
+      '/{provider}/payment',
+      '/{provider}/payment/complete-3ds',
+      '/{provider}/payment/init-3ds',
+    ]);
+  });
+
+  it('is off in production mode unless enabled', async () => {
+    const request = {
+      method: 'GET',
+      url: 'http://localhost/api/pay/reference/openapi.json',
+      headers: {},
+    };
+
+    const production = betterPayment({
+      mode: 'production',
+      providers: { mock: new MockProvider() },
+      plugins: [openAPI()],
+    });
+    expect((await production.handler.handle(request)).status).toBe(404);
+
+    const enabled = betterPayment({
+      mode: 'production',
+      providers: { mock: new MockProvider() },
+      plugins: [openAPI({ disabled: false })],
+    });
+    expect((await enabled.handler.handle(request)).status).toBe(200);
+  });
+
+  it('puts the reference behind the authorize hook when privileged', async () => {
+    const withoutHook = betterPayment({
+      mode: 'sandbox',
+      providers: { mock: new MockProvider() },
+      plugins: [openAPI({ privileged: true })],
+    });
+    expect(() => withoutHook.handler).toThrow(/authorize/);
+
+    const payment = betterPayment({
+      mode: 'sandbox',
+      providers: { mock: new MockProvider() },
+      plugins: [openAPI({ privileged: true })],
+      handler: {
+        authorize: (ctx) => ctx.request.headers.authorization === 'Bearer docs',
+      },
+    });
+    const url = 'http://localhost/api/pay/reference';
+
+    expect((await payment.handler.handle({ method: 'GET', url, headers: {} })).status).toBe(403);
+    const allowed = await payment.handler.handle({
+      method: 'GET',
+      url,
+      headers: { authorization: 'Bearer docs' },
+    });
+    expect(allowed.status).toBe(200);
+  });
+
+  it('gives plugins read-only endpoint descriptions without handlers', () => {
+    let context: PluginContext | undefined;
+    betterPayment({
+      mode: 'sandbox',
+      providers: { mock: new MockProvider() },
+      plugins: [
+        definePlugin({
+          id: 'inventory',
+          endpoints: {
+            stock: { method: 'GET', path: '/stock', handler: () => ({ ok: true }) },
+          },
+        }),
+        definePlugin({
+          id: 'observer',
+          methods(ctx) {
+            context = ctx;
+            return {};
+          },
+        }),
+      ],
+    });
+
+    const seen = context?.endpoints ?? [];
+    expect(seen).toEqual([
+      {
+        pluginId: 'inventory',
+        name: 'stock',
+        method: 'GET',
+        path: '/stock',
+        privileged: false,
+        openapi: undefined,
+      },
+    ]);
+    expect(Object.isFrozen(seen[0])).toBe(true);
+    expect('handler' in seen[0]).toBe(false);
   });
 });

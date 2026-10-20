@@ -30,7 +30,6 @@ const payment = betterPayment({
         version: '1.0.0',
         description: 'Interactive API reference for web and mobile checkout endpoints',
       },
-      disabled: process.env.NODE_ENV === 'production',
     }),
   ],
 });
@@ -47,7 +46,7 @@ Varsayılan handler taban yolu `/api/pay` olduğunda:
 
 ## Dokümante Edilen Çekirdek Uç Noktalar [#documented-core-endpoints]
 
-Oluşturulan OpenAPI şeması şu operasyonları içerir:
+Şema yalnızca handler'ınızın sunduğu rotaları listeler: `handler.allowedActions` içindeki aksiyonlar (varsayılan olarak `payment/complete-3ds`, `callback`, `installment` ve `bin-check`) ve `GET /health`; `servers` girdisi handler'ın `basePath` değeridir. Başka aksiyonları açtığınızda onlar da görünür. `authorize` hook'u gerektiren rotalar `security: [{ bearerAuth: [] }]` ile işaretlenir. Tüm liste şöyledir:
 - **Ödemeler:** `POST /{provider}/payment`, `POST /{provider}/payment/init-3ds`, `POST /{provider}/payment/complete-3ds`, `GET /{provider}/payment/{paymentId}`
 - **Geri Bildirimler:** `POST /{provider}/callback`
 - **İade ve İptal:** `POST /{provider}/refund`, `POST /{provider}/cancel` (Bearer yetkilendirme işaretli)
@@ -55,6 +54,21 @@ Oluşturulan OpenAPI şeması şu operasyonları içerir:
 - **Kartlar ve BIN Sorgusu:** `POST /{provider}/cards/save`, `POST /{provider}/cards/list`, `POST /{provider}/cards/delete`, `POST /{provider}/bin-check`
 - **Taksit Tablosu:** `POST /{provider}/installment`
 - **Sistem Kontrolü:** `GET /health`
+
+## Canlı ortam ve erişim [#production-and-access]
+
+Referans `mode: 'production'` içinde kapalıdır: `disabled: false` vermediğiniz sürece iki rota da 404 döner. `mode: 'sandbox'` içinde `disabled: true` vermediğiniz sürece açıktır. Canlı ortamda yalnızca kendi ekibinize göstermek için `privileged: true` verin. Rotalar bu durumda handler'ın `authorize` hook'undan geçer ve hook zorunlu olur:
+
+```typescript
+const payment = betterPayment({
+  mode: 'production',
+  providers: { /* ... */ },
+  plugins: [openAPI({ disabled: false, privileged: true })],
+  handler: {
+    authorize: (ctx) => ctx.request.headers.authorization === `Bearer ${process.env.DOCS_TOKEN}`,
+  },
+});
+```
 
 ## Özel Eklenti (Plugin) Uç Noktalarını Dokümante Etme [#documenting-custom-plugin-endpoints]
 
@@ -104,5 +118,6 @@ openAPI({
 | `info.title` | `'Better Payment API'` | OpenAPI şemasında ve sayfa başlığında gösterilecek ad |
 | `info.version` | `'1.0.0'` | API sürüm numarası |
 | `info.description` | — | Dokümantasyon açıklaması |
-| `disabled` | `false` | `true` yapıldığında endpoint'ler 404 döner (canlı ortamda dokümantasyonu gizlemek için önerilir) |
+| `disabled` | `mode: 'production'` içinde `true`, `mode: 'sandbox'` içinde `false` | `true` olduğunda iki rota da 404 döner |
+| `privileged` | `false` | `true` olduğunda iki rota handler'ın `authorize` hook'undan geçer; hook zorunlu olur |
 | `scalarScriptUrl` | sabit jsDelivr adresi | Scalar referans arayüzü betiğinin adresi; CDN'i tamamen kaldırmak için kendi betik adresinizi verin |

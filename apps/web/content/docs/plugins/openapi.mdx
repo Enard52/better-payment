@@ -30,7 +30,6 @@ const payment = betterPayment({
         version: '1.0.0',
         description: 'Interactive API reference for web and mobile checkout endpoints',
       },
-      disabled: process.env.NODE_ENV === 'production',
     }),
   ],
 });
@@ -47,7 +46,7 @@ When mounted on the default handler base path `/api/pay`:
 
 ## Documented Core Endpoints
 
-The generated OpenAPI specification includes:
+The specification lists only the routes your handler serves: the actions in `handler.allowedActions` (by default `payment/complete-3ds`, `callback`, `installment` and `bin-check`) plus `GET /health`, with the handler `basePath` as its `servers` entry. Enable more actions and they appear too. Routes that need the `authorize` hook carry `security: [{ bearerAuth: [] }]`. The full set is:
 - **Payments:** `POST /{provider}/payment`, `POST /{provider}/payment/init-3ds`, `POST /{provider}/payment/complete-3ds`, `GET /{provider}/payment/{paymentId}`
 - **Callbacks:** `POST /{provider}/callback`
 - **Refunds & Cancels:** `POST /{provider}/refund`, `POST /{provider}/cancel` (marked with Bearer auth)
@@ -55,6 +54,21 @@ The generated OpenAPI specification includes:
 - **Cards & BINs:** `POST /{provider}/cards/save`, `POST /{provider}/cards/list`, `POST /{provider}/cards/delete`, `POST /{provider}/bin-check`
 - **Installments:** `POST /{provider}/installment`
 - **Health Check:** `GET /health`
+
+## Production and access
+
+The reference is off in `mode: 'production'`: both routes return 404 unless you set `disabled: false`. In `mode: 'sandbox'` it is on unless you set `disabled: true`. To serve it in production only to your own team, set `privileged: true`. The routes then go through the handler's `authorize` hook, which becomes required:
+
+```typescript
+const payment = betterPayment({
+  mode: 'production',
+  providers: { /* ... */ },
+  plugins: [openAPI({ disabled: false, privileged: true })],
+  handler: {
+    authorize: (ctx) => ctx.request.headers.authorization === `Bearer ${process.env.DOCS_TOKEN}`,
+  },
+});
+```
 
 ## Documenting Custom Plugin Endpoints
 
@@ -104,5 +118,6 @@ openAPI({
 | `info.title` | `'Better Payment API'` | Title shown in the OpenAPI spec and documentation header |
 | `info.version` | `'1.0.0'` | Semantic API version |
 | `info.description` | — | Summary description for your API reference |
-| `disabled` | `false` | When `true`, endpoints return 404 (recommended for production environments where public documentation is not desired) |
+| `disabled` | `true` in `mode: 'production'`, `false` in `mode: 'sandbox'` | When `true`, both routes return 404 |
+| `privileged` | `false` | When `true`, both routes go through the handler's `authorize` hook, which then becomes required |
 | `scalarScriptUrl` | pinned jsDelivr URL | URL of the Scalar reference UI script; point it at a self-hosted copy to avoid the CDN |

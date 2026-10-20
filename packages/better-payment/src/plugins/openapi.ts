@@ -1,4 +1,13 @@
-import { definePlugin, type BetterPaymentPlugin, type PluginContext } from 'better-payment';
+import {
+  definePlugin,
+  DEFAULT_HANDLER_ACTIONS,
+  PRIVILEGED_HANDLER_ACTIONS,
+  type BetterPaymentPlugin,
+  type BuiltInHandlerAction,
+  type EndpointContext,
+  type EndpointHandlerInfo,
+  type PluginContext,
+} from 'better-payment';
 
 export interface OpenAPIOptions {
   /**
@@ -15,11 +24,15 @@ export interface OpenAPIOptions {
     description?: string;
   };
   /**
-   * Disables the OpenAPI documentation routes (e.g. in production).
-   * When disabled, the routes return 404.
-   * Default: false
+   * Turns the reference routes off; they answer 404.
+   * Default: true in `mode: 'production'`, false in `mode: 'sandbox'`
    */
   disabled?: boolean;
+  /**
+   * Serves the reference routes as privileged endpoints, so they go through the
+   * handler's `authorize` hook (which then becomes required). Default: false
+   */
+  privileged?: boolean;
   /**
    * URL of the Scalar reference UI script. Pinned to `@scalar/api-reference@<version>` by
    * default so a new Scalar release cannot change the page on a merchant's domain without
@@ -40,6 +53,7 @@ export interface OpenAPISpec {
     version: string;
     description?: string;
   };
+  servers: { url: string }[];
   paths: Record<string, Record<string, unknown>>;
   components: {
     securitySchemes: Record<string, unknown>;
@@ -51,11 +65,41 @@ function trimSlashes(p: string): string {
   return p.replace(/^\/+|\/+$/g, '');
 }
 
+/** The handler action behind each documented core route */
+const ROUTE_ACTIONS: Record<string, BuiltInHandlerAction> = {
+  '/{provider}/payment': 'payment',
+  '/{provider}/payment/init-3ds': 'payment/init-3ds',
+  '/{provider}/payment/complete-3ds': 'payment/complete-3ds',
+  '/{provider}/payment/{paymentId}': 'payment/get',
+  '/{provider}/callback': 'callback',
+  '/{provider}/refund': 'refund',
+  '/{provider}/cancel': 'cancel',
+  '/{provider}/authorize': 'authorize',
+  '/{provider}/capture': 'capture',
+  '/{provider}/void': 'void',
+  '/{provider}/installment': 'installment',
+  '/{provider}/bin-check': 'bin-check',
+  '/{provider}/cards/save': 'cards/save',
+  '/{provider}/cards/list': 'cards/list',
+  '/{provider}/cards/delete': 'cards/delete',
+};
+
+/** The handler defaults, for a document built outside a request */
+const DEFAULT_HANDLER: EndpointHandlerInfo = {
+  basePath: '/api/pay',
+  allowedActions: DEFAULT_HANDLER_ACTIONS as BuiltInHandlerAction[],
+};
+
 /**
- * Builds the OpenAPI 3.1.0 document from the configured providers, core handler routes,
- * and registered plugin endpoints.
+ * Builds the OpenAPI 3.1.0 document from the configured providers, the core routes
+ * the handler serves, and registered plugin endpoints. Without `handler`, the
+ * handler defaults are assumed (basePath `/api/pay`, `DEFAULT_HANDLER_ACTIONS`).
  */
-export function buildOpenAPISpec(options: OpenAPIOptions, ctx?: PluginContext): OpenAPISpec {
+export function buildOpenAPISpec(
+  options: OpenAPIOptions,
+  ctx?: PluginContext,
+  handler: EndpointHandlerInfo = DEFAULT_HANDLER
+): OpenAPISpec {
   const providerParam = {
     name: 'provider',
     in: 'path',
@@ -348,8 +392,22 @@ export function buildOpenAPISpec(options: OpenAPIOptions, ctx?: PluginContext): 
     },
   };
 
+  // Only the core routes the handler serves; the others answer 404
+  const allowed = new Set<string>(handler.allowedActions);
+  for (const [path, action] of Object.entries(ROUTE_ACTIONS)) {
+    if (!allowed.has(action)) {
+      delete paths[path];
+      continue;
+    }
+    if (PRIVILEGED_HANDLER_ACTIONS.includes(action)) {
+      for (const operation of Object.values(paths[path])) {
+        (operation as Record<string, unknown>).security = bearerAuth;
+      }
+    }
+  }
+
   // Add plugin endpoints
-  if (ctx?.endpoints) {
+  if (ctx) {
     for (const ep of ctx.endpoints) {
       // Don't document the openapi reference routes inside themselves
       if (ep.pluginId === 'openapi') continue;
@@ -383,6 +441,7 @@ export function buildOpenAPISpec(options: OpenAPIOptions, ctx?: PluginContext): 
         options.info?.description ??
         'OpenAPI 3.1 reference for Better Payment HTTP handler routes and plugin endpoints.',
     },
+    servers: [{ url: handler.basePath }],
     paths,
     components: {
       securitySchemes: {
@@ -456,7 +515,6 @@ function renderScalarHtml(spec: OpenAPISpec, title: string, scriptUrl: string): 
  *     openAPI({
  *       path: '/reference',
  *       info: { title: 'Store Checkout API' },
- *       disabled: process.env.NODE_ENV === 'production',
  *     }),
  *   ],
  * });
@@ -467,53 +525,36 @@ export function openAPI(options: OpenAPIOptions = {}): BetterPaymentPlugin {
   const basePath = '/' + trimSlashes(rawPath);
   const jsonPath = `${basePath}/openapi.json`;
   const scriptUrl = options.scalarScriptUrl ?? DEFAULT_SCALAR_SCRIPT_URL;
-  let pluginCtx: PluginContext;
+  const privileged = options.privileged === true;
+
+  const isDisabled = (ctx: EndpointContext): boolean =>
+    options.disabled ?? ctx.mode === 'production';
+  const notFound = (ctx: EndpointContext) =>
+    ctx.json({ status: 'error', errorMessage: 'OpenAPI reference is disabled' }, 404);
 
   return definePlugin({
     id: 'openapi',
     options,
-    init(ctx) {
-      pluginCtx = ctx;
-    },
     endpoints: {
       scalarUi: {
         method: 'GET',
         path: basePath,
+        privileged,
         handler: (ctx) => {
-          if (options.disabled) {
-            return ctx.json(
-              { status: 'error', errorMessage: 'OpenAPI reference is disabled' },
-              404
-            );
-          }
-          const spec = buildOpenAPISpec(options, pluginCtx ?? ctx);
-          const html = renderScalarHtml(
-            spec,
-            options.info?.title ?? 'Better Payment API Reference',
-            scriptUrl
+          if (isDisabled(ctx)) return notFound(ctx);
+          const spec = buildOpenAPISpec(options, ctx, ctx.handler);
+          return ctx.html(
+            renderScalarHtml(spec, options.info?.title ?? 'Better Payment API Reference', scriptUrl)
           );
-          if (typeof ctx.html === 'function') {
-            return ctx.html(html);
-          }
-          return {
-            status: 200,
-            headers: { 'Content-Type': 'text/html; charset=utf-8' },
-            body: html,
-          };
         },
       },
       openApiJson: {
         method: 'GET',
         path: jsonPath,
+        privileged,
         handler: (ctx) => {
-          if (options.disabled) {
-            return ctx.json(
-              { status: 'error', errorMessage: 'OpenAPI reference is disabled' },
-              404
-            );
-          }
-          const spec = buildOpenAPISpec(options, pluginCtx ?? ctx);
-          return ctx.json(spec);
+          if (isDisabled(ctx)) return notFound(ctx);
+          return ctx.json(buildOpenAPISpec(options, ctx, ctx.handler));
         },
       },
     },
