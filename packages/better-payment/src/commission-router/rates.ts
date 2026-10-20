@@ -2,27 +2,26 @@
 // router. Amounts are decimal strings everywhere; commission costs are computed
 // in integer minor units with BigInt, never with float multiplications.
 import { ConfigurationError } from 'better-payment';
-import { toMinorUnits } from '../core/utils';
 
 /**
- * A card classification as a BIN lookup returns it. The shape matches the
- * `BinInfo` of `better-payment/bin` (issue #153, PR #252), so its `lookupBin`
- * can be passed to `binLookup` unchanged, as can the `BinCheckResponse` of any
- * provider's `binCheck()`.
+ * A card classification as a BIN lookup returns it. Every field is optional so
+ * that the `BinInfo` of `better-payment/bin` (issue #153, PR #252) and the
+ * `BinCheckResponse` of any provider's `binCheck()` can be passed to
+ * `binLookup` unchanged; a missing field simply cannot satisfy a filter.
  */
 export interface RouterBinInfo {
   /** The 6 or 8 digit BIN prefix that matched */
-  binNumber: string;
-  bankName: string;
-  bankCode: number;
+  binNumber?: string;
+  bankName?: string;
+  bankCode?: number;
   /** Card family / program: Bonus, Maximum, Axess, World... */
-  cardFamily: string;
+  cardFamily?: string;
   /** CREDIT_CARD, DEBIT_CARD, PREPAID_CARD... */
-  cardType: string;
+  cardType?: string;
   /** VISA, MASTER_CARD, TROY, AMERICAN_EXPRESS... */
-  cardAssociation: string;
+  cardAssociation?: string;
   /** Commercial/corporate card */
-  commercial: boolean;
+  commercial?: boolean;
 }
 
 /**
@@ -77,12 +76,16 @@ export interface CommissionRate {
   threeDS?: boolean;
 }
 
-/** Amounts up to 2 decimals, no sign, at most 15 integer digits */
-const DECIMAL_2 = /^\d{1,15}(\.\d{1,2})?$/;
+/**
+ * Amounts up to 2 decimals, no sign, at most 13 integer digits. Capped at 13
+ * digits because `13 digits * 100` is still a safe integer in minor units
+ * (Number.MAX_SAFE_INTEGER), so every amount is compared exactly as an integer.
+ */
+const DECIMAL_2 = /^\d{1,13}(\.\d{1,2})?$/;
 /** Percentages up to 4 decimals */
 const DECIMAL_4 = /^\d{1,3}(\.\d{1,4})?$/;
 
-/** `'2.49'` -> `{ digits: 249n, decimals: 2 }`; keeps the decimal exact */
+/** `'2.49'` -> `249n`; the decimal is kept exact, never parsed as a float */
 export function parseDecimal(value: string | number, maxDecimals: number, field: string): bigint {
   const text = typeof value === 'number' ? String(value) : String(value).trim();
   const pattern = maxDecimals === 4 ? DECIMAL_4 : DECIMAL_2;
@@ -97,36 +100,58 @@ export function parseDecimal(value: string | number, maxDecimals: number, field:
 }
 
 /**
- * `amountMinor * ratePct / 100`, rounded half up, exactly. `rate` is a percent
- * as a decimal string with at most 4 decimals ('2.49'); the result is in the
- * same minor units as the input. Used for ranking only: better-payment never
+ * Converts a 2-decimal amount to exact integer minor units (kuruş/cents).
+ * Rejects values whose minor-unit form could not be represented exactly.
+ */
+export function amountMinor(value: string | number, field: string): number {
+  const digits = parseDecimal(value, 2, field);
+  if (digits > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new ConfigurationError(`${field} is too large to be compared exactly`);
+  }
+  return Number(digits);
+}
+
+/**
+ * Formats integer minor units as a 2-decimal string, using integer arithmetic
+ * only ("1290" -> "12.90"). Locale-independent on purpose.
+ */
+export function formatMinor(minor: number): string {
+  const sign = minor < 0 ? '-' : '';
+  const absolute = Math.abs(minor);
+  const whole = Math.floor(absolute / 100);
+  const fraction = String(absolute % 100).padStart(2, '0');
+  return `${sign}${whole}.${fraction}`;
+}
+
+/**
+ * `amountMinor * ratePct / 100`, rounded half up, exactly. `scaledRate` is the
+ * percentage multiplied by 10^4 (so `'2.49'` is `24_900n`); the result is in the
+ * same minor units as the input and is compared as an integer.
+ *
+ * The rounding rule for a tie (exactly half a minor unit) is half up:
+ * 0.5 kuruş becomes 1 kuruş. Used for ranking only: better-payment never
  * charges a price computed from a commission rate.
  */
-export function percentCostMinor(amountMinor: number, rate: string | number): number {
-  // scale 10^4 so every allowed rate (<=4 decimals) is an exact integer
-  const scaled = parseDecimal(rate, 4, 'rate');
-  const numerator = BigInt(amountMinor) * scaled;
+export function percentCostMinorScaled(amountMinor: number, scaledRate: bigint): number {
+  const numerator = BigInt(amountMinor) * scaledRate;
   const denominator = 100n * 10_000n;
   const quotient = numerator / denominator;
   const remainder = numerator % denominator;
   return Number(remainder * 2n >= denominator ? quotient + 1n : quotient);
 }
 
-/** Fixed fee of a line in minor units (2 decimals, half up, like all amounts) */
-export function fixedCostMinor(fixed: string | number | undefined): number {
-  if (fixed === undefined) return 0;
-  const text = typeof fixed === 'number' ? String(fixed) : String(fixed).trim();
-  if (!DECIMAL_2.test(text)) {
-    throw new ConfigurationError(`fixed must be a positive decimal with at most 2 decimals, got '${text}'`);
-  }
-  return toMinorUnits(text, 'fixed');
+/** `percentCostMinorScaled` from a configured percentage ('2.49' -> 2.49%) */
+export function percentCostMinor(amountMinor: number, rate: string | number): number {
+  return percentCostMinorScaled(amountMinor, parseDecimal(rate, 4, 'rate'));
 }
 
 function checkList(value: string | string[] | undefined, field: string, index: number): void {
   const items = value === undefined ? [] : Array.isArray(value) ? value : [value];
   for (const item of items) {
     if (typeof item !== 'string' || item.trim() === '') {
-      throw new ConfigurationError(`rates[${index}].${field} must be a non-empty string or a list of them`);
+      throw new ConfigurationError(
+        `rates[${index}].${field} must be a non-empty string or a list of them`
+      );
     }
   }
 }
@@ -141,12 +166,18 @@ function checkDate(value: string | undefined, field: string, index: number): num
 }
 
 /**
- * Validates the whole table once, at plugin init, so a bad contract line can
- * never reach a payment. Providers must be configured; unknown fields, bad
- * decimals, empty filters and inverted ranges fail with `ConfigurationError`.
+ * Validates the whole table once, at plugin creation and init, so a bad
+ * contract line can never reach a payment. With `providerIds` the provider of
+ * every line must be configured; without it (before `betterPayment()`) only the
+ * shape is checked. Bad decimals, empty filters and inverted ranges fail with
+ * `ConfigurationError`.
  */
-export function validateRateTable(rates: readonly CommissionRate[], providerIds: readonly string[]): void {
-  if (!Array.isArray(rates)) throw new ConfigurationError('commissionRouter: rates must be an array');
+export function validateRateTable(
+  rates: readonly CommissionRate[],
+  providerIds?: readonly string[]
+): void {
+  if (!Array.isArray(rates))
+    throw new ConfigurationError('commissionRouter: rates must be an array');
   rates.forEach((entry, index) => {
     if (!entry || typeof entry !== 'object') {
       throw new ConfigurationError(`rates[${index}] must be an object`);
@@ -154,29 +185,37 @@ export function validateRateTable(rates: readonly CommissionRate[], providerIds:
     if (typeof entry.provider !== 'string' || !entry.provider) {
       throw new ConfigurationError(`rates[${index}].provider must be a non-empty string`);
     }
-    if (!providerIds.includes(entry.provider)) {
+    if (providerIds && !providerIds.includes(entry.provider)) {
       throw new ConfigurationError(
         `rates[${index}].provider '${entry.provider}' is not a configured provider (${providerIds.join(', ') || 'none'})`
       );
     }
-    parseDecimal(entry.rate, 4, `rates[${index}].rate`);
+    if (parseDecimal(entry.rate, 4, `rates[${index}].rate`) > 1_000_000n) {
+      throw new ConfigurationError(`rates[${index}].rate must be at most 100 (percent)`);
+    }
     if (entry.fixed !== undefined) parseDecimal(entry.fixed, 2, `rates[${index}].fixed`);
-    if (entry.minAmount !== undefined) parseDecimal(entry.minAmount, 2, `rates[${index}].minAmount`);
-    if (entry.maxAmount !== undefined) parseDecimal(entry.maxAmount, 2, `rates[${index}].maxAmount`);
+    if (entry.minAmount !== undefined)
+      parseDecimal(entry.minAmount, 2, `rates[${index}].minAmount`);
+    if (entry.maxAmount !== undefined)
+      parseDecimal(entry.maxAmount, 2, `rates[${index}].maxAmount`);
     if (
       entry.minAmount !== undefined &&
       entry.maxAmount !== undefined &&
-      toMinorUnits(entry.minAmount) > toMinorUnits(entry.maxAmount)
+      parseDecimal(entry.minAmount, 2, 'minAmount') > parseDecimal(entry.maxAmount, 2, 'maxAmount')
     ) {
       throw new ConfigurationError(`rates[${index}]: minAmount is above maxAmount`);
     }
     if (entry.installments !== undefined) {
       if (!Array.isArray(entry.installments) || entry.installments.length === 0) {
-        throw new ConfigurationError(`rates[${index}].installments must be a non-empty array of counts`);
+        throw new ConfigurationError(
+          `rates[${index}].installments must be a non-empty array of counts`
+        );
       }
       for (const count of entry.installments) {
-        if (!Number.isInteger(count) || count < 1) {
-          throw new ConfigurationError(`rates[${index}].installments: every count must be an integer >= 1`);
+        if (!Number.isInteger(count) || count < 1 || count > 99) {
+          throw new ConfigurationError(
+            `rates[${index}].installments: every count must be an integer between 1 and 99`
+          );
         }
       }
     }
@@ -188,9 +227,14 @@ export function validateRateTable(rates: readonly CommissionRate[], providerIds:
       throw new ConfigurationError(`rates[${index}].commercial must be true or false`);
     }
     if (entry.currencies !== undefined) {
+      if (!Array.isArray(entry.currencies) || entry.currencies.length === 0) {
+        throw new ConfigurationError(`rates[${index}].currencies must be a non-empty array`);
+      }
       for (const code of entry.currencies) {
         if (typeof code !== 'string' || !/^[A-Za-z]{3}$/.test(code)) {
-          throw new ConfigurationError(`rates[${index}].currencies: '${code}' is not a 3-letter currency code`);
+          throw new ConfigurationError(
+            `rates[${index}].currencies: '${code}' is not a 3-letter currency code`
+          );
         }
       }
     }
