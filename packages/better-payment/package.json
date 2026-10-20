@@ -26,6 +26,11 @@
       "import": "./dist/plugins/index.mjs",
       "require": "./dist/plugins/index.js"
     },
+    "./routing": {
+      "types": "./dist/routing/index.d.ts",
+      "import": "./dist/routing/index.mjs",
+      "require": "./dist/routing/index.js"
+    },
     "./next": {
       "types": "./dist/next/index.d.ts",
       "import": "./dist/next/index.mjs",
