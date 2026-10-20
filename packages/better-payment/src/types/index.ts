@@ -70,19 +70,21 @@ export interface PaymentRequest {
    */
   saveCard?: boolean | { customerToken?: string; alias?: string };
   /**
-   * Set explicitly on EVERY `storedCard` payment (`#151`):
-   * - `true`: merchant-initiated recurring charge (COF/MIT); the cardholder is
-   *   NOT present. Requires `storedCard` and a provider that supports
-   *   `recurring` charges (iyzico: NON-3D stored-card payment with
+   * Marks a `storedCard` payment as merchant-initiated (recurring / card on
+   * file, the cardholder is NOT present):
+   * - `true`: recurring charge. Requires `storedCard` and a provider whose
+   *   `capabilities.recurring` is true (iyzico: NON-3D stored-card payment with
    *   `paymentGroup=SUBSCRIPTION`,
-   *   https://docs.iyzico.com/en/advanced/card-storage; PayTR: `recurring_payment=1`
-   *   with `non_3d=1`,
+   *   https://docs.iyzico.com/en/advanced/card-storage; PayTR:
+   *   `recurring_payment=1` with `non_3d=1`,
    *   https://dev.paytr.com/direkt-api/kart-saklama-api/kayitli-kart-tekrarlayan-odeme).
-   *   Only direct (non-3D) payments accept it.
-   * - `false`: the cardholder is present and picked a saved card (one-click).
+   *   Only direct (non-3D) payments accept it. Prefer
+   *   `chargeStoredCard()`, which requires it and validates the request.
+   * - `false` or omitted: the cardholder is present and picked a saved card
+   *   (one-click payment).
    *
-   * A stored-card payment without an explicit value is rejected: the library
-   * never guesses whether a charge is merchant-initiated.
+   * The library never turns a stored-card payment into a recurring charge on
+   * its own: only `chargeStoredCard()` and an explicit `true` do.
    */
   recurring?: boolean;
   buyer: Buyer;
@@ -132,15 +134,19 @@ export interface StoredCardReference {
 /**
  * A merchant-initiated (recurring) charge on a stored card: `storedCard` and
  * `recurring: true` are required, so a billing job cannot charge a card that is
- * not on file or forget the MIT indicator. Accepted only by providers whose
- * `capabilities.recurring` is true; see `chargeStoredCard()`.
+ * not on file or forget the MIT indicator, and `conversationId` is required so
+ * the provider gets a stable order id for the billing period (retries and
+ * duplicate detection depend on it). Accepted only by providers whose
+ * `capabilities.recurring` is true; use `chargeStoredCard()`.
  */
 export type RecurringPaymentRequest = Omit<
   PaymentRequest,
-  'paymentCard' | 'storedCard' | 'recurring' | 'saveCard'
+  'paymentCard' | 'storedCard' | 'recurring' | 'saveCard' | 'conversationId'
 > & {
   storedCard: StoredCardReference;
   recurring: true;
+  /** Your order id for this billing period, e.g. `sub42202602` */
+  conversationId: string;
 };
 
 /** Tokens returned when a card is saved */

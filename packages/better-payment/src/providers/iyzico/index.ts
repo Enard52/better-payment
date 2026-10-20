@@ -8,7 +8,7 @@ import type { HttpClient, HttpRequestConfig } from '../../core/http';
 import { fromBase64, randomHex } from '../../core/crypto';
 import { PaymentProvider, type PaymentProviderConfig } from '../../core/PaymentProvider';
 import type { ProviderCapabilities } from '../../core/PaymentProvider';
-import { ConfigurationError, ValidationError } from '../../core/errors';
+import { ConfigurationError } from '../../core/errors';
 import { failureResult, FailureResult } from '../../core/failure';
 import type { PaymentValidationRules } from '../../core/validation';
 import { IYZICO_ERROR_CODES } from './error-codes';
@@ -124,9 +124,6 @@ const IYZICO_DIRECT_PAYMENT_RULES: PaymentValidationRules = {
   ...IYZICO_CARD_PAYMENT_RULES,
   recurring: true,
 };
-
-/** Installment counts a stored-card (COF) payment accepts */
-const IYZICO_SAVED_CARD_INSTALLMENTS = [1, 2, 3, 6, 9, 12];
 
 export interface IyzicoConfig extends PaymentProviderConfig {
   apiKey: string;
@@ -389,7 +386,12 @@ export class Iyzico extends PaymentProvider<IyzicoConfig> {
    * Direct payment (without 3D Secure)
    */
   async createPayment(request: PaymentRequest): Promise<PaymentResponse> {
-    return this.cardPayment('/payment/auth', request, 'Payment failed', IYZICO_DIRECT_PAYMENT_RULES);
+    return this.cardPayment(
+      '/payment/auth',
+      request,
+      'Payment failed',
+      IYZICO_DIRECT_PAYMENT_RULES
+    );
   }
 
   /** Pre-authorization (`/payment/preauth`): blocks the amount without charging it */
@@ -405,9 +407,6 @@ export class Iyzico extends PaymentProvider<IyzicoConfig> {
   ): Promise<PaymentResponse> {
     try {
       this.validatePayment(request, rules);
-      if (request.recurring && request.installment) {
-        this.assertSavedCardInstallment(request.installment);
-      }
       const iyzicoRequest = this.mapToIyzicoRequest(request);
       const response = await this.sendRequest<IyzicoPaymentResponse>(path, iyzicoRequest);
 
@@ -424,19 +423,6 @@ export class Iyzico extends PaymentProvider<IyzicoConfig> {
     } catch (error) {
       return this.failure(error, fallback);
     }
-  }
-
-  /**
-   * Stored-card (card-on-file) payments only support these installment counts.
-   * https://docs.iyzico.com/en/advanced/card-storage (installment enum 1,2,3,6,9,12)
-   */
-  private assertSavedCardInstallment(installment: number): void {
-    if (IYZICO_SAVED_CARD_INSTALLMENTS.includes(installment)) return;
-    throw new ValidationError(
-      `Stored-card payments support ${IYZICO_SAVED_CARD_INSTALLMENTS.join(', ')} installments, got ${installment}`,
-      'iyzico',
-      [{ path: 'installment', message: `must be one of ${IYZICO_SAVED_CARD_INSTALLMENTS.join(', ')}` }]
-    );
   }
 
   /**

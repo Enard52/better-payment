@@ -210,20 +210,19 @@ export function validatePaymentRequest(
   if (request.saveCard && !rules.saveCard) {
     v.add('saveCard', 'is not supported by this provider for this payment type');
   }
+  // `recurring` is only ever set to `true` deliberately (a merchant-initiated
+  // charge); a stored-card payment that leaves it out stays a normal
+  // cardholder-initiated payment, so existing one-click flows keep working.
   if (request.recurring === true) {
     if (!request.storedCard) {
-      v.add('recurring', 'requires storedCard: a merchant-initiated charge must target a stored card');
+      v.add(
+        'recurring',
+        'requires storedCard: a merchant-initiated charge must target a stored card'
+      );
     }
     if (!rules.recurring) {
       v.add('recurring', 'is not supported by this provider for this payment type');
     }
-  } else if (request.recurring === undefined && request.storedCard !== undefined) {
-    // Never default the CIT/MIT indicator: a stored-card charge must say whether
-    // the cardholder is present, so a billing job cannot silently MIT-charge.
-    v.add(
-      'recurring',
-      'must be set explicitly with storedCard: true for a merchant-initiated charge, false when the cardholder is present'
-    );
   }
   if (rules.required) v.required(request, rules.required);
   v.buyerFormats(request);

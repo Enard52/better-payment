@@ -235,6 +235,10 @@ export class PayTR extends PaymentProvider<PayTRConfig> {
         user_address: request.billingAddress?.address || request.shippingAddress?.address || '',
         user_phone: request.buyer.gsmNumber,
         user_basket: this.buildBasket(request.basketItems, 'direct'),
+        // Merchant-initiated charge on a stored card. PayTR requires Non-3D
+        // (`non_3d=1`, above) and does not include this field in paytr_token:
+        // https://dev.paytr.com/direkt-api/kart-saklama-api/kayitli-kart-tekrarlayan-odeme
+        ...(request.recurring ? { recurring_payment: '1' } : {}),
         ...this.cardFields(request),
       };
 

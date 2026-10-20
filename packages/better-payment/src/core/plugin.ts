@@ -14,6 +14,7 @@ import type {
   ListCardsResponse,
   DeleteCardRequest,
   DeleteCardResponse,
+  RecurringPaymentRequest,
   BinCheckResponse,
   InstallmentInfoRequest,
   InstallmentInfoResponse,
@@ -43,6 +44,8 @@ export interface PaymentOperations {
   cancel: { request: CancelRequest; result: CancelResponse };
   /** The request is the payment id */
   getPayment: { request: string; result: PaymentResponse };
+  /** A merchant-initiated charge on a stored card, for one billing period */
+  chargeStoredCard: { request: RecurringPaymentRequest; result: PaymentResponse };
   saveCard: { request: SaveCardRequest; result: SaveCardResponse };
   listCards: { request: { customerToken: string }; result: ListCardsResponse };
   deleteCard: { request: DeleteCardRequest; result: DeleteCardResponse };
@@ -64,6 +67,7 @@ export const PAYMENT_OPERATIONS: readonly PaymentOperation[] = [
   'refund',
   'cancel',
   'getPayment',
+  'chargeStoredCard',
   'saveCard',
   'listCards',
   'deleteCard',
