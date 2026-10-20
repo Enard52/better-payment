@@ -9,9 +9,10 @@ import { localePath, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/dictionary";
 import { withBasePath } from "@/lib/base-path";
 
-export function getMDXComponents(components: MDXComponents, lang: Locale = "en"): MDXComponents {
+export function getMDXComponents(components: MDXComponents, lang: Locale = DEFAULT_LOCALE): MDXComponents {
   const Link = components.a as ((props: ComponentProps<"a">) => React.ReactNode) | undefined;
-  const copy = getDictionary(lang).code;
+  const dictionary = getDictionary(lang);
+  const copy = dictionary.code;
   return {
     ...components,
     // Internal links in the docs are written without a locale; keep readers in their language
@@ -27,10 +28,10 @@ export function getMDXComponents(components: MDXComponents, lang: Locale = "en")
     Card,
     Cards,
     Since: (props: SinceProps) => <Since {...props} lang={lang} />,
-    // Static TypeDoc HTML is shared by both locales; do not add /tr to its URL.
+    // Static TypeDoc HTML is shared by every locale; do not add a locale prefix to its URL.
     ApiReferenceLink: () => (
       <a href={withBasePath("/api-reference/index.html")}>
-        {lang === "tr" ? "Otomatik API referansını aç (İngilizce)" : "Open the generated API reference"}
+        {dictionary.docs.apiReference}
       </a>
     ),
   };

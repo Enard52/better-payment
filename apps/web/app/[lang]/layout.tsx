@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Inter, JetBrains_Mono, Manrope } from "next/font/google";
 import "../globals.css";
 import SiteProvider from "@/components/SiteProvider";
-import { LOCALES, SITE_URL, alternates, isLocale, isRtl, openGraphLocale } from "@/lib/i18n/config";
+import { LOCALES, SITE_URL, alternates, isLocale, isRtl, openGraphLocale, socialImageFile } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/dictionary";
 import { i18nUI } from "@/lib/i18n/ui";
 import { Analytics } from "@vercel/analytics/next";
@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: LayoutProps<"/[lang]">): Prom
   if (!isLocale(lang)) return {};
   const t = getDictionary(lang);
   const socialImage = {
-    url: new URL(withBasePath(`/brand/social/og-${lang}.png`), SITE_URL),
+    url: new URL(withBasePath(`/brand/social/${socialImageFile(lang)}`), SITE_URL),
     width: 1200,
     height: 630,
     alt: t.meta.socialImageAlt,

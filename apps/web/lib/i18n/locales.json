@@ -6,12 +6,14 @@
     "3. translate docs pages as <path>.<code>.mdx. With docs: \"optional\" a language may start with zero pages:",
     "   untranslated pages fall back to English with a notice. Set docs: \"required\" only when every page must exist.",
     "ogLocale is the Open Graph tag (en_US), intlLocale is the BCP 47 tag used for dates (en-US),",
-    "rtl marks right-to-left scripts and sets dir=\"rtl\" on <html> (layout mirroring for RTL is tracked separately)."
+    "rtl marks right-to-left scripts and sets dir=\"rtl\" on <html> (layout mirroring for RTL is tracked separately),",
+    "contribGuide is true only when this repo has a CONTRIBUTING.<code>.md for the language;",
+    "without it the homepage contribution button links to the English guide."
   ],
   "defaultLanguage": "en",
   "languages": {
     "en": { "name": "English", "ogLocale": "en_US", "intlLocale": "en-US", "rtl": false, "docs": "required" },
-    "tr": { "name": "Türkçe", "ogLocale": "tr_TR", "intlLocale": "tr-TR", "rtl": false, "docs": "required" },
+    "tr": { "name": "Türkçe", "ogLocale": "tr_TR", "intlLocale": "tr-TR", "rtl": false, "docs": "required", "contribGuide": true },
     "de": { "name": "Deutsch", "ogLocale": "de_DE", "intlLocale": "de-DE", "rtl": false, "docs": "optional" }
   }
 }

@@ -350,6 +350,7 @@ const en = {
   docs: {
     fallbackNotice:
       "This page has not been translated into English yet, so it is shown in Turkish.",
+    apiReference: "Open the generated API reference",
     betaNotice: {
       title: "You are viewing the beta docs",
       install: "Install the beta with",
@@ -712,6 +713,7 @@ const tr: Dictionary = {
   },
   docs: {
     fallbackNotice: "Bu sayfa henüz Türkçeye çevrilmedi; İngilizce hâli gösteriliyor.",
+    apiReference: "Otomatik API referansını aç (İngilizce)",
     betaNotice: {
       title: "Beta sürümün dokümanını görüntülüyorsunuz",
       install: "Beta sürümü kurmak için",

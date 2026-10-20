@@ -7,6 +7,9 @@ import locales from "./locales.json";
  * alternates and the translation checks are all derived from it, so adding a language
  * is a config change, not a code change (see TRANSLATIONS.md → Adding a language).
  */
+/** How complete a language's docs must be: `required` = every page, `optional` = a subset */
+export type DocsMode = "required" | "optional";
+
 export interface LocaleSettings {
   /** the language's own name, used by the navbar switcher and the generated llms index */
   name: string;
@@ -16,8 +19,11 @@ export interface LocaleSettings {
   intlLocale: string;
   /** right-to-left script; sets dir="rtl" on <html>. Layout mirroring is a follow-up. */
   rtl: boolean;
-  /** "required": every docs page must exist; "optional": missing pages fall back to English */
-  docs: string;
+  docs: DocsMode;
+  /** true when this repo has a CONTRIBUTING.<code>.md; otherwise the English guide is linked */
+  contribGuide?: boolean;
+  /** social preview file under public/brand/social/; defaults to og-<code>.png */
+  socialImage?: string;
 }
 
 const settings = locales.languages;
@@ -63,6 +69,25 @@ export function isRtl(lang: Locale): boolean {
   return settings[lang].rtl;
 }
 
+/** True when this repo ships a CONTRIBUTING.<code>.md for the language */
+export function hasContribGuide(lang: Locale): boolean {
+  return settings[lang].contribGuide === true;
+}
+
+/**
+ * Social preview image (under `public/brand/social/`) for a language. Defaults to
+ * `og-<code>.png`; a language without its own artwork points at another file with
+ * the `socialImage` registry key (e.g. `"socialImage": "og-en.png"`).
+ */
+export function socialImageFile(lang: Locale): string {
+  return settings[lang].socialImage ?? `og-${lang}.png`;
+}
+
+/** Locale codes with regex metacharacters stripped, longest first (`de-AT` before `de`) */
+const CODES_BY_LENGTH = [...LOCALES]
+  .map((code) => code.replace(/[^a-z0-9-]/gi, ""))
+  .sort((a, b) => b.length - a.length);
+
 export function isLocale(value: string | undefined): value is Locale {
   return value !== undefined && (LOCALES as string[]).includes(value);
 }
@@ -84,7 +109,16 @@ export function localePath(lang: Locale, path: string): string {
 }
 
 /** Matches a leading locale segment for any registered language */
-const localePrefix = new RegExp(`^\\/(${LOCALES.map((code) => code.replace(/[^a-z0-9-]/gi, "")).join("|")})(?=\\/|$)`);
+const localePrefix = new RegExp(`^\\/(${CODES_BY_LENGTH.join("|")})(?=\\/|$)`);
+
+/** Matches the locale suffix of a content file name: "reference/api.de.mdx" → "de" */
+const localeSuffix = new RegExp(`\\.(${CODES_BY_LENGTH.join("|")})\\.mdx?$`);
+
+/** The language a content file is written in, or null for a default-language file */
+export function localeOfPath(path: string): Locale | null {
+  const match = localeSuffix.exec(path);
+  return match && isLocale(match[1]) ? match[1] : null;
+}
 
 /** Removes a locale prefix: "/tr/docs/x" → "/docs/x" */
 export function stripLocale(path: string): string {

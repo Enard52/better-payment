@@ -183,14 +183,12 @@ if (problems.length) {
   console.error(`\n${problems.length} translation problem(s). See CONTRIBUTING.md → Translations.`);
   process.exit(1);
 }
-const requiredNames = registry.required
-  .filter((code) => code !== registry.defaultLanguage)
-  .map((code) => registry.settings[code].name)
-  .join(', ');
-const partialLanguages = registry.translated.filter((code) => !registry.required.includes(code));
+const nameOf = (code) => registry.settings[code].name;
+const partialCodes = registry.translated.filter((code) => !registry.required.includes(code));
 console.log(
-  `✓ Every docs page is available in ${registry.settings[registry.defaultLanguage].name} and ${requiredNames}` +
-    (partialLanguages.length
-      ? `; partial languages (${partialLanguages.join(', ')}) are checked page by page.`
+  `✓ Every docs page is available in ${registry.required.map(nameOf).join(', ')}, ` +
+    'with matching code blocks and heading ids' +
+    (partialCodes.length
+      ? `; ${partialCodes.join(', ')} ${partialCodes.length === 1 ? 'is' : 'are'} partial and checked page by page.`
       : '.')
 );
