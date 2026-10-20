@@ -9,6 +9,7 @@ import { PaymentProvider } from '../../core/PaymentProvider';
 import { ConfigurationError, ValidationError } from '../../core/errors';
 import { failureResult, FailureResult } from '../../core/failure';
 import type { PaymentValidationRules } from '../../core/validation';
+import { hasSubMerchant } from '../../core/validation';
 import { PAYTR_ERROR_CODES } from './error-codes';
 import type { PaymentErrorCode } from '../../core/error-codes';
 import { generateOrderId, parseAmount } from '../../core/utils';
@@ -132,6 +133,18 @@ export class PayTR extends PaymentProvider<PayTRConfig> {
 
   protected errorCodeTable(): Record<string, PaymentErrorCode> {
     return PAYTR_ERROR_CODES;
+  }
+
+  /**
+   * PayTR's marketplace (pazaryeri) sub-merchants and transfers are managed in
+   * the PayTR merchant panel; PayTR documents no public HTTP API for onboarding
+   * sellers or sending them their share, so a split basket cannot be sent.
+   */
+  protected marketplaceDetail(): string {
+    return (
+      'PayTR manages marketplace sub-merchants and seller transfers in its merchant panel, ' +
+      'with no public HTTP API for them; see issue #88'
+    );
   }
 
   private failure<T extends FailureResult>(
@@ -730,6 +743,12 @@ export class PayTR extends PaymentProvider<PayTRConfig> {
    * notification URL like any other payment.
    */
   async createPaymentWithToken(request: PayTRTokenPaymentRequest): Promise<ThreeDSInitResponse> {
+    if (hasSubMerchant(request?.basketItems)) {
+      throw this.notSupported(
+        'Marketplace split payments (BasketItem.subMerchant)',
+        this.marketplaceDetail()
+      );
+    }
     let merchantOid: string | undefined;
     try {
       merchantOid = this.resolveMerchantOid(request.conversationId);
