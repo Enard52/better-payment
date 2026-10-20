@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getOrder } from '@/lib/orders';
 import { formatKurus } from '@/lib/products';
 
@@ -75,6 +76,12 @@ export default async function OrderPage({
       <p className="price">
         Total: {formatKurus(order.amountKurus)} {order.currency} · {order.installment}x installment
       </p>
+      {order.paidPriceKurus !== null && order.paidPriceKurus !== order.amountKurus ? (
+        <p className="muted">
+          Charged by the provider with the installment commission:{' '}
+          {formatKurus(order.paidPriceKurus)} {order.currency}
+        </p>
+      ) : null}
 
       {order.refunds.length > 0 ? (
         <>
@@ -83,6 +90,12 @@ export default async function OrderPage({
             {order.refunds.map((refund) => (
               <li key={refund.id}>
                 <code>{refund.id}</code> · {formatKurus(refund.amountKurus)} {order.currency}
+                {refund.providerRefundId ? (
+                  <span className="muted">
+                    {' '}
+                    · provider ref <code>{refund.providerRefundId}</code>
+                  </span>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -90,7 +103,7 @@ export default async function OrderPage({
       ) : null}
 
       <p>
-        <a href="/">Continue shopping</a>
+        <Link href="/">Continue shopping</Link>
       </p>
     </>
   );

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { cartSummary, readCart } from '@/lib/cart';
 import { formatKurus } from '@/lib/products';
 import { startCheckout, updateCart } from '@/lib/cart-actions';
@@ -14,7 +15,7 @@ export default async function CartPage() {
       <>
         <h1>Cart</h1>
         <p className="muted">
-          Your cart is empty. <a href="/">Browse the products</a>.
+          Your cart is empty. <Link href="/">Browse the products</Link>.
         </p>
       </>
     );

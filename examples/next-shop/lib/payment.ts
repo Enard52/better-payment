@@ -3,6 +3,7 @@ import {
   iyzico,
   CALLBACK_HANDLER_ACTIONS,
   type BasketItem,
+  type BetterPaymentLogger,
   type HandlerContext,
   type PaymentCard,
   type ThreeDSPaymentRequest,
@@ -67,6 +68,36 @@ function orderIdFrom(body: Record<string, unknown> | undefined): string {
 }
 
 /**
+ * The total the provider quoted for the chosen installment. The count is the
+ * only thing the browser picked; the price asked for is the server-side order
+ * total, and the answer comes from the provider, so no amount ever crosses the
+ * trust boundary as a client value.
+ */
+async function quotedPaidPrice(
+  cardNumber: string,
+  total: string,
+  conversationId: string,
+  installment: number
+): Promise<string> {
+  if (installment <= 1) return total;
+  const binNumber = cardNumber.replace(/\D/g, '').slice(0, 6);
+  if (binNumber.length !== 6) return total;
+  try {
+    const quote = await getBetterPayment()
+      .use(PROVIDER_ID)
+      .installmentInfo({ binNumber, price: total, conversationId });
+    const option = quote.installmentDetails?.[0]?.installmentPrices?.find(
+      (price) => price.installmentNumber === installment
+    );
+    return option ? option.totalPrice.toFixed(2) : total;
+  } catch {
+    // A failed quote must not block a payment: the provider applies (and shows)
+    // the commission on its own 3D Secure page.
+    return total;
+  }
+}
+
+/**
  * The browser sends only ids (orderId, and for installments the BIN it typed).
  * Everything that moves money — amount, currency, basket, installment — is
  * looked up from the database here. This is `transformRequest` in the docs:
@@ -83,6 +114,20 @@ async function buildRequestFromDatabase(ctx: HandlerContext): Promise<object> {
 
     const origin = new URL(ctx.request.url).origin;
     const total = formatKurus(order.amountKurus);
+    const paymentCard = readCard(body.paymentCard);
+    const paidPrice = await quotedPaidPrice(
+      paymentCard.cardNumber,
+      total,
+      order.id,
+      order.installment
+    );
+    // What is about to be charged, kept on the order row so a refund returns
+    // exactly that amount even when the provider added an installment commission.
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { paidPriceKurus: Math.round(Number(paidPrice) * 100) },
+    });
+
     // Line totals use unit price x quantity; they add up to `price`, which is
     // what iyzico requires. The mock ignores it, real providers check it.
     const basketItems: BasketItem[] = order.items.map((item, index) => ({
@@ -95,12 +140,12 @@ async function buildRequestFromDatabase(ctx: HandlerContext): Promise<object> {
 
     const request: ThreeDSPaymentRequest = {
       price: total,
-      paidPrice: total,
+      paidPrice,
       currency: order.currency,
       basketId: order.id,
       conversationId: order.id,
       installment: order.installment,
-      paymentCard: readCard(body.paymentCard),
+      paymentCard,
       buyer: demoBuyer(order.id),
       shippingAddress: demoAddress('Demo Buyer'),
       billingAddress: demoAddress('Demo Buyer'),
@@ -131,7 +176,7 @@ async function buildRequestFromDatabase(ctx: HandlerContext): Promise<object> {
     }
     return {
       paymentId: order.paymentId,
-      price: formatKurus(order.amountKurus),
+      price: formatKurus(order.paidPriceKurus ?? order.amountKurus),
       currency: order.currency,
       ip: '127.0.0.1',
       conversationId: order.id,
@@ -162,51 +207,60 @@ function centsOf(amount: string | undefined): number {
  * can never disagree, and a forged callback emits nothing at all.
  */
 function attachOrderEvents(payment: ReturnType<typeof createPayment>): void {
-  payment.on('payment.succeeded', (event) =>
-    prisma.order.updateMany({
+  payment.on('payment.succeeded', async (event) => {
+    await prisma.order.updateMany({
       where: { id: event.conversationId ?? '' },
       data: { status: 'PAID', paymentId: event.paymentId ?? null, errorCode: null },
-    })
-  );
+    });
+  });
 
-  payment.on('payment.pending', (event) =>
-    prisma.order.updateMany({
-      where: { id: event.conversationId ?? '', status: 'NEW' },
+  payment.on('payment.pending', async (event) => {
+    // The outcome is unknown (e.g. a lost response): never overwrite a final state.
+    await prisma.order.updateMany({
+      where: { id: event.conversationId ?? '', status: { notIn: ['PAID', 'REFUNDED'] } },
       data: { status: 'PENDING' },
-    })
-  );
+    });
+  });
 
-  payment.on('payment.failed', (event) =>
-    prisma.order.updateMany({
-      where: { id: event.conversationId ?? '', status: { not: 'PAID' } },
+  payment.on('payment.failed', async (event) => {
+    await prisma.order.updateMany({
+      where: { id: event.conversationId ?? '', status: { notIn: ['PAID', 'REFUNDED'] } },
       data: { status: 'FAILED', errorCode: event.code ?? 'UNKNOWN' },
-    })
-  );
+    });
+  });
 
-  payment.on('refund.succeeded', (event) => {
+  payment.on('refund.succeeded', async (event) => {
     const orderId = event.conversationId;
     if (!orderId) return;
-    const refundId =
-      (event.result as { refundId?: unknown }).refundId ?? `REF-${randomUUID()}`;
+    const providerRefundId = (event.result as { refundId?: unknown }).refundId;
     const amount = centsOf(event.amount);
-    return prisma.order
-      .updateMany({ where: { id: orderId }, data: { status: 'REFUNDED' } })
-      .then(() =>
-        prisma.refund.create({
-          data: {
-            id: String(refundId),
-            orderId,
-            paymentId: event.paymentId ?? '',
-            amountKurus: amount,
-          },
-        })
-      );
+    await prisma.order.updateMany({ where: { id: orderId }, data: { status: 'REFUNDED' } });
+    await prisma.refund.create({
+      data: {
+        id: randomUUID(),
+        providerRefundId: typeof providerRefundId === 'string' ? providerRefundId : null,
+        orderId,
+        paymentId: event.paymentId ?? '',
+        amountKurus: amount,
+      },
+    });
   });
 }
+
+/**
+ * Only messages and error text: the library never passes request/response
+ * bodies to the logger, and this example must not log card data either.
+ */
+const logger: BetterPaymentLogger = {
+  debug: () => undefined,
+  info: () => undefined,
+  error: (message, error) => console.error(`[better-payment] ${message}`, error?.message ?? ''),
+};
 
 function createPayment() {
   return betterPayment({
     mode: 'sandbox',
+    logger,
     providers: {
       mock: new MockProvider(),
       ...(PROVIDER_ID === 'iyzico'

@@ -1,4 +1,4 @@
-/** Demo catalog, in kuruş. The same prices are used by `prisma db seed`. */
+/** Demo catalog, in kuruş. `loadProducts()` inserts it on first use. */
 export const CATALOG = [
   { id: 'P1', name: 'Mechanical Keyboard', detail: 'Tenkeyless, hot-swappable switches', priceKurus: 249900 },
   { id: 'P2', name: 'USB-C Hub', detail: 'Seven ports, 100 W passthrough', priceKurus: 89900 },
