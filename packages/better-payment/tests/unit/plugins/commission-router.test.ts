@@ -13,7 +13,11 @@ import {
   type CommissionRouterOptions,
   type RouterBinInfo,
 } from 'better-payment/commission-router';
-import { mockPaymentRequest, mockRefundRequest, mockCancelRequest } from '../../fixtures/payment-data';
+import {
+  mockPaymentRequest,
+  mockRefundRequest,
+  mockCancelRequest,
+} from '../../fixtures/payment-data';
 
 type RouterPayment = ReturnType<typeof betterPayment> & CommissionRouterMethods;
 
@@ -99,10 +103,7 @@ describe('commissionRouter', () => {
     expect(below.candidates[0]).toMatchObject({ cost: '0.00', costMinor: 0 });
 
     // 2.49% of 10.10 TRY is 0.25149 TRY -> 25 minor units, rounded half up
-    const { payment: percent } = setup(
-      { rates: [{ provider: 'alpha', rate: '2.49' }] },
-      ['alpha']
-    );
+    const { payment: percent } = setup({ rates: [{ provider: 'alpha', rate: '2.49' }] }, ['alpha']);
     const exact = await percent.router.quote({ price: '10.10' });
     expect(exact.candidates[0]).toMatchObject({ cost: '0.25', costMinor: 25 });
   });
@@ -203,22 +204,25 @@ describe('commissionRouter', () => {
       (await payment.router.quote({ price: '100.00', operation: 'initThreeDSPayment' })).selected
     ).toBe('alpha');
     expect(
-      (await payment.router.quote({ price: '100.00', operation: 'initThreeDSPayment', threeDS: false }))
-        .selected
+      (
+        await payment.router.quote({
+          price: '100.00',
+          operation: 'initThreeDSPayment',
+          threeDS: false,
+        })
+      ).selected
     ).toBe('beta');
   });
 
   it('matches card filters from the BIN lookup and reports unknown cards', async () => {
-    const lookup = vi.fn(
-      (bin: string): RouterBinInfo => ({
-        binNumber: bin,
-        cardFamily: 'Bonus',
-        bankName: 'Fictional Bank',
-        cardAssociation: 'MASTER_CARD',
-        cardType: 'CREDIT_CARD',
-        commercial: false,
-      })
-    );
+    const lookup = vi.fn((bin: string): RouterBinInfo => ({
+      binNumber: bin,
+      cardFamily: 'Bonus',
+      bankName: 'Fictional Bank',
+      cardAssociation: 'MASTER_CARD',
+      cardType: 'CREDIT_CARD',
+      commercial: false,
+    }));
     const { payment } = setup({
       binLookup: lookup,
       rates: [
@@ -251,10 +255,7 @@ describe('commissionRouter', () => {
 
     const unknown = await payment.router.quote({ price: '100.00' });
     expect(unknown.selected).toBe('gamma');
-    expect(unknown.excluded.map((entry) => entry.reason)).toEqual([
-      'card-unknown',
-      'card-unknown',
-    ]);
+    expect(unknown.excluded.map((entry) => entry.reason)).toEqual(['card-unknown', 'card-unknown']);
   });
 
   it('skips unhealthy providers, and fails open when the health monitor throws', async () => {
@@ -659,9 +660,9 @@ describe('commissionRouter', () => {
   });
 
   it('validates the rate table, the options, the configured providers and quote input', async () => {
-    expect(() =>
-      commissionRouter({ rates: [{ provider: 'alpha', rate: '100.01' }] })
-    ).toThrow(/at most 100/);
+    expect(() => commissionRouter({ rates: [{ provider: 'alpha', rate: '100.01' }] })).toThrow(
+      /at most 100/
+    );
     expect(() =>
       commissionRouter({ rates: [{ provider: 'alpha', rate: '1', installments: [] }] })
     ).toThrow(/non-empty array/);

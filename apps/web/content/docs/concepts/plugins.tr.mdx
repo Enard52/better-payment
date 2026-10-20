@@ -52,12 +52,13 @@ Sağlayıcıya özel metotlar (iyzico ödeme formu, PWI ve abonelikler, PayTR to
 
 ## Resmi plugin'ler [#official-plugins]
 
-Resmi plugin'ler paketle birlikte, `better-payment/plugins` altında gelir:
+Resmi plugin'ler paketle birlikte gelir. Çoğu `better-payment/plugins` altındadır; komisyon yönlendiricinin kendi tree-shakable `better-payment/commission-router` girişi vardır:
 
 | Plugin | Ne yapar |
 | ------ | -------- |
 | [`localizedErrors`](/docs/plugins/localized-errors) | Müşteriler için, kendi dillerinde hata mesajları (İngilizce, Türkçe, Almanca, Rusça ve Arapça dahil) |
 | [`chaos`](/docs/plugins/chaos) | Uygulamanızın hataları nasıl karşıladığını test etmek için işlemlere hata ve gecikme enjekte eder |
 | [`notifications`](/docs/plugins/notifications) | Satışları, iadeleri ve hataları Slack, Discord, Telegram veya kendi kanalınıza gönderir |
+| [`commissionRouter`](/docs/plugins/commission-router) | Her ödemeyi kendi komisyon oranı tablolarınıza göre en ucuz uygun sağlayıcıya yönlendirir |
 
-Planlanan: her ödemeyi en ucuz sağlayıcıya gönderen bir komisyon yönlendirici ([#51](https://github.com/czaydev/better-payment/issues/51)). Başka bir şeye mi ihtiyacınız var? [Kendi plugin'inizi yazın](/docs/guides/writing-plugins); birkaç satır yeterli.
+Başka bir şeye mi ihtiyacınız var? [Kendi plugin'inizi yazın](/docs/guides/writing-plugins); birkaç satır yeterli.

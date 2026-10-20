@@ -40,7 +40,6 @@ export interface RouterQuoteInput {
  * is a human-readable explanation (it never contains card data).
  */
 export type ExclusionReason =
-  | 'provider-not-configured'
   | 'provider-unhealthy'
   | 'no-rate-line'
   | 'rate-not-yet-valid'
