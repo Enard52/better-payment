@@ -24,9 +24,7 @@ export const PARAMPOS_KS_URLS = {
 
 /** KS endpoint for a payment base URL; the test service has "test" in its host */
 export function defaultParamposKsUrl(baseUrl: string | undefined): string {
-  return baseUrl && /test/i.test(baseUrl)
-    ? PARAMPOS_KS_URLS.sandbox
-    : PARAMPOS_KS_URLS.production;
+  return baseUrl && /test/i.test(baseUrl) ? PARAMPOS_KS_URLS.sandbox : PARAMPOS_KS_URLS.production;
 }
 
 /**

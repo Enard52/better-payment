@@ -66,6 +66,7 @@ import {
   decodeParamposHtml,
   paramposRatesOf,
   calculateParamposTotalMinor,
+  PARAMPOS_NAMESPACE,
   PARAMPOS_KS_NAMESPACE,
   PARAMPOS_KS_URLS,
   defaultParamposKsUrl,
@@ -152,12 +153,14 @@ export class Parampos extends PaymentProvider<ParamposConfig> {
   }
 
   /**
-   * Send SOAP request to Parampos API
+   * Send SOAP request to Parampos API. `options.cardStorage` targets the
+   * separate card-storage (Kart Saklama) ASMX endpoint: different namespace,
+   * no hash fields.
    */
   private async sendSoapRequest(
     soapAction: string,
     fields: Record<string, XmlValue>,
-    options: { retryable?: boolean } = {}
+    options: { retryable?: boolean; cardStorage?: boolean } = {}
   ): Promise<ParamposResult> {
     const xml = await this.sendSoapRaw(soapAction, fields, options);
     return parseParamposSoapResponse<ParamposResult>(xml, `${soapAction}Result`);
@@ -167,49 +170,21 @@ export class Parampos extends PaymentProvider<ParamposConfig> {
   private async sendSoapRaw(
     soapAction: string,
     fields: Record<string, XmlValue>,
-    options: { retryable?: boolean } = {}
+    options: { retryable?: boolean; cardStorage?: boolean } = {}
   ): Promise<string> {
-    const envelope = buildParamposSoapEnvelope(soapAction, fields);
+    const namespace = options.cardStorage ? PARAMPOS_KS_NAMESPACE : PARAMPOS_NAMESPACE;
+    const envelope = buildParamposSoapEnvelope(soapAction, fields, namespace);
 
     const requestConfig: HttpRequestConfig = {
-      headers: { SOAPAction: `https://turkpos.com.tr/${soapAction}` },
+      headers: { SOAPAction: `${namespace}${soapAction}` },
       retryable: options.retryable === true,
       responseType: 'text',
     };
 
-    const response = await this.client.post('', envelope, requestConfig);
-    return String(response.data);
-  }
-
-  /** KS (card storage) service URL */
-  private get cardStorageUrl(): string {
-    return this.config.cardStorageUrl ?? defaultParamposKsUrl(this.config.baseUrl);
-  }
-
-  /**
-   * Send SOAP request to the card storage (Kart Saklama) service. It is a
-   * separate ASMX endpoint: different namespace, no hash fields.
-   */
-  private async sendKsRequest(
-    soapAction: string,
-    fields: Record<string, XmlValue>,
-    options: { retryable?: boolean } = {}
-  ): Promise<ParamposResult> {
-    const xml = await this.sendKsRaw(soapAction, fields, options);
-    return parseParamposSoapResponse<ParamposResult>(xml, `${soapAction}Result`);
-  }
-
-  private async sendKsRaw(
-    soapAction: string,
-    fields: Record<string, XmlValue>,
-    options: { retryable?: boolean } = {}
-  ): Promise<string> {
-    const envelope = buildParamposSoapEnvelope(soapAction, fields, PARAMPOS_KS_NAMESPACE);
-    const response = await this.client.post(this.cardStorageUrl, envelope, {
-      headers: { SOAPAction: `${PARAMPOS_KS_NAMESPACE}${soapAction}` },
-      retryable: options.retryable === true,
-      responseType: 'text',
-    });
+    const url = options.cardStorage
+      ? (this.config.cardStorageUrl ?? defaultParamposKsUrl(this.config.baseUrl))
+      : '';
+    const response = await this.client.post(url, envelope, requestConfig);
     return String(response.data);
   }
 
@@ -384,15 +359,19 @@ export class Parampos extends PaymentProvider<ParamposConfig> {
     customerToken: string,
     alias?: string
   ): Promise<ParamposResult> {
-    return this.sendKsRequest('KS_Kart_Ekle', {
-      ...this.credentials,
-      KK_Sahibi: card.cardHolderName,
-      KK_No: card.cardNumber,
-      KK_SK_Ay: formatParamposExpiryMonth(card.expireMonth),
-      KK_SK_Yil: formatParamposExpiryYear(card.expireYear),
-      KK_Kart_Adi: alias ?? '',
-      KK_Islem_ID: customerToken,
-    });
+    return this.sendSoapRequest(
+      'KS_Kart_Ekle',
+      {
+        ...this.credentials,
+        KK_Sahibi: card.cardHolderName,
+        KK_No: card.cardNumber,
+        KK_SK_Ay: formatParamposExpiryMonth(card.expireMonth),
+        KK_SK_Yil: formatParamposExpiryYear(card.expireYear),
+        KK_Kart_Adi: alias ?? '',
+        KK_Islem_ID: customerToken,
+      },
+      { cardStorage: true }
+    );
   }
 
   /**
@@ -411,11 +390,7 @@ export class Parampos extends PaymentProvider<ParamposConfig> {
     }
     const options = typeof request.saveCard === 'object' ? request.saveCard : {};
     const customerToken = options.customerToken ?? generateOrderId('CARD');
-    const result = await this.addCard(
-      this.cardOf(request),
-      customerToken,
-      options.alias
-    );
+    const result = await this.addCard(this.cardOf(request), customerToken, options.alias);
     if (!isParamposSuccess(result.Sonuc) || !result.KS_GUID) return { result, customerToken };
     return { tokens: { customerToken, cardToken: result.KS_GUID }, customerToken };
   }
@@ -484,7 +459,7 @@ export class Parampos extends PaymentProvider<ParamposConfig> {
           installment,
           request.callbackUrl
         );
-        const result = await this.sendKsRequest('KS_Tahsilat', fields);
+        const result = await this.sendSoapRequest('KS_Tahsilat', fields, { cardStorage: true });
         const approved =
           isParamposSuccess(result.Sonuc) &&
           Number(result.Islem_ID) > 0 &&
@@ -551,7 +526,7 @@ export class Parampos extends PaymentProvider<ParamposConfig> {
           installment,
           request.callbackUrl
         );
-        const result = await this.sendKsRequest('KS_Tahsilat', fields);
+        const result = await this.sendSoapRequest('KS_Tahsilat', fields, { cardStorage: true });
 
         if (
           !isParamposSuccess(result.Sonuc) ||
@@ -769,9 +744,7 @@ export class Parampos extends PaymentProvider<ParamposConfig> {
       return this.withErrorCode({
         status: approved ? PaymentStatus.SUCCESS : PaymentStatus.FAILURE,
         customerToken,
-        card: approved
-          ? { cardToken: result.KS_GUID!, alias: request.alias }
-          : undefined,
+        card: approved ? { cardToken: result.KS_GUID!, alias: request.alias } : undefined,
         errorCode: approved ? undefined : result.Sonuc,
         errorMessage: approved ? undefined : result.Sonuc_Str,
         rawResponse: result,
@@ -798,14 +771,14 @@ export class Parampos extends PaymentProvider<ParamposConfig> {
         ]);
       }
       // At least one filter is required, otherwise Param lists every stored card
-      const xml = await this.sendKsRaw(
+      const xml = await this.sendSoapRaw(
         'KS_Kart_Liste',
         {
           ...this.credentials,
           KK_Kart_Adi: '',
           KK_Islem_ID: customerToken,
         },
-        { retryable: true }
+        { retryable: true, cardStorage: true }
       );
       const result = parseParamposSoapResponse<ParamposResult>(xml, 'KS_Kart_ListeResult');
 
@@ -842,17 +815,19 @@ export class Parampos extends PaymentProvider<ParamposConfig> {
     try {
       if (!request.cardToken || !request.customerToken) {
         throw new ValidationError('customerToken and cardToken are required', undefined, [
-          ...(request.customerToken
-            ? []
-            : [{ path: 'customerToken', message: 'is required' }]),
+          ...(request.customerToken ? [] : [{ path: 'customerToken', message: 'is required' }]),
           ...(request.cardToken ? [] : [{ path: 'cardToken', message: 'is required' }]),
         ]);
       }
-      const result = await this.sendKsRequest('KS_Kart_Sil', {
-        G: this.credentials.G,
-        KS_GUID: request.cardToken,
-        KK_Islem_ID: request.customerToken,
-      });
+      const result = await this.sendSoapRequest(
+        'KS_Kart_Sil',
+        {
+          G: this.credentials.G,
+          KS_GUID: request.cardToken,
+          KK_Islem_ID: request.customerToken,
+        },
+        { cardStorage: true }
+      );
       const approved = isParamposSuccess(result.Sonuc);
 
       return this.withErrorCode({
@@ -973,8 +948,7 @@ export class Parampos extends PaymentProvider<ParamposConfig> {
         return this.withErrorCode({
           status: PaymentStatus.FAILURE,
           errorCode: 'INVALID_CALLBACK',
-          errorMessage:
-            'TURKPOS_RETVAL_Siparis_ID is missing from the 3D Secure callback',
+          errorMessage: 'TURKPOS_RETVAL_Siparis_ID is missing from the 3D Secure callback',
           rawResponse: callbackData,
         });
       }
@@ -1027,7 +1001,9 @@ export class Parampos extends PaymentProvider<ParamposConfig> {
         errorCode: approved ? undefined : status.Sonuc,
         errorMessage: approved
           ? undefined
-          : status.Odeme_Sonuc_Aciklama || status.Sonuc_Str || callbackData.TURKPOS_RETVAL_Sonuc_Str,
+          : status.Odeme_Sonuc_Aciklama ||
+            status.Sonuc_Str ||
+            callbackData.TURKPOS_RETVAL_Sonuc_Str,
         rawResponse: { callback: callbackData, payment: status },
       });
     } catch (error) {
