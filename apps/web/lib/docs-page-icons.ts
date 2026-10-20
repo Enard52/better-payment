@@ -1,4 +1,5 @@
 import { createElement, type ReactElement } from "react";
+import { withBasePath } from "@/lib/base-path";
 import {
   Bell,
   Blocks,
@@ -31,15 +32,15 @@ import {
   Webhook,
 } from "lucide-react";
 
-/** A square tile in the brand's color, for providers and banks whose logos are wordmarks */
-type Monogram = { label: string; bg: string; fg?: string };
+/** A brand logo tile from public/brand/docs-logos (sources: SOURCES.md there) */
+type Logo = { logo: string };
 
 /**
  * Sidebar icon for each docs page, keyed by its path under content/docs (route groups left out).
  * Pages that only exist on the beta branch are listed too, so they get their icon once main
  * is merged into beta.
  */
-const PAGE_ICONS: Record<string, LucideIcon | Monogram> = {
+const PAGE_ICONS: Record<string, LucideIcon | Logo> = {
   // Get started
   "": BookOpen,
   installation: Download,
@@ -56,24 +57,38 @@ const PAGE_ICONS: Record<string, LucideIcon | Monogram> = {
   "payments/stored-cards": CreditCard,
   "payments/basket": ShoppingCart,
   // Providers
-  "providers/iyzico": { label: "iy", bg: "#1e64ff" },
-  "providers/paytr": { label: "PT", bg: "#0a3e8c" },
-  "providers/parampos": { label: "P", bg: "#49267f" },
-  "providers/sipay": { label: "S", bg: "#211261" },
+  "providers/iyzico": { logo: "providers-iyzico.png" },
+  "providers/paytr": { logo: "providers-paytr.png" },
+  "providers/parampos": { logo: "providers-parampos.png" },
+  "providers/sipay": { logo: "providers-sipay.png" },
   // Banks
-  "banks/akbank": { label: "A", bg: "#dc0005" },
-  "banks/kuveytturk": { label: "KT", bg: "#16a085" },
+  "banks/akbank": { logo: "banks-akbank.png" },
+  "banks/kuveytturk": { logo: "banks-kuveytturk.png" },
   "banks/est": Landmark,
-  "banks/denizbank": { label: "D", bg: "#004899" },
-  "banks/albaraka": { label: "AT", bg: "#00843d" },
-  "banks/vakifbank": { label: "V", bg: "#fbc34e", fg: "#1a1a1a" },
-  "banks/yapikredi": { label: "YK", bg: "#124b8c" },
-  "banks/qnb": { label: "Q", bg: "#003d74" },
-  "banks/garanti": { label: "G", bg: "#004481" },
+  "banks/halkbank": { logo: "banks-halkbank.png" },
+  "banks/isbank": { logo: "banks-isbank.png" },
+  "banks/sekerbank": { logo: "banks-sekerbank.png" },
+  "banks/teb": { logo: "banks-teb.png" },
+  "banks/ziraat": { logo: "banks-ziraat.png" },
+  "banks/denizbank": { logo: "banks-denizbank.png" },
+  "banks/albaraka": { logo: "banks-albaraka.png" },
+  "banks/vakifbank": { logo: "banks-vakifbank.png" },
+  "banks/yapikredi": { logo: "banks-yapikredi.png" },
+  "banks/qnb": { logo: "banks-qnb.png" },
+  "banks/garanti": { logo: "banks-garanti.png" },
   // Integrations
-  "integrations/nextjs": { label: "N", bg: "#000000" },
   "integrations/frameworks": Boxes,
+  "integrations/nextjs": { logo: "nextjs.svg" },
+  "integrations/react-router": { logo: "react-router.svg" },
+  "integrations/express": { logo: "express.svg" },
+  "integrations/fastify": { logo: "fastify.svg" },
+  "integrations/hono": { logo: "hono.svg" },
+  "integrations/elysia": { logo: "elysia.svg" },
+  "integrations/node": { logo: "node.svg" },
   "integrations/edge": Globe,
+  "integrations/cloudflare-workers": { logo: "cloudflare-workers.svg" },
+  "integrations/deno": { logo: "deno.svg" },
+  "integrations/bun": { logo: "bun.svg" },
   // Plugins
   "plugins/i18n": Languages,
   "plugins/localized-errors": Languages,
@@ -92,21 +107,21 @@ const PAGE_ICONS: Record<string, LucideIcon | Monogram> = {
   "reference/changelog": History,
 };
 
-function render(icon: LucideIcon | Monogram): ReactElement {
-  if ("label" in icon) {
-    return createElement(
-      "span",
-      {
-        key: "icon",
-        "aria-hidden": true,
-        className:
-          "inline-flex size-4 shrink-0 items-center justify-center rounded-[4px] text-[8.5px] ring-1 ring-black/10 ring-inset dark:ring-white/15 leading-none font-bold tracking-tight",
-        style: { backgroundColor: icon.bg, color: icon.fg ?? "#ffffff" },
-      },
-      icon.label,
-    );
-  }
+function render(icon: LucideIcon | Logo): ReactElement {
+  if ("logo" in icon) return logoIcon(icon.logo);
   return createElement(icon, { key: "icon", className: "size-4 shrink-0", "aria-hidden": true });
+}
+
+/** A logo from public/brand/docs-logos, sized like the line icons */
+function logoIcon(file: string): ReactElement {
+  return createElement("img", {
+    key: "icon",
+    src: withBasePath(`/brand/docs-logos/${file}`),
+    alt: "",
+    width: 16,
+    height: 16,
+    className: "size-4 shrink-0 rounded-[4px] ring-1 ring-black/10 dark:ring-white/15",
+  });
 }
 
 /**

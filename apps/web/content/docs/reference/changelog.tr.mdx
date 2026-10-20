@@ -20,7 +20,7 @@ description: better-payment'in sürüm geçmişi ve geriye uyumsuz değişiklikl
 - **[Albaraka Türk sağlayıcısı](/docs/banks/albaraka):** Albaraka'nın Posnet JSON API'si üzerinden 3D'siz satış, 3D Secure, iade, iptal, sipariş sorgusu ve ön provizyon. conversationId verilmediğinde bankaya uygun sipariş kimlikleri üretilir.
 - **[Denizbank sağlayıcısı](/docs/banks/denizbank):** InterVPos üzerinden 3D'siz satış, 3D Secure (3D Model), iade ve iptal. Callback hash'i `HASHPARAMS` üzerinden yeniden oluşturulur, sonucu bankanın tahsilatı belirler.
 - **[EST Girogate](/docs/banks/est#girogate):** EST ödeme sayfası üzerinden iDEAL, Sofort, giropay, EPS, Bancontact, Przelewy24, Trustly ve diğer alternatif yöntemlerle ödeme; kart yerine `girogate: { method, country }` gönderilir.
-- **[Yeni EST bankaları](/docs/banks/est#banks):** EST sağlayıcısına `akbankest` (Akbank'ın eski sanal POS'u) ve `halkbankmkd` (Halkbank Makedonya, `MKD` ile) eklendi.
+- **[Yeni EST bankaları](/docs/banks/est):** EST sağlayıcısına `akbankest` (Akbank'ın eski sanal POS'u) ve `halkbankmkd` (Halkbank Makedonya, `MKD` ile) eklendi.
 - **[PayTR Direct API ile 3D Secure](/docs/providers/paytr):** `threeDSMode: 'direct'` ile `initThreeDSPayment()` kartı kendi ödeme formunuzdan alır ve PayTR iFrame'i yerine imzalı bir Direct API formu döndürür.
 - **[QNB sağlayıcısı](/docs/banks/qnb):** PayFor XML API üzerinden 3D'siz satış, 3D Secure (3D Model ve 3D Pay), iade, iptal ve sipariş sorgusu. 3D callback'leri ResponseHash ile doğrulanır ve bankayla teyit edilir.
 - **[VakıfBank sağlayıcısı](/docs/banks/vakifbank):** 3D'siz satış, 3D Secure (MPI kaydı ve ardından kartı ve tutarı VakıfBank'ın kendi 3D kaydından alan VPOS provizyonu), iade ve iptal. `getPayment()` desteklenmez.
@@ -77,7 +77,7 @@ React Router adaptörü.
 
 ### Eklenenler [#added-5]
 
-- **[React Router adaptörü](/docs/integrations/frameworks#react-router):** `better-payment/react-router`, bir splat resource route için `loader` ve `action` döndürür; React Router v7 ve Remix v2 ile çalışır.
+- **[React Router adaptörü](/docs/integrations/react-router):** `better-payment/react-router`, bir splat resource route için `loader` ve `action` döndürür; React Router v7 ve Remix v2 ile çalışır.
 
 ## 0.7.0
 
@@ -96,7 +96,7 @@ Sepet yardımcısı, Arapça hata mesajları ve iyzico'da `paymentId` ile iade. 
 
 ### Eklenenler [#added-7]
 
-- **[Elysia adapter'ı](/docs/integrations/frameworks#elysia):** `better-payment/elysia` handler'ı Elysia'ya (Bun) tek satırda bağlar: `app.all('/api/pay/*', toElysiaHandler(payment), { parse: 'none' })`. Katkısı için [@ScottHallchico](https://github.com/ScottHallchico)'ya teşekkürler.
+- **[Elysia adapter'ı](/docs/integrations/elysia):** `better-payment/elysia` handler'ı Elysia'ya (Bun) tek satırda bağlar: `app.all('/api/pay/*', toElysiaHandler(payment), { parse: 'none' })`. Katkısı için [@ScottHallchico](https://github.com/ScottHallchico)'ya teşekkürler.
 
 ## 0.5.2
 
