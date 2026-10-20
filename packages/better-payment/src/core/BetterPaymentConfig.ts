@@ -2,11 +2,7 @@ import type { BetterPaymentLogger } from './logger';
 import type { RetryConfig } from './retry';
 export type { RetryConfig } from './retry';
 import type { BetterPaymentHandlerOptions } from './BetterPaymentHandler';
-import type {
-  PaymentProvider,
-  PaymentProviderConfig,
-  VerifyCardOptions,
-} from './PaymentProvider';
+import type { PaymentProvider, PaymentProviderConfig, VerifyCardOptions } from './PaymentProvider';
 import type { BetterPaymentPlugin } from './plugin';
 
 /**

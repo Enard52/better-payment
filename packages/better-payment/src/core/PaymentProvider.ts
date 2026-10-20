@@ -211,11 +211,7 @@ export abstract class PaymentProvider<
     try {
       amount = this.config.verifyCard?.amount ?? '1.00';
       currency = this.config.verifyCard?.currency ?? Currency.TRY;
-      if (
-        !/^\d+(\.\d{1,2})?$/.test(amount) ||
-        Number(amount) <= 0 ||
-        !(currency in Currency)
-      ) {
+      if (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0 || !(currency in Currency)) {
         throw new ValidationError('Invalid verifyCard configuration');
       }
       // The verification subset: a card, the buyer IP and the callback URL

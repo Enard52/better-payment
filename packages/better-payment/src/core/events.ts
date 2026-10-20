@@ -130,8 +130,7 @@ export function eventFor(
   // A forged callback is not a payment outcome
   if (field(result, 'errorCode') === 'INVALID_HASH') return undefined;
   // verifyCard() results, and the callback that completes them, are verifications
-  const verification =
-    operation === 'verifyCard' || field(result, 'verification') === 'card';
+  const verification = operation === 'verifyCard' || field(result, 'verification') === 'card';
 
   let type: PaymentEventType | undefined;
   if (verification) {
