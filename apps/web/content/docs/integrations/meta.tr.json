@@ -3,6 +3,7 @@
   "icon": "integrations",
   "pages": [
     "nextjs",
+    "next-shop",
     "frameworks",
     "edge"
   ]
