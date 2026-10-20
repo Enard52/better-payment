@@ -1,8 +1,9 @@
 import { formatKurus, loadProducts } from '@/lib/products';
+import { addToCart } from '@/lib/cart-actions';
 
 export const dynamic = 'force-dynamic';
 
-/** Step 1 of the flow: the product list. Adding to the cart posts to /cart. */
+/** Step 1 of the flow: the product list. Adding to the cart runs a server action. */
 export default async function HomePage() {
   const products = await loadProducts();
 
@@ -21,7 +22,7 @@ export default async function HomePage() {
             <p className="price">
               {formatKurus(product.priceKurus)} {product.currency}
             </p>
-            <form action="/cart" method="post">
+            <form action={addToCart}>
               <input type="hidden" name="productId" value={product.id} />
               <input type="hidden" name="quantity" value="1" />
               <button type="submit">Add to cart</button>
