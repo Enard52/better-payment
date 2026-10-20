@@ -65,6 +65,11 @@ const PAGE_ICONS: Record<string, LucideIcon | Logo> = {
   "banks/akbank": { logo: "banks-akbank.png" },
   "banks/kuveytturk": { logo: "banks-kuveytturk.png" },
   "banks/est": Landmark,
+  "banks/halkbank": { logo: "banks-halkbank.png" },
+  "banks/isbank": { logo: "banks-isbank.png" },
+  "banks/sekerbank": { logo: "banks-sekerbank.png" },
+  "banks/teb": { logo: "banks-teb.png" },
+  "banks/ziraat": { logo: "banks-ziraat.png" },
   "banks/denizbank": { logo: "banks-denizbank.png" },
   "banks/albaraka": { logo: "banks-albaraka.png" },
   "banks/vakifbank": { logo: "banks-vakifbank.png" },
@@ -108,7 +113,7 @@ function render(icon: LucideIcon | Logo): ReactElement {
 }
 
 /** A logo from public/brand/docs-logos, sized like the line icons */
-export function logoIcon(file: string): ReactElement {
+function logoIcon(file: string): ReactElement {
   return createElement("img", {
     key: "icon",
     src: withBasePath(`/brand/docs-logos/${file}`),
