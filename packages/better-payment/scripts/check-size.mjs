@@ -8,19 +8,23 @@ const budgets = [
   // buildBasket() (ESM bundlers drop it when it is not imported), 29 kB since the
   // 0.8.1 security fixes (Akbank order check, body limits, response filtering),
   // 31 kB since the Kuveyt Türk provider, 34 kB since the EST provider, 38 kB since
-  // the Sipay provider
-  { file: 'dist/index.mjs', maxGzipKb: 38 },
-  { file: 'dist/index.js', maxGzipKb: 38 },
+  // the Sipay provider, 40 kB since QNB, 42 kB with Yapı Kredi, 44 kB with VakıfBank,
+  // 46 kB with Albaraka Türk, 48 kB with Denizbank, 49 kB with QNBpay, 51 kB with Garanti BBVA alongside the
+  // other providers
+  { file: 'dist/index.mjs', maxGzipKb: 51 },
+  { file: 'dist/index.js', maxGzipKb: 51 },
   { file: 'dist/client/index.mjs', maxGzipKb: 2 },
   { file: 'dist/client/index.js', maxGzipKb: 2 },
   { file: 'dist/testing/index.mjs', maxGzipKb: 8 },
   { file: 'dist/testing/index.js', maxGzipKb: 8 },
   // Official plugins, with every built-in error message language. Raise this for new
   // languages; translations are never shortened to fit it. 7 kB since the
-  // notifications plugin (its messages in the same five languages), 8 kB since the
-  // refundApproval plugin. ESM bundlers drop the plugins an application does not import.
-  { file: 'dist/plugins/index.mjs', maxGzipKb: 8 },
-  { file: 'dist/plugins/index.js', maxGzipKb: 8 },
+  // notifications plugin, 9 kB with the openAPI plugin (beta measures 8.99 kB gzip).
+  // With this branch's plugin on top of beta the entry point is 10.16 / 10.16 kB
+  // gzip, so the budget is 11 kB. ESM bundlers drop the plugins an application
+  // does not import.
+  { file: 'dist/plugins/index.mjs', maxGzipKb: 11 },
+  { file: 'dist/plugins/index.js', maxGzipKb: 11 },
   { file: 'dist/next/index.mjs', maxGzipKb: 1 },
   { file: 'dist/next/index.js', maxGzipKb: 1 },
   { file: 'dist/express/index.mjs', maxGzipKb: 1 },

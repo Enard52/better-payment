@@ -1,11 +1,11 @@
 {
   "title": "Plugins",
   "icon": "plugins",
-  "defaultOpen": true,
   "pages": [
-    "localized-errors",
+    "i18n",
     "chaos",
     "notifications",
+    "openapi",
     "refund-approval"
   ]
 }
