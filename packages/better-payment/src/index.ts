@@ -13,6 +13,9 @@ export type {
   PluginContext,
   PaymentEndpoint,
   EndpointContext,
+  EndpointInfo,
+  EndpointHandlerInfo,
+  EndpointOpenAPIMetadata,
   ResponseContext,
 } from './core/plugin';
 export { EventListenerError, PAYMENT_EVENT_TYPES } from './core/events';

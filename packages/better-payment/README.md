@@ -311,14 +311,18 @@ const payment = betterPayment({ providers: { ... }, plugins: [auditLog] });
 payment.on('payment.succeeded', (event) => orders.markPaid(event.conversationId));
 ```
 
-Official plugins ship under `better-payment/plugins`. `localizedErrors` puts
-customer-facing error messages in `errorMessage`, in the customer's language
-(English, Turkish, German, Russian, and Arabic included; per request from `Accept-Language` in the handler):
+Official plugins ship under `better-payment/plugins`. `i18n` puts
+customer-facing error messages in `errorMessage`, in the customer's language. It works like
+Better Auth's i18n plugin: English is built in, Turkish, German, Russian, and Arabic come in `locales`,
+and the handler picks each response's language from `Accept-Language`, a cookie, or your own callback:
 
 ```typescript
-import { localizedErrors } from 'better-payment/plugins';
+import { i18n, locales } from 'better-payment/plugins';
 
-const payment = betterPayment({ providers: { ... }, plugins: [localizedErrors({ locale: 'tr' })] });
+const payment = betterPayment({
+  providers: { ... },
+  plugins: [i18n({ translations: { tr: locales.tr }, defaultLocale: 'tr' })],
+});
 ```
 
 `chaos` injects declines, lost responses (`NETWORK_ERROR`) and delays in tests, so you can check how your application handles them.
