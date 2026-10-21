@@ -17,6 +17,8 @@ export enum ProviderType {
   KUVEYTTURK = 'kuveytturk',
   SIPAY = 'sipay',
   ALBARAKA = 'albaraka',
+  /** QNBpay, on Sipay's platform: `sipay({ brand: 'qnbpay' })` or `qnbpay()` */
+  QNBPAY = 'qnbpay',
   /** EST (Asseco) banks, all created with `est({ bank })` */
   ISBANK = 'isbank',
   ZIRAAT = 'ziraat',
@@ -31,6 +33,7 @@ export enum ProviderType {
   VAKIFBANK = 'vakifbank',
   YAPIKREDI = 'yapikredi',
   QNB = 'qnb',
+  GARANTI = 'garanti',
   /** In-memory provider for tests, from `better-payment/testing` */
   MOCK = 'mock',
 }
@@ -149,6 +152,10 @@ export const PROVIDER_DEFAULT_URLS: Record<
     sandbox: 'https://epostest.albarakaturk.com.tr',
     production: 'https://epos.albarakaturk.com.tr',
   },
+  [ProviderType.QNBPAY]: {
+    sandbox: 'https://test.qnbpay.com.tr',
+    production: 'https://portal.qnbpay.com.tr',
+  },
   // The EST banks share Asseco's test host
   [ProviderType.ISBANK]: {
     sandbox: 'https://entegrasyon.asseco-see.com.tr',
@@ -193,6 +200,10 @@ export const PROVIDER_DEFAULT_URLS: Record<
   [ProviderType.QNB]: {
     sandbox: 'https://vpostest.qnb.com.tr',
     production: 'https://vpos.qnb.com.tr',
+  },
+  [ProviderType.GARANTI]: {
+    sandbox: 'https://sanalposprovtest.garantibbva.com.tr',
+    production: 'https://sanalposprov.garanti.com.tr',
   },
 };
 
