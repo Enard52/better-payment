@@ -19,12 +19,15 @@ const budgets = [
   { file: 'dist/testing/index.js', maxGzipKb: 8 },
   // Official plugins, with every built-in error message language. Raise this for new
   // languages; translations are never shortened to fit it. 7 kB since the
-  // notifications plugin, 9 kB with the openAPI plugin (beta measures 8.99 kB gzip).
-  // With this branch's plugin on top of beta the entry point is 8.99 / 9 kB
-  // gzip, so the budget is 9 kB. ESM bundlers drop the plugins an application
-  // does not import.
+  // notifications plugin (its messages in the same five languages). ESM bundlers
+  // drop the plugins an application does not import.
   { file: 'dist/plugins/index.mjs', maxGzipKb: 9 },
   { file: 'dist/plugins/index.js', maxGzipKb: 9 },
+  // The fraud rules engine is a separate subpath (`better-payment/fraud`); the plugins
+  // barrel only re-exports its types, so it costs that entry point nothing. 3.90 kB
+  // gzip measured on the merged tree, so its own budget is 4 kB.
+  { file: 'dist/fraud/index.mjs', maxGzipKb: 4 },
+  { file: 'dist/fraud/index.js', maxGzipKb: 4 },
   { file: 'dist/next/index.mjs', maxGzipKb: 1 },
   { file: 'dist/next/index.js', maxGzipKb: 1 },
   { file: 'dist/express/index.mjs', maxGzipKb: 1 },
