@@ -2,9 +2,11 @@
   "title": "Plugin'ler",
   "icon": "plugins",
   "pages": [
+    "i18n",
     "localized-errors",
     "fraud-rules",
     "chaos",
-    "notifications"
+    "notifications",
+    "openapi"
   ]
 }
