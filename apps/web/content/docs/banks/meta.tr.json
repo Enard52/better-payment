@@ -1,10 +1,20 @@
 {
   "title": "Bankalar",
   "icon": "banks",
-  "defaultOpen": true,
   "pages": [
     "akbank",
+    "halkbank",
+    "isbank",
     "kuveytturk",
-    "est"
+    "sekerbank",
+    "teb",
+    "ziraat",
+    "est",
+    "denizbank",
+    "albaraka",
+    "vakifbank",
+    "yapikredi",
+    "qnb",
+    "garanti"
   ]
 }
