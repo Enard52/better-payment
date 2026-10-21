@@ -2,9 +2,10 @@
   "title": "Plugins",
   "icon": "plugins",
   "pages": [
-    "localized-errors",
+    "i18n",
     "chaos",
     "notifications",
+    "openapi",
     "currency-conversion"
   ]
 }
