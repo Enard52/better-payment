@@ -17,6 +17,7 @@ import {
   type AfterHook,
   type BeforeHook,
   type BetterPaymentPlugin,
+  type EndpointInfo,
   type OperationContext,
   type PaymentEndpoint,
   type PaymentOperation,
@@ -59,6 +60,18 @@ const OPERATIONS = new Set<string>(PAYMENT_OPERATIONS);
 export interface RegisteredEndpoint extends PaymentEndpoint {
   pluginId: string;
   name: string;
+}
+
+/** A frozen copy of an endpoint without its handler, for other plugins */
+function endpointInfo(endpoint: RegisteredEndpoint): EndpointInfo {
+  return Object.freeze({
+    pluginId: endpoint.pluginId,
+    name: endpoint.name,
+    method: endpoint.method,
+    path: endpoint.path,
+    privileged: endpoint.privileged === true,
+    openapi: endpoint.openapi,
+  });
 }
 
 /** @internal Options of `run()` */
@@ -139,6 +152,7 @@ export class PaymentCore<P extends Record<string, ProviderEntry> = Record<string
     }
     this.defaultProviderId = options.defaultProvider ?? (ids.length === 1 ? ids[0] : undefined);
 
+    const endpoints = this.endpoints;
     this.context = {
       providerIds: ids,
       errorCodes: this.$ERROR_CODES,
@@ -146,6 +160,9 @@ export class PaymentCore<P extends Record<string, ProviderEntry> = Record<string
       mode,
       logger: options.logger,
       use: (id) => this.use(id),
+      get endpoints() {
+        return endpoints.map(endpointInfo);
+      },
     };
 
     const pluginIds = new Set<string>();
