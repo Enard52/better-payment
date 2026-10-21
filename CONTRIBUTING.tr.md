@@ -424,6 +424,7 @@ IYZICO_SANDBOX_API_KEY=... IYZICO_SANDBOX_SECRET_KEY=... pnpm test:sandbox
 | Akbank    | `AKBANK_SANDBOX_MERCHANT_SAFE_ID`, `AKBANK_SANDBOX_TERMINAL_SAFE_ID`, `AKBANK_SANDBOX_SECRET_KEY` | `AKBANK_SANDBOX_CARD_*` |
 | Albaraka  | `ALBARAKA_SANDBOX_MERCHANT_ID`, `ALBARAKA_SANDBOX_TERMINAL_ID`, `ALBARAKA_SANDBOX_POSNET_ID`, `ALBARAKA_SANDBOX_ENC_KEY` | `ALBARAKA_SANDBOX_CARD_*` (zorunlu: testler kartsız çalışmaz) |
 | Sipay     | `SIPAY_SANDBOX_APP_ID`, `SIPAY_SANDBOX_APP_SECRET`, `SIPAY_SANDBOX_MERCHANT_KEY` (Sipay dokümanındaki ortak test üye işyeri kullanılabilir) | `SIPAY_SANDBOX_CARD_*` (varsayılan: Sipay test kartı `4508034508034509`) |
+| QNBpay    | `QNBPAY_SANDBOX_APP_ID`, `QNBPAY_SANDBOX_APP_SECRET`, `QNBPAY_SANDBOX_MERCHANT_KEY` (test üye işyeri talep üzerine verilir) | `QNBPAY_SANDBOX_CARD_*` |
 | EST       | `EST_SANDBOX_CLIENT_ID`, `EST_SANDBOX_USERNAME`, `EST_SANDBOX_PASSWORD`, `EST_SANDBOX_STORE_KEY` | `EST_SANDBOX_BANK` (varsayılan `isbank`), `EST_SANDBOX_CARD_*` |
 
 Kart değişkenleri: `<PREFIX>_CARD_NUMBER`, `<PREFIX>_CARD_EXPIRE_MONTH`,
@@ -471,7 +472,7 @@ pnpm --filter web docs:check      # üretilen sayfalar ve public API hedefleri
 
 Üretim, tanınmayan MDX bileşenlerini veya çalıştırılabilir ifadeleri sessizce atlamak yerine hata verir. Yeni bir doküman bileşeni eklerken `apps/web/scripts/docs-content.mjs` içine açık bir dönüşüm ve test ekleyin. Kod blokları kod olarak korunur, çalıştırılmaz.
 
-**Hata mesajı dilleri** (`localizedErrors`), `packages/better-payment/src/plugins/localized-errors/` altında her dil için bir dosyadır. Mesajları müşteriye doğal gelecek şekilde yazın. Paket boyutu kontrolüne (`pnpm --filter better-payment size`) sığdırmak için asla kısaltmayın: yeni bir dil sınırı aşarsa PR'da belirtin, sınırı bakımcılar yükseltir.
+**Hata mesajı dilleri** (`i18n` plugin'i), `packages/better-payment/src/plugins/i18n/locales/` altında her dil için bir dosyadır. Mesajları müşteriye doğal gelecek şekilde yazın. Paket boyutu kontrolüne (`pnpm --filter better-payment size`) sığdırmak için asla kısaltmayın: yeni bir dil sınırı aşarsa PR'da belirtin, sınırı bakımcılar yükseltir.
 
 ## Sürüm ve Yayın
 
