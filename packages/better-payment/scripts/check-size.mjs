@@ -24,6 +24,13 @@ const budgets = [
   // the budget is 11 kB. ESM bundlers drop the plugins an application does not import.
   { file: 'dist/plugins/index.mjs', maxGzipKb: 11 },
   { file: 'dist/plugins/index.js', maxGzipKb: 11 },
+  // notifications plugin (its messages in the same five languages), 9 kB since the
+  // openAPI plugin (i18n, chaos, notifications and openAPI build to 8.99 kB gzip on
+  // beta). The currencyConversion plugin adds 2.14 kB, taking the bundle to 11.13 kB
+  // gzip, so the budget is 12 kB. ESM bundlers
+  // drop the plugins an application does not import.
+  { file: 'dist/plugins/index.mjs', maxGzipKb: 12 },
+  { file: 'dist/plugins/index.js', maxGzipKb: 12 },
   { file: 'dist/next/index.mjs', maxGzipKb: 1 },
   { file: 'dist/next/index.js', maxGzipKb: 1 },
   { file: 'dist/express/index.mjs', maxGzipKb: 1 },

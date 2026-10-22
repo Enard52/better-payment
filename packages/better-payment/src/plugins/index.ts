@@ -34,3 +34,10 @@ export {
   type CircuitState,
   type ProviderCircuitStatus,
 } from './failover';
+  currencyConversion,
+  type CurrencyConversionOptions,
+  type CurrencyRateSource,
+  type TcmbRateType,
+  type FxQuoteRequest,
+  type FxQuoteResponse,
+} from './currency-conversion';
