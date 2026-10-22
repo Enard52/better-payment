@@ -50,3 +50,10 @@ export { redact, createRedactor, type RedactOptions, type CardMaskingStyle } fro
   type ExpireStaleResult,
 } from './three-ds-timeout';
 export { captcha, type CaptchaOptions, type CaptchaProvider } from './captcha';
+  rateLimit,
+  MemoryRateLimitStore,
+  parseDuration,
+  type RateLimitOptions,
+  type RateLimitRule,
+  type RateLimitStore,
+} from './rate-limit';

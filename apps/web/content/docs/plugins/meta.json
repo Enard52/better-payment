@@ -11,5 +11,6 @@
     "redact"
     "three-ds-timeout"
     "captcha"
+    "rate-limit"
   ]
 }

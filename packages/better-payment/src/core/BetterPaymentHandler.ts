@@ -410,6 +410,13 @@ export class BetterPaymentHandler {
    * Main request handler
    */
   async handle(request: BetterPaymentRequest): Promise<BetterPaymentResponse> {
+    const path = this.getPath(request.url);
+    if (path !== null && path !== '/health' && path !== '/ok') {
+      const intercepted = await this.core.interceptRequest(request, { path });
+      if (intercepted) {
+        return this.core.respond(intercepted, { request });
+      }
+    }
     return this.core.respond(await this.route(request), { request });
   }
 
