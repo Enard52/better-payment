@@ -5,6 +5,7 @@
     "i18n",
     "chaos",
     "notifications",
-    "openapi"
+    "openapi",
+    "failover"
   ]
 }

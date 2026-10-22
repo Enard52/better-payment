@@ -26,3 +26,11 @@ export {
   type NotificationLocale,
 } from './notifications';
 export { openAPI, buildOpenAPISpec, type OpenAPIOptions, type OpenAPISpec } from './openapi';
+export {
+  failover,
+  type FailoverOptions,
+  type FailoverEvent,
+  type CircuitBreakerOptions,
+  type CircuitState,
+  type ProviderCircuitStatus,
+} from './failover';

@@ -19,10 +19,11 @@ const budgets = [
   { file: 'dist/testing/index.js', maxGzipKb: 8 },
   // Official plugins, with every built-in error message language. Raise this for new
   // languages; translations are never shortened to fit it. 7 kB since the
-  // notifications plugin (its messages in the same five languages). ESM bundlers
-  // drop the plugins an application does not import.
-  { file: 'dist/plugins/index.mjs', maxGzipKb: 9 },
-  { file: 'dist/plugins/index.js', maxGzipKb: 9 },
+  // notifications plugin, 9 kB with the openAPI plugin (beta measures 8.99 kB gzip).
+  // The failover plugin adds 1.34 kB, taking the bundle to 10.33 / 10.34 kB gzip, so
+  // the budget is 11 kB. ESM bundlers drop the plugins an application does not import.
+  { file: 'dist/plugins/index.mjs', maxGzipKb: 11 },
+  { file: 'dist/plugins/index.js', maxGzipKb: 11 },
   { file: 'dist/next/index.mjs', maxGzipKb: 1 },
   { file: 'dist/next/index.js', maxGzipKb: 1 },
   { file: 'dist/express/index.mjs', maxGzipKb: 1 },
