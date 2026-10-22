@@ -34,6 +34,10 @@
       "types": "./dist/commission-router/index.d.ts",
       "import": "./dist/commission-router/index.mjs",
       "require": "./dist/commission-router/index.js"
+    "./routing": {
+      "types": "./dist/routing/index.d.ts",
+      "import": "./dist/routing/index.mjs",
+      "require": "./dist/routing/index.js"
     },
     "./next": {
       "types": "./dist/next/index.d.ts",

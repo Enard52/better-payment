@@ -20,5 +20,6 @@
     "mcp"
     "telemetry"
     "commission-router"
+    "routing"
   ]
 }

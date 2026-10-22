@@ -53,6 +53,7 @@ Sağlayıcıya özel metotlar (iyzico ödeme formu, PWI ve abonelikler, PayTR to
 ## Resmi plugin'ler [#official-plugins]
 
 Resmi plugin'ler paketle birlikte gelir. Çoğu `better-payment/plugins` altındadır; komisyon yönlendiricinin kendi tree-shakable `better-payment/commission-router` girişi vardır:
+Resmi plugin'ler paketle birlikte gelir: çoğu `better-payment/plugins` altında, daha büyükleri kendi alt yolunda:
 
 | Plugin | Ne yapar |
 | ------ | -------- |
@@ -69,3 +70,6 @@ Resmi plugin'ler paketle birlikte gelir. Çoğu `better-payment/plugins` altınd
 | [`commissionRouter`](/docs/plugins/commission-router) | Her ödemeyi kendi komisyon oranı tablolarınıza göre en ucuz uygun sağlayıcıya yönlendirir |
 
 Başka bir şeye mi ihtiyacınız var? [Kendi plugin'inizi yazın](/docs/guides/writing-plugins); birkaç satır yeterli.
+| [`routing`](/docs/plugins/routing) | Her ödemeyi kart ailesi, kartın menşei, tutar, taksit ve sağlığa göre doğru sağlayıcıya gönderir (alt yol `better-payment/routing`) |
+
+Bugün [routing plugin'i](/docs/plugins/routing) her ödemeyi kendi kurallarınızın seçtiği sağlayıcıya gönderir. Planlanan: her ödemeyi en ucuz sağlayıcıya gönderen bir komisyon yönlendirici ([#51](https://github.com/czaydev/better-payment/issues/51)). Başka bir şeye mi ihtiyacınız var? [Kendi plugin'inizi yazın](/docs/guides/writing-plugins); birkaç satır yeterli.

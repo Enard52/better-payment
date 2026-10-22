@@ -81,6 +81,11 @@ const budgets = [
   // merged tree, 8 kB leaves room for the matching rules an application adds.
   { file: 'dist/commission-router/index.mjs', maxGzipKb: 8 },
   { file: 'dist/commission-router/index.js', maxGzipKb: 8 },
+  // The routing engine is a separate subpath: its conditions, weighted splits,
+  // store and explain() would break the plugins barrel's budget. 5.57 / 5.58 kB gzip
+  // measured against beta; 6 kB leaves room for a few more conditions.
+  { file: 'dist/routing/index.mjs', maxGzipKb: 6 },
+  { file: 'dist/routing/index.js', maxGzipKb: 6 },
   { file: 'dist/next/index.mjs', maxGzipKb: 1 },
   { file: 'dist/next/index.js', maxGzipKb: 1 },
   { file: 'dist/express/index.mjs', maxGzipKb: 1 },
