@@ -23,8 +23,8 @@ const payment = betterPayment({
     redact({
       // Masking style for card numbers
       card: 'first6last4', // e.g. 545454******5454
-      // Custom patterns to mask in string values (TCKN 11-digit numbers are masked by default)
-      custom: [/\b\d{11}\b/g],
+      // More patterns to mask in string values (TCKN 11-digit numbers are always masked)
+      custom: [/\bTR\d{24}\b/g], // IBAN
     }),
   ],
 });
@@ -41,16 +41,16 @@ payment.on('payment.succeeded', (event) => {
 ## Nasıl Çalışır? [#how-it-works]
 
 1. **Banka / Sağlayıcıya Değişmeden İletim**: Gerçek kart ve müşteri verileri doğrudan ödeme sağlayıcısına iletilir, ödeme akışında hiçbir kesinti veya hata oluşmaz.
-2. **Olay Yükü Maskeleme**: `after` kancasında, olay dinleyicilerine (`payment.succeeded`, `payment.failed` vb.) iletilen `request` ve `result` nesnelerinin kopyaları maskelenir.
+2. **Olay Yükü Maskeleme**: `after` kancasında, olay dinleyicilerine (`payment.succeeded`, `payment.failed` vb.) iletilen `request` ve `result` nesnelerinin kopyaları maskelenir. Çağrının döndürdüğü sonuç da maskelenmiş sonuçtur; yalnızca `paymentId`, `conversationId`, `threeDSHtmlContent`, `redirectUrl`, `checkoutFormContent`, `paymentPageUrl`, `token` ve `storedCard` sağlayıcının gönderdiği gibi kalır.
 3. **Logger Sarmalama**: `betterPayment({ logger })` ile bir logger yapılandırıldıysa, `debug`, `info` ve `error` metodları sarmalanarak loglanan tüm metin ve meta veriler hassas anahtarlara ve PAN desenlerine karşı filtrelenir.
 
 ## Seçenekler [#options]
 
 | Seçenek | Varsayılan | Açıklama |
 | ------- | ---------- | -------- |
-| `fields` | `['cardNumber', 'cvc', 'cvv', 'expireMonth', 'expireYear', 'identityNumber', 'gsmNumber', 'phoneNumber', 'password', ...]` | Değerleri otomatik olarak maskelenecek nesne anahtarları |
+| `fields` | — | Maskelenecek ek nesne anahtarları; her zaman maskelenen varsayılanlara (`cardNumber`, `cardHolderName`, `cvc`, `cvv`, `securityCode`, `expireMonth`, `expireYear`, `identityNumber`, `gsmNumber`, `phoneNumber`, `password`, sağlayıcı sırları...) eklenir |
 | `card` | `'first6last4'` | Kart maskeleme formatı: `'first6last4'`, `'last4'`, `'none'` veya özel `(pan) => string` |
-| `custom` | `[/\b\d{11}\b/g]` | Metin içerisinde maskelenecek ek RegExp desenleri (örn: 11 haneli TCKN) |
+| `custom` | — | Metin içinde maskelenecek ek RegExp desenleri; yerleşik 11 haneli TCKN desenine eklenir |
 | `maskString` | `'<redacted>'` | Genel maskeleme metni |
 | `redactLogger` | `true` | Log çıktılarını otomatik maskelemek için yapılandırılmış logger'ı sarmalar |
 | `redactEvents` | `true` | Olay dinleyicilerine gitmeden önce olay yükünü maskeler |

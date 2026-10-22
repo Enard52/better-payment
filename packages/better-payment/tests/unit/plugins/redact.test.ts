@@ -256,4 +256,40 @@ describe('redact plugin', () => {
     expect(masked.rawResponse.bin).toBe('552879');
     expect(masked.rawResponse.last4).toBe('0008');
   });
+
+  it('keeps the default fields and the TCKN pattern when fields and custom are given', () => {
+    const { mask } = createRedactor({ fields: ['email'], custom: [/SECRET-\w+/g] });
+
+    const masked = mask({
+      email: 'a@b.com',
+      cvc: '123',
+      cardHolderName: 'Ali Veli',
+      note: 'TCKN 12345678901, ref SECRET-abc',
+    }) as Record<string, string>;
+
+    expect(masked.email).toBe('<redacted>');
+    expect(masked.cvc).toBe('***');
+    expect(masked.cardHolderName).toBe('<redacted>');
+    expect(masked.note).not.toContain('12345678901');
+    expect(masked.note).not.toContain('SECRET-abc');
+  });
+
+  it('returns identifiers and the 3D Secure page unmasked to the caller', async () => {
+    const mock = new MockProvider();
+    const html = '<form><input name="oid" value="4543601234567890123"></form>';
+    vi.spyOn(mock, 'initThreeDSPayment').mockResolvedValueOnce({
+      status: PaymentStatus.SUCCESS,
+      paymentId: '1234567890123456',
+      threeDSHtmlContent: html,
+    } as any);
+    const payment = betterPayment({ providers: { mock }, plugins: [redact()] });
+
+    const res = await payment.initThreeDSPayment({
+      ...mockPaymentRequest,
+      callbackUrl: 'https://shop.test/callback',
+    } as any);
+
+    expect(res.paymentId).toBe('1234567890123456');
+    expect(res.threeDSHtmlContent).toBe(html);
+  });
 });
