@@ -204,6 +204,14 @@ export interface PaymentEndpoint {
    * like refunds. The hook runs for every endpoint that has one.
    */
   privileged?: boolean;
+  /**
+   * Accept HTML form bodies (`application/x-www-form-urlencoded`,
+   * `multipart/form-data`, `text/plain`) on a POST endpoint. Off by default: a
+   * cross-site form can send these without a CORS preflight, carrying the
+   * visitor's cookies (CSRF). Turn it on only for an endpoint a third party posts
+   * a form to, like a bank callback, and verify that request yourself.
+   */
+  acceptForm?: boolean;
   /** Optional OpenAPI documentation metadata */
   openapi?: EndpointOpenAPIMetadata;
   handler: (ctx: EndpointContext) => Awaitable<unknown>;
@@ -257,7 +265,9 @@ export interface BetterPaymentPlugin {
   /**
    * Runs on every incoming request to the HTTP handler before routing.
    * Return a response (e.g. 429 Too Many Requests) to short-circuit routing;
-   * that response will still pass through onResponse hooks.
+   * that response will still pass through onResponse hooks. A hook that throws
+   * stops the request with 503: a check that could not run (a rate limit whose
+   * store is down) must not let the request through unchecked.
    */
   onRequest?: (
     request: BetterPaymentRequest,

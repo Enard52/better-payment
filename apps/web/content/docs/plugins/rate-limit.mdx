@@ -47,6 +47,7 @@ When a client exceeds the limit, the handler responds with `429 Too Many Request
 | `trustProxy` | `false` | Let the default key extraction trust proxy headers. `true` means one trusted hop, a number means that many hops |
 | `store` | `MemoryRateLimitStore` | Counter storage backend (`RateLimitStore`) |
 | `excludeCallbacks` | `true` | Exclude provider callbacks from rate limiting by default |
+| `passOnStoreError` | `false` | Let requests through, unlimited, while the store fails (and log the error). By default the handler answers `503` until the store is back |
 
 ## Client Identity and Proxies
 

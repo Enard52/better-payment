@@ -419,4 +419,24 @@ describe('rateLimit plugin', () => {
       (await handler.handle(req('/api/pay/mock/payment', { 'x-forwarded-for': '8.8.8.8' }))).status
     ).toBe(429);
   });
+
+  it('answers 503 while the store fails, unless passOnStoreError is set', async () => {
+    const store = {
+      increment: () => {
+        throw new Error('redis down');
+      },
+    };
+    const make = (passOnStoreError?: boolean) =>
+      betterPayment({
+        providers: { mock: new MockProvider() },
+        plugins: [rateLimit({ key: () => 'client', store, passOnStoreError })],
+        handler: { allowedActions: ['payment'] },
+      });
+
+    const closed = await make().handler.handle(req('/api/pay/mock/payment'));
+    expect(closed.status).toBe(503);
+
+    const open = await make(true).handler.handle(req('/api/pay/mock/payment'));
+    expect(open.status).toBe(200);
+  });
 });

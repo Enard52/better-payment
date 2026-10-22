@@ -47,6 +47,7 @@ Bir istemci limiti aştığında handler `429 Too Many Requests` yanıtı, stand
 | `trustProxy` | `false` | Varsayılan çıkarıcının proxy başlıklarına güvenmesi; `true` tek güvenilir atlama, sayı ise atlama sayısı |
 | `store` | `MemoryRateLimitStore` | Sayaç depolama katmanı (`RateLimitStore`) |
 | `excludeCallbacks` | `true` | Sağlayıcı callback'lerini varsayılan olarak hız sınırının dışında tutar |
+| `passOnStoreError` | `false` | Store hata verirken istekleri sınırsız geçirir (ve hatayı loglar). Varsayılan olarak handler, store düzelene kadar `503` döner |
 
 ## İstemci Kimliği ve Proxy [#client-identity-and-proxies]
 
