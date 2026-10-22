@@ -64,5 +64,6 @@ Official plugins ship in the package, under `better-payment/plugins`:
 | [`pendingResolver`](/docs/plugins/pending-resolver) | Queries and resolves timed out payments (`NETWORK_ERROR`) on a schedule |
 | [`refundApproval`](/docs/plugins/refund-approval) | Requires manager review and approval for refunds and cancellations above a threshold |
 | [`webhookForwarding`](/docs/plugins/webhook-forwarding) | Forwards payment events to external microservices as HMAC-SHA256 signed webhooks with retries |
+| [`mcp`](/docs/plugins/mcp) | Exposes Better Payment as a Model Context Protocol (MCP) server for AI agents |
 
 Planned: a commission router that sends each payment to the cheapest provider ([#51](https://github.com/czaydev/better-payment/issues/51)). Need something else? [Write your own](/docs/guides/writing-plugins); it takes a few lines.

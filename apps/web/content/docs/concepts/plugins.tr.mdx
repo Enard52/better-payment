@@ -64,5 +64,6 @@ Resmi plugin'ler paketle birlikte, `better-payment/plugins` altında gelir:
 | [`pendingResolver`](/docs/plugins/pending-resolver) | Zaman aşımına uğrayan ödemeleri (`NETWORK_ERROR`) belirli takvimle sorgular ve çözer |
 | [`refundApproval`](/docs/plugins/refund-approval) | Belirli bir limitin üzerindeki iade ve iptaller için yönetici onayı gerektirir |
 | [`webhookForwarding`](/docs/plugins/webhook-forwarding) | Ödeme olaylarını diğer mikroservislere HMAC-SHA256 imzalı ve yeniden denemeli webhook olarak iletir |
+| [`mcp`](/docs/plugins/mcp) | Better Payment'ı yapay zekâ ajanları için Model Context Protocol (MCP) sunucusu olarak sunar |
 
 Planlanan: her ödemeyi en ucuz sağlayıcıya gönderen bir komisyon yönlendirici ([#51](https://github.com/czaydev/better-payment/issues/51)). Başka bir şeye mi ihtiyacınız var? [Kendi plugin'inizi yazın](/docs/guides/writing-plugins); birkaç satır yeterli.

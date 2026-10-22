@@ -15,5 +15,6 @@
     "pending-resolver"
     "refund-approval"
     "webhook-forwarding"
+    "mcp"
   ]
 }

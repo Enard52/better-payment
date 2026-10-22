@@ -77,3 +77,11 @@ export { captcha, type CaptchaOptions, type CaptchaProvider } from './captcha';
   type WebhookEndpoint,
   type ForwardedWebhookPayload,
 } from './webhook-forwarding';
+  mcp,
+  ALL_MCP_TOOLS,
+  WRITE_MCP_TOOLS,
+  MCP_PROTOCOL_VERSIONS,
+  type McpOptions,
+  type McpToolName,
+  type McpToolCallInfo,
+} from './mcp';

@@ -58,6 +58,11 @@ const budgets = [
   // does not import.
   { file: 'dist/plugins/index.mjs', maxGzipKb: 11 },
   { file: 'dist/plugins/index.js', maxGzipKb: 11 },
+  // With this branch's plugin on top of beta the entry point is 11.24 / 11.24 kB
+  // gzip, so the budget is 12 kB. ESM bundlers drop the plugins an application
+  // does not import.
+  { file: 'dist/plugins/index.mjs', maxGzipKb: 12 },
+  { file: 'dist/plugins/index.js', maxGzipKb: 12 },
   { file: 'dist/next/index.mjs', maxGzipKb: 1 },
   { file: 'dist/next/index.js', maxGzipKb: 1 },
   { file: 'dist/express/index.mjs', maxGzipKb: 1 },
