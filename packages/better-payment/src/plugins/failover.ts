@@ -70,7 +70,9 @@ export interface FailoverOptions {
   /**
    * Error codes that trigger failover to a backup provider.
    * Defaults to provider/infrastructure errors where the transaction definitely did not charge:
-   * `['PROVIDER_ERROR', 'PROVIDER_UNAVAILABLE', 'TIMEOUT_BEFORE_SEND', 'SYSTEM_ERROR']`
+   * `['PROVIDER_ERROR', 'PROVIDER_UNAVAILABLE', 'TIMEOUT_BEFORE_SEND', 'SYSTEM_ERROR', '503']`.
+   * A failure built from an HTTP 500, 502 or 504 answer never fails over: the
+   * provider may have charged the card before the error.
    */
   on?: (PaymentErrorCode | string)[];
   /**
@@ -191,11 +193,16 @@ const DEFAULT_ON_CODES: (PaymentErrorCode | string)[] = [
   'PROVIDER_UNAVAILABLE',
   'TIMEOUT_BEFORE_SEND',
   'SYSTEM_ERROR',
-  '500',
-  '502',
   '503',
-  '504',
 ];
+
+/**
+ * HTTP statuses after which the provider may have charged the card: a 500 can come
+ * after the payment was written, and 502/504 come from a gateway that lost the
+ * answer of a backend still processing it. Moving the payment to another provider
+ * then could charge the customer twice, so these never fail over, whatever `on` says.
+ */
+const UNKNOWN_OUTCOME_STATUSES = new Set([500, 502, 504]);
 
 const DEFAULT_ALLOWED_OPERATIONS: PaymentOperation[] = ['createPayment', 'authorize'];
 
@@ -257,6 +264,8 @@ export const failover = (options: FailoverOptions = {}) => {
     if (result.status === PaymentStatus.PENDING) return false;
     if (result.code === PaymentErrorCode.NETWORK_ERROR) return false;
     if (result.status !== PaymentStatus.FAILURE) return false;
+    const { httpStatus } = result as { httpStatus?: unknown };
+    if (typeof httpStatus === 'number' && UNKNOWN_OUTCOME_STATUSES.has(httpStatus)) return false;
 
     // Check code or raw errorCode against the allowed retry error list
     const code = result.code ? String(result.code) : '';

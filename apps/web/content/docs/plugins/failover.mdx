@@ -7,7 +7,7 @@ description: Automatically retry payments on backup providers when a provider is
 
 Merchants with multiple payment provider contracts lose sales when their primary provider suffers downtime, network timeouts, or intermittent gateway errors. The `failover` plugin ensures high availability by automatically trying backup providers in a specified order whenever a transient provider failure occurs.
 
-Importantly, failover guarantees **zero double charging**: it strictly never retries payments with an unknown outcome (such as `NETWORK_ERROR` or `pending` status where the transaction may already have processed at the bank).
+Importantly, failover guarantees **zero double charging**: it strictly never retries payments with an unknown outcome (such as `NETWORK_ERROR` or `pending` status where the transaction may already have processed at the bank), and never moves a payment after an HTTP 500, 502 or 504 answer, which a provider or its gateway can send after the card was charged.
 
 ## Setup
 
@@ -60,7 +60,7 @@ const result = await payment.createPayment({
 | Option | Default | Description |
 | ------ | ------- | ----------- |
 | `order` | all configured providers | Priority list of provider IDs or a dynamic function `(ctx) => string[]` |
-| `on` | `PROVIDER_ERROR`, `PROVIDER_UNAVAILABLE`, `TIMEOUT_BEFORE_SEND`, `SYSTEM_ERROR`, `500-504` | Error codes that trigger failover |
+| `on` | `PROVIDER_ERROR`, `PROVIDER_UNAVAILABLE`, `TIMEOUT_BEFORE_SEND`, `SYSTEM_ERROR`, `503` | Error codes that trigger failover. HTTP 500, 502 and 504 never do, even when listed |
 | `operations` | `['createPayment', 'authorize']` | Operations failover applies to |
 | `circuitBreaker` | `{ failures: 5, window: '1m', cooldown: '5m' }` | Circuit breaker thresholds and cooldown |
 | `onSwitch` | — | Callback fired when switching providers |
