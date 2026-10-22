@@ -1,4 +1,5 @@
 import {
+  BetterPaymentError,
   ConfigurationError,
   definePlugin,
   type BetterPaymentPlugin,
@@ -31,8 +32,13 @@ export interface TenantContext {
   operation?: PaymentOperation;
   provider?: string;
   request?: unknown;
-  headers?: Record<string, string>;
   conversationId?: string;
+  /**
+   * False when the call reached the core through the HTTP handler or a provider
+   * object (`payment.use('iyzico').createPayment()`), true when it was made on the
+   * payment object. Only routable calls are written by your own server code.
+   */
+  routable?: boolean;
 }
 
 export type TenantResolver = (
@@ -46,11 +52,24 @@ export type TenantCredentialsResolver = (
 
 export interface MultiTenantOptions {
   /**
-   * Resolves the tenant ID from the operation request, headers, or metadata.
-   * By default, checks `request.__tenantId`, `request.tenantId`, `request.metadata.tenantId`,
-   * or a `tenant:` prefix in `conversationId`.
+   * Resolves the tenant ID from a source only your server controls: request-scoped
+   * state (async local storage), your own session, or a header your auth middleware
+   * or edge proxy put there. The hook context carries no headers, so close over the
+   * state instead of reading it from `ctx.request` — the body of a request that
+   * reached the HTTP handler is written by the customer or the browser.
    */
   tenant?: TenantResolver;
+  /**
+   * Reads the tenant from the request body: `__tenantId`, `tenantId`,
+   * `metadata.tenantId` or a `tenant:` / `::` prefix in `conversationId`.
+   *
+   * Off by default. Even when enabled it never applies to a request that came
+   * through the HTTP handler or a provider object (`ctx.routable` is false there),
+   * because that body is not written by your code. Turn it on only for server-to-server
+   * calls where your own service puts the tenant in the request, and prefer
+   * `payment.forTenant(id)` when you know the tenant.
+   */
+  trustRequestTenant?: boolean;
   /**
    * Loads the provider instance or provider credentials for a given tenant.
    */
@@ -126,6 +145,20 @@ function extractTenantFromRequest(req: unknown): string | undefined {
   return undefined;
 }
 
+/**
+ * True when the body names a tenant outright. `conversationId` is not counted: a
+ * provider posts its own value there, so only ignoring it is enough.
+ */
+function declaresTenantInBody(req: unknown): boolean {
+  if (!req || typeof req !== 'object') return false;
+  const obj = req as Record<string, unknown>;
+  if (typeof obj.__tenantId === 'string' || typeof obj.tenantId === 'string') return true;
+  if (obj.metadata && typeof obj.metadata === 'object') {
+    return typeof (obj.metadata as Record<string, unknown>).tenantId === 'string';
+  }
+  return false;
+}
+
 export interface TenantPaymentClient {
   readonly tenantId: string;
   createPayment(request: PaymentRequest): Promise<PaymentResponse>;
@@ -152,6 +185,10 @@ export interface TenantPaymentClient {
  * SaaS and marketplace platforms, caching instances and routing 3D Secure callbacks
  * seamlessly to the correct tenant contract.
  *
+ * The tenant comes from server-side state only: the `tenant` resolver, or an explicit
+ * `forTenant()` call. Reading it from the request body is opt-in
+ * (`trustRequestTenant`) and never applies to handler requests.
+ *
  * @example
  * ```ts
  * import { multiTenant } from 'better-payment/plugins';
@@ -160,7 +197,7 @@ export interface TenantPaymentClient {
  *   providers: { iyzico: iyzico({ ... }) },
  *   plugins: [
  *     multiTenant({
- *       tenant: (ctx) => ctx.headers?.['x-tenant-id'] ?? ctx.request?.metadata?.tenantId,
+ *       tenant: () => tenantStorage.getStore()?.id,
  *       credentials: async (tenantId) => db.merchant.findCredentials(tenantId),
  *       cache: { ttl: '5m' },
  *     }),
@@ -227,18 +264,37 @@ export function multiTenant(options: MultiTenantOptions): BetterPaymentPlugin {
     return providerInstance;
   };
 
-  const resolveTenantId = async (ctx: OperationContext): Promise<string | undefined> => {
+  const resolveTenantId = async (
+    ctx: OperationContext,
+    refuseForged = true
+  ): Promise<string | undefined> => {
+    const reqObj = ctx.request as Record<string, unknown> | undefined;
+    const conversationId =
+      reqObj && typeof reqObj.conversationId === 'string' ? reqObj.conversationId : undefined;
+
     if (options.tenant) {
-      const reqObj = ctx.request as Record<string, unknown> | undefined;
-      const conversationId =
-        reqObj && typeof reqObj.conversationId === 'string' ? reqObj.conversationId : undefined;
       const t = await options.tenant({
         operation: ctx.operation,
         provider: ctx.provider,
         request: ctx.request,
         conversationId,
+        routable: ctx.routable,
       });
       if (t) return t;
+    }
+
+    if (!options.trustRequestTenant || !ctx.routable) {
+      if (refuseForged && declaresTenantInBody(ctx.request)) {
+        throw new BetterPaymentError(
+          `multiTenant: refusing to run '${ctx.operation}' with the tenant named in the ` +
+            `request body. That body is written by the caller, so it would let one merchant's ` +
+            `payment or 3D Secure callback be processed with another merchant's credentials. ` +
+            `Resolve the tenant from server-side state in the 'tenant' option, call ` +
+            `payment.forTenant(id), or set trustRequestTenant for calls made on the payment object.`,
+          'UNTRUSTED_TENANT'
+        );
+      }
+      return undefined;
     }
     return extractTenantFromRequest(ctx.request);
   };
@@ -402,7 +458,7 @@ export function multiTenant(options: MultiTenantOptions): BetterPaymentPlugin {
       after: [
         {
           handler: async (ctx) => {
-            const tenantId = await resolveTenantId(ctx as unknown as OperationContext);
+            const tenantId = await resolveTenantId(ctx as unknown as OperationContext, false);
             if (tenantId && ctx.result && typeof ctx.result === 'object') {
               (ctx.result as unknown as Record<string, unknown>).tenantId = tenantId;
             }

@@ -96,6 +96,7 @@ describe('multiTenant plugin', () => {
       providers: { default: new MockProvider() },
       plugins: [
         multiTenant({
+          trustRequestTenant: true,
           credentials: async (tenantId) => {
             return tenantId === 'tenant-alpha' ? providerA : providerB;
           },
@@ -110,6 +111,87 @@ describe('multiTenant plugin', () => {
     });
 
     expect(callbackResult.tenantId).toBe('tenant-alpha');
+  });
+
+  it.each([
+    ['tenantId', { tenantId: 'merchant-b' }],
+    ['__tenantId', { __tenantId: 'merchant-b' }],
+    ['metadata.tenantId', { metadata: { tenantId: 'merchant-b' } }],
+  ])('refuses a handler request that names the tenant in its %s field', async (_field, extra) => {
+    const providerA = new MockProvider();
+    const providerB = new MockProvider();
+    const credentials = vi.fn(async (tenantId: string) =>
+      tenantId === 'merchant-a' ? providerA : providerB
+    );
+
+    const payment = betterPayment({
+      providers: { default: new MockProvider() },
+      plugins: [multiTenant({ credentials })],
+    });
+
+    // `payment.use()` is how the HTTP handler runs an operation: the body is the
+    // caller's, so it must not choose whose credentials the payment runs with.
+    await expect(
+      payment.use('default').createPayment({ ...mockPaymentRequest, ...extra })
+    ).rejects.toThrow(/written by the caller/);
+    expect(credentials).not.toHaveBeenCalled();
+  });
+
+  it('refuses the body tenant even with trustRequestTenant when the call is not routable', async () => {
+    const credentials = vi.fn(async () => new MockProvider());
+    const payment = betterPayment({
+      providers: { default: new MockProvider() },
+      plugins: [multiTenant({ credentials, trustRequestTenant: true })],
+    });
+
+    await expect(
+      payment.use('default').createPayment({ ...mockPaymentRequest, tenantId: 'merchant-b' })
+    ).rejects.toThrow(/written by the caller/);
+    expect(credentials).not.toHaveBeenCalled();
+  });
+
+  it('never routes a callback with a forged conversationId prefix by default', async () => {
+    const providerB = new MockProvider();
+    const spy = vi.spyOn(providerB, 'createPayment');
+    const credentials = vi.fn(async () => providerB);
+
+    const payment = betterPayment({
+      providers: { default: new MockProvider() },
+      plugins: [multiTenant({ credentials })],
+    });
+
+    const res = await payment.use('default').createPayment({
+      ...mockPaymentRequest,
+      conversationId: 'tenant:merchant-b:order-1',
+    });
+
+    // The conversationId alone is only ignored, never trusted: merchant-b's contract is
+    // never loaded, never called, and the response carries no tenant tag.
+    expect(res.tenantId).toBeUndefined();
+    expect(credentials).not.toHaveBeenCalled();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('keeps the server-side resolver authoritative over the body', async () => {
+    const providerA = new MockProvider();
+    const providerB = new MockProvider();
+    const payment = betterPayment({
+      providers: { default: new MockProvider() },
+      plugins: [
+        multiTenant({
+          tenant: () => 'merchant-a',
+          trustRequestTenant: true,
+          credentials: async (tenantId) => (tenantId === 'merchant-a' ? providerA : providerB),
+        }),
+      ],
+    });
+
+    const res = await payment.createPayment({
+      ...mockPaymentRequest,
+      // @ts-expect-error forged tenant field
+      tenantId: 'merchant-b',
+    });
+    expect(res.tenantId).toBe('merchant-a');
   });
 
   it('caches tenant provider instances and respects cache TTL and eviction', async () => {

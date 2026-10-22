@@ -21,8 +21,8 @@ const payment = betterPayment({
   },
   plugins: [
     multiTenant({
-      // Resolves tenant from request header, metadata, or conversationId
-      tenant: (ctx) => ctx.headers?.['x-tenant-id'] ?? ctx.request?.metadata?.tenantId,
+      // Resolves the tenant from state only your server writes
+      tenant: () => tenantStore.getStore()?.id,
 
       // Loads credentials or provider instances from your database
       credentials: async (tenantId, provider) => {
@@ -72,21 +72,38 @@ Desteklenen `forTenant` metotları:
 
 ## 3D Secure Geri Dönüşleri (Callback) [#3d-secure-callbacks]
 
-3D Secure ödemelerinde banka kullanıcının tarayıcısını callback adresinize yönlendirir. Eklenti şu durumlarda mağazayı otomatik tanır:
-1. `conversationId` değeri `tenant:<tenantId>:<orderId>` veya `<tenantId>::<orderId>` biçiminde olduğunda
-2. Özel `tenant` fonksiyonu callback isteğini analiz ettiğinde
+3D Secure ödemelerinde banka kullanıcının tarayıcısını callback adresinize yönlendirir. Bu gövdeyi tarayıcı veya banka yazdığı için eklenti mağazayı oradan hiç okumaz: eklenti kancalarını çalıştıran handler rotaları (`payment/complete-3ds` ve `callback`) gövdede mağaza adı veren alanı reddeder, `conversationId` öneki ise orada yok sayılır. Mağazayı kendi verinizden verin:
 
 ```typescript
+// 1. Start the payment on the tenant contract your session resolved
 const init = await payment.forTenant('shop-42').initThreeDSPayment({
   price: '150.00',
   paidPrice: '150.00',
-  callbackUrl: 'https://shop.com/api/pay/iyzico/callback',
+  callbackUrl: 'https://shop.com/api/pay/shop-42/iyzico/callback',
   conversationId: 'tenant:shop-42:order-987',
   paymentCard: { ... },
 });
+
+// 2. In the callback route read the tenant from the URL you chose, not from the body
+app.post('/api/pay/:tenant/iyzico/callback', async (req, res) => {
+  const result = await payment
+    .forTenant(req.params.tenant)
+    .completeThreeDSPayment(req.body);
+  res.send(result);
+});
 ```
 
-Callback geldiğinde imza doğrulaması ve tamamlama işlemi `shop-42` anahtarlarıyla yapılır ve sonuca `tenantId: 'shop-42'` eklenir.
+`forTenant` işlemi o mağazanın sözleşmesi üzerinden çalıştırır ve sonuca `tenantId` ekler; böylece bir mağazanın callback'i başka bir mağazanın gizli anahtarlarıyla doğrulanamaz.
+
+Gövdeden mağaza okumak, yalnızca kendi kodunuzun ödeme nesnesi üzerinden yaptığı sunucudan sunucuya çağrılar için açık bir seçime bağlıdır:
+
+```typescript
+multiTenant({
+  // applies only to calls made on the payment object, never to handler requests
+  trustRequestTenant: true,
+  credentials: loadCredentials,
+});
+```
 
 ## Önbellek Yönetimi [#cache-management]
 
@@ -109,7 +126,8 @@ console.log(stats.size, stats.ttl);
 | Seçenek | Varsayılan | Açıklama |
 | ------- | ---------- | -------- |
 | `credentials` | *zorunlu* | `(tenantId, provider) => Promise<PaymentProvider \| Record<string, unknown>>` |
-| `tenant` | yerleşik resolver | İstekten veya başlıklardan `tenantId` çözen özel fonksiyon |
+| `tenant` | — | `forTenant` kullanmayan çağrılarda mağazayı sunucu tarafı durumdan çözen fonksiyon |
+| `trustRequestTenant` | `false` | Yalnızca ödeme nesnesi üzerinden yapılan çağrıların gövdesinden de mağaza okur; handler isteklerine asla uygulanmaz |
 | `providers` | — | Sağlayıcı fabrika haritası: `(credentials) => PaymentProvider` |
 | `cache.ttl` | `'5m'` | Önbellekteki sağlayıcı örneklerinin geçerlilik süresi |
 | `cache.maxSize` | `1000` | Önbellekte tutulacak maksimum sağlayıcı sayısı |

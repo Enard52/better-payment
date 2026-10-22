@@ -21,8 +21,8 @@ const payment = betterPayment({
   },
   plugins: [
     multiTenant({
-      // Resolves tenant from request header, metadata, or conversationId
-      tenant: (ctx) => ctx.headers?.['x-tenant-id'] ?? ctx.request?.metadata?.tenantId,
+      // Resolves the tenant from state only your server writes
+      tenant: () => tenantStore.getStore()?.id,
 
       // Loads credentials or provider instances from your database
       credentials: async (tenantId, provider) => {
@@ -72,21 +72,38 @@ Supported `forTenant` operations include:
 
 ## 3D Secure Callbacks
 
-For 3D Secure payments, the bank redirects back to your callback URL. The plugin automatically detects the tenant ID if:
-1. `conversationId` has the format `tenant:<tenantId>:<orderId>` or `<tenantId>::<orderId>`
-2. The custom `tenant` resolver inspects the callback query or body.
+For 3D Secure payments, the bank redirects back to your callback URL. That body is written by the browser or the bank, so the plugin never takes the tenant from it: the handler routes that run plugin hooks (`payment/complete-3ds` and `callback`) refuse a body naming a tenant, and a `conversationId` prefix is ignored there. Take the tenant from data you control instead:
 
 ```typescript
+// 1. Start the payment on the tenant contract your session resolved
 const init = await payment.forTenant('shop-42').initThreeDSPayment({
   price: '150.00',
   paidPrice: '150.00',
-  callbackUrl: 'https://shop.com/api/pay/iyzico/callback',
+  callbackUrl: 'https://shop.com/api/pay/shop-42/iyzico/callback',
   conversationId: 'tenant:shop-42:order-987',
   paymentCard: { ... },
 });
+
+// 2. In the callback route read the tenant from the URL you chose, not from the body
+app.post('/api/pay/:tenant/iyzico/callback', async (req, res) => {
+  const result = await payment
+    .forTenant(req.params.tenant)
+    .completeThreeDSPayment(req.body);
+  res.send(result);
+});
 ```
 
-When the bank posts the callback, the plugin automatically resolves `shop-42`, decrypts the signature with `shop-42` secret keys, and attaches `tenantId: 'shop-42'` to the callback response.
+`forTenant` runs the operation on that merchant's contract and tags the response with `tenantId`, so a callback of one merchant can never be verified with another merchant's secret keys.
+
+Reading the tenant out of the body is an opt-in for server-to-server calls your own code makes on the payment object:
+
+```typescript
+multiTenant({
+  // applies only to calls made on the payment object, never to handler requests
+  trustRequestTenant: true,
+  credentials: loadCredentials,
+});
+```
 
 ## Cache Management
 
@@ -109,7 +126,8 @@ console.log(stats.size, stats.ttl);
 | Option | Default | Description |
 | ------ | ------- | ----------- |
 | `credentials` | *required* | `(tenantId, provider) => Promise<PaymentProvider \| Record<string, unknown>>` |
-| `tenant` | built-in resolver | Custom function resolving tenant ID from context, request, or headers |
+| `tenant` | — | Resolves the tenant from server-side state for calls that do not use `forTenant` |
+| `trustRequestTenant` | `false` | Also reads the tenant from the body of calls made on the payment object; never applies to handler requests |
 | `providers` | — | Map of provider factory functions `(credentials) => PaymentProvider` |
 | `cache.ttl` | `'5m'` | Duration before refreshing cached merchant provider instances |
 | `cache.maxSize` | `1000` | Maximum number of cached instances before LRU eviction |
