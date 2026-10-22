@@ -9,5 +9,6 @@
     "failover"
     "currency-conversion"
     "redact"
+    "three-ds-timeout"
   ]
 }

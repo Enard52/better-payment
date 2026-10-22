@@ -42,3 +42,10 @@ export {
   type FxQuoteResponse,
 } from './currency-conversion';
 export { redact, createRedactor, type RedactOptions, type CardMaskingStyle } from './redact';
+  threeDSTimeout,
+  MemoryThreeDSFlowStore,
+  type ThreeDSTimeoutOptions,
+  type ThreeDSFlowStore,
+  type StartedThreeDSFlow,
+  type ExpireStaleResult,
+} from './three-ds-timeout';

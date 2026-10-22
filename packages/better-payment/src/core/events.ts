@@ -25,6 +25,7 @@ export type PaymentEventType =
   | 'payment.pending'
   | 'payment.failed'
   | 'payment.cancelled'
+  | 'payment.expired'
   | 'refund.succeeded'
   | 'refund.failed';
 
@@ -34,6 +35,7 @@ export const PAYMENT_EVENT_TYPES: readonly PaymentEventType[] = [
   'payment.pending',
   'payment.failed',
   'payment.cancelled',
+  'payment.expired',
   'refund.succeeded',
   'refund.failed',
 ];
