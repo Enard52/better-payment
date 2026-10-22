@@ -8,5 +8,6 @@
     "openapi",
     "failover"
     "currency-conversion"
+    "redact"
   ]
 }

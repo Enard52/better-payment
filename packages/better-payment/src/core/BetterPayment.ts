@@ -271,7 +271,13 @@ export class PaymentCore<P extends Record<string, ProviderEntry> = Record<string
     for (const hook of this.afterHooks) {
       if (hook.matcher && !hook.matcher(after)) continue;
       const out = await hook.handler(after);
-      if (out) after = { ...after, result: out.result } as typeof after;
+      if (out) {
+        after = {
+          ...after,
+          ...(out.result !== undefined ? { result: out.result } : {}),
+          ...(out.request !== undefined ? { request: out.request } : {}),
+        } as typeof after;
+      }
     }
 
     if (emit) await this.emit(operation, after.provider, after.request, after.result);

@@ -127,8 +127,10 @@ export interface BeforeHook {
 export interface AfterHook {
   /** Which operations the hook runs for. Default: all. */
   matcher?: (ctx: OperationResultContext) => boolean;
-  /** Return `{ result }` to replace the result */
-  handler: (ctx: OperationResultContext) => Awaitable<{ result: unknown } | void>;
+  /** Return `{ result, request }` to replace the result or the request passed to events */
+  handler: (
+    ctx: OperationResultContext
+  ) => Awaitable<{ result?: unknown; request?: unknown } | void>;
 }
 
 /** What plugins get in `init`, `methods` and endpoints */

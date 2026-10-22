@@ -41,3 +41,4 @@ export {
   type FxQuoteRequest,
   type FxQuoteResponse,
 } from './currency-conversion';
+export { redact, createRedactor, type RedactOptions, type CardMaskingStyle } from './redact';

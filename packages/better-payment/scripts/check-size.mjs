@@ -31,6 +31,12 @@ const budgets = [
   // drop the plugins an application does not import.
   { file: 'dist/plugins/index.mjs', maxGzipKb: 12 },
   { file: 'dist/plugins/index.js', maxGzipKb: 12 },
+  // notifications plugin (its messages in the same five languages), 9 kB with the
+  // openAPI plugin (beta measures 8.99 kB gzip). The redact plugin adds 0.89 kB,
+  // taking the bundle to 9.88 kB gzip, so the budget is 10 kB. ESM bundlers
+  // drop the plugins an application does not import.
+  { file: 'dist/plugins/index.mjs', maxGzipKb: 10 },
+  { file: 'dist/plugins/index.js', maxGzipKb: 10 },
   { file: 'dist/next/index.mjs', maxGzipKb: 1 },
   { file: 'dist/next/index.js', maxGzipKb: 1 },
   { file: 'dist/express/index.mjs', maxGzipKb: 1 },
