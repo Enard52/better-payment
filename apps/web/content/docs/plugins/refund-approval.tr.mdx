@@ -33,10 +33,11 @@ const payment = betterPayment({
 
 ## Nasıl Çalışır? [#how-it-works]
 
-1. **Limitin altı**: Eşik değerin altındaki iadeler doğrudan sağlayıcıya iletilerek tamamlanır.
-2. **Limitin üstü**: `before` hook'u araya girer, `status: 'pending'` ve `REFUND_APPROVAL_REQUIRED` koduyla bir `approvalId` döndürür.
-3. **Onaylama**: Yetkili kişi `payment.refunds.approve(id, { by: user })` çağrısı yapar. İzinler doğrulanır ve iade sağlayıcı üzerinde çalıştırılır.
-4. **Reddetme**: `payment.refunds.reject(id, { by: user, reason })` çağrısı yapıldığında talep sağlayıcıya hiç gitmeden reddedilir.
+1. **Limitin altı**: Eşik değerin altındaki iadeler doğrudan sağlayıcıya iletilerek tamamlanır. Kesin olarak okunamayan bir tutar (`'1,500.00'`, `'abc'`) onaya düşer.
+2. **İptaller**: İptal isteğinde tutar yoktur. `cancelAmount` ödemenin tutarını kendi kayıtlarınızdan döndürüp bu tutar eşiğin altında kalmadıkça her iptal onaya düşer.
+3. **Limitin üstü**: `before` hook'u araya girer, `status: 'pending'` ve `REFUND_APPROVAL_REQUIRED` koduyla bir `approvalId` döndürür.
+4. **Onaylama**: Yetkili kişi `payment.refunds.approve(id, { by: user })` çağrısı yapar. İzinler doğrulanır ve iade sağlayıcı üzerinde çalıştırılır. Aynı talep iki kez onaylansa da iade bir kez yapılır.
+5. **Reddetme**: `payment.refunds.reject(id, { by: user, reason })` çağrısı yapıldığında talep sağlayıcıya hiç gitmeden reddedilir.
 
 ```typescript
 // Review pending refunds
@@ -62,11 +63,25 @@ await payment.refunds.reject(approvalId, {
 | `store` | `MemoryRefundApprovalStore` | Bekleyen onay talepleri depolama katmanı (`RefundApprovalStore`) |
 | `approvers` | Talep eden dışındaki herkes | Kullanıcının onay yetkisi olup olmadığını doğrulayan fonksiyon |
 | `notify` | — | Yeni onay talebi oluştuğunda tetiklenen bildirim fonksiyonu |
+| `getActor` | — | HTTP isteğindeki oturum açmış kullanıcıyı (oturum ya da token) döndürür. Onay ve ret uç noktaları için zorunludur |
+| `cancelAmount` | — | İptalin geçersiz kıldığı ödemenin tutarını kendi kayıtlarınızdan döndüren `(request, provider) => amount` |
+
+İade isteğindeki `requestedBy` alanını istemcinin gönderdiğinden değil, sunucunuzda oturum açmış kullanıcıdan doldurun: kendi talebini onaylama kontrolü onaylayanı bu alanla karşılaştırır.
 
 ## HTTP Uç Noktaları [#http-endpoints]
 
 Plugin, yönetim panelleri ve iç araçlar için yetkili uç noktalar sunar:
 
 - `GET /api/pay/refunds/pending`: Bekleyen onay taleplerini listeler.
-- `POST /api/pay/refunds/approve`: Gövde `{ id, by }`.
-- `POST /api/pay/refunds/reject`: Gövde `{ id, by, reason }`.
+- `POST /api/pay/refunds/approve`: Gövde `{ id }`.
+- `POST /api/pay/refunds/reject`: Gövde `{ id, reason }`.
+
+Onaylayan her zaman `getActor`'ın istek için döndürdüğü kullanıcıdır, gövdedeki bir değer asla kullanılmaz. `getActor` yoksa onay ve ret uç noktaları `403` döner. Reddedilen bir onay (kendi talebini onaylama, `approvers`'ın kabul etmediği kullanıcı) `403`, bilinmeyen ya da zaten işlenmiş bir talep `400` döner.
+
+```typescript
+refundApproval({
+  threshold: 1000,
+  approvers: (user) => user.role === 'finance',
+  getActor: async (request) => (await getSession(request.headers))?.user,
+});
+```
