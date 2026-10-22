@@ -1,6 +1,7 @@
 import {
   ConfigurationError,
   definePlugin,
+  type BetterPaymentLogger,
   type BetterPaymentPlugin,
   type BetterPaymentRequest,
   type BetterPaymentResponse,
@@ -95,6 +96,11 @@ export interface RateLimitOptions {
   store?: RateLimitStore;
   /** Whether to exclude payment provider callbacks by default. Default: true */
   excludeCallbacks?: boolean;
+  /**
+   * Let requests through, unlimited, while the store fails (a Redis outage), and
+   * log the error. Default: false: the handler answers 503 until the store is back.
+   */
+  passOnStoreError?: boolean;
 }
 
 /**
@@ -261,11 +267,16 @@ export function rateLimit(options: RateLimitOptions = {}): BetterPaymentPlugin {
   const keyFn =
     options.key ?? forwardedKeyExtractor(typeof trustProxy === 'number' ? trustProxy : 1);
   const excludeCallbacks = options.excludeCallbacks !== false;
+  const passOnStoreError = options.passOnStoreError === true;
+  let logger: BetterPaymentLogger | undefined;
   const rules = options.rules ?? {};
 
   return definePlugin({
     id: 'rate-limit',
     options,
+    init: (ctx) => {
+      logger = ctx.logger;
+    },
     $ERROR_CODES: {
       RATE_LIMITED: 'Too many requests, please try again later',
     },
@@ -319,7 +330,18 @@ export function rateLimit(options: RateLimitOptions = {}): BetterPaymentPlugin {
       const ruleKey = matchedPattern ? `rule:${matchedPattern}` : 'global';
       const storageKey = `${ruleKey}:${clientKey}`;
 
-      const { count, resetAt } = await store.increment(storageKey, windowMs);
+      let counter: { count: number; resetAt: number };
+      try {
+        counter = await store.increment(storageKey, windowMs);
+      } catch (error) {
+        if (!passOnStoreError) throw error;
+        logger?.error(
+          'rateLimit: store failed, request let through (passOnStoreError)',
+          error instanceof Error ? error : new Error(String(error))
+        );
+        return;
+      }
+      const { count, resetAt } = counter;
 
       if (count > limit) {
         const now = Date.now();

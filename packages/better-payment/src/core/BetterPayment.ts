@@ -345,6 +345,16 @@ export class PaymentCore<P extends Record<string, ProviderEntry> = Record<string
           `onRequest of plugin '${pluginId}' failed`,
           error instanceof Error ? error : new Error(String(error))
         );
+        // Fail closed: the hook is a guard (rate limit, IP filter) that could not decide
+        return {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            error: true,
+            message: 'Service unavailable',
+            timestamp: new Date().toISOString(),
+          },
+        };
       }
     }
     return undefined;
