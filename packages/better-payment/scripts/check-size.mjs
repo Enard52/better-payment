@@ -70,6 +70,12 @@ const budgets = [
   // gzip measured on the merged tree, so its own budget is 4 kB.
   { file: 'dist/fraud/index.mjs', maxGzipKb: 4 },
   { file: 'dist/fraud/index.js', maxGzipKb: 4 },
+  // notifications plugin (its messages in the same five languages), 9 kB with the
+  // openAPI plugin (beta measures 8.99 kB gzip), 10 kB with this telemetry plugin on
+  // top of beta (measured 9.85 kB gzip for both extensions). ESM bundlers
+  // drop the plugins an application does not import.
+  { file: 'dist/plugins/index.mjs', maxGzipKb: 10 },
+  { file: 'dist/plugins/index.js', maxGzipKb: 10 },
   { file: 'dist/next/index.mjs', maxGzipKb: 1 },
   { file: 'dist/next/index.js', maxGzipKb: 1 },
   { file: 'dist/express/index.mjs', maxGzipKb: 1 },

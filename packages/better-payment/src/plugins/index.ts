@@ -37,6 +37,18 @@ export type {
   FraudIpOptions,
 } from './fraud-rules';
 export {
+  telemetry,
+  type TelemetryOptions,
+  type TelemetryAttributes,
+  type TelemetryAttributeValue,
+  type TelemetryCounter,
+  type TelemetryHistogram,
+  type TelemetryMeter,
+  type TelemetrySpan,
+  type TelemetrySpanOptions,
+  type TelemetryTracer,
+} from './telemetry';
+export {
   notifications,
   formatNotification,
   type NotificationsOptions,
