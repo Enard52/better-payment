@@ -71,3 +71,9 @@ export { captcha, type CaptchaOptions, type CaptchaProvider } from './captcha';
   type RefundApprovalRequest,
   type RefundApprovalStore,
 } from './refund-approval';
+  webhookForwarding,
+  verifyForwardedWebhook,
+  type WebhookForwardingOptions,
+  type WebhookEndpoint,
+  type ForwardedWebhookPayload,
+} from './webhook-forwarding';

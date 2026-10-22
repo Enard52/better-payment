@@ -14,5 +14,6 @@
     "rate-limit"
     "pending-resolver"
     "refund-approval"
+    "webhook-forwarding"
   ]
 }
