@@ -57,3 +57,10 @@ export { captcha, type CaptchaOptions, type CaptchaProvider } from './captcha';
   type RateLimitRule,
   type RateLimitStore,
 } from './rate-limit';
+  pendingResolver,
+  MemoryPendingStore,
+  type PendingPayment,
+  type PendingStore,
+  type PendingResolverOptions,
+  type ResolveSummary,
+} from './pending-resolver';

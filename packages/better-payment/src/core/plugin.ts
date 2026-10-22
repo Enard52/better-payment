@@ -20,7 +20,7 @@ import type {
 } from '../types';
 import type { PaymentProvider } from './PaymentProvider';
 import type { BetterPaymentLogger } from './logger';
-import type { PaymentEventListeners } from './events';
+import type { PaymentEventListeners, PaymentEvent } from './events';
 import type {
   BetterPaymentRequest,
   BetterPaymentResponse,
@@ -145,6 +145,8 @@ export interface PluginContext {
   readonly logger: BetterPaymentLogger | undefined;
   /** A provider by id. Its operations run with hooks and events. */
   use(providerId: string): PaymentProvider;
+  /** Emits a payment event to registered listeners */
+  emit(event: PaymentEvent): Promise<void>;
   /** The endpoints registered by plugins, without their handlers */
   readonly endpoints: readonly EndpointInfo[];
 }

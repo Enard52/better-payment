@@ -48,6 +48,10 @@ const budgets = [
   // With this branch's plugin on top of beta the entry point is 10.4 / 10.41 kB
   // gzip, so the budget is 11 kB. ESM bundlers drop the plugins an application
   // does not import.
+  // notifications plugin (its messages in the same five languages), 9 kB with the
+  // openAPI plugin (beta measures 8.99 kB gzip). The pendingResolver plugin takes
+  // the entry point to 10.3 / 10.31 kB gzip, so the budget is 11 kB. ESM bundlers
+  // drop the plugins an application does not import.
   { file: 'dist/plugins/index.mjs', maxGzipKb: 11 },
   { file: 'dist/plugins/index.js', maxGzipKb: 11 },
   { file: 'dist/next/index.mjs', maxGzipKb: 1 },

@@ -61,5 +61,6 @@ Resmi plugin'ler paketle birlikte, `better-payment/plugins` altında gelir:
 | [`notifications`](/docs/plugins/notifications) | Satışları, iadeleri ve hataları Slack, Discord, Telegram veya kendi kanalınıza gönderir |
 | [`openAPI`](/docs/plugins/openapi) | Handler endpoint'leri için OpenAPI 3.1.0 şema üretimi ve etkileşimli Scalar API referansı |
 | [`rateLimit`](/docs/plugins/rate-limit) | Bot saldırılarına ve kart deneme girişimlerine karşı HTTP handler isteklerini sınırlandırır |
+| [`pendingResolver`](/docs/plugins/pending-resolver) | Zaman aşımına uğrayan ödemeleri (`NETWORK_ERROR`) belirli takvimle sorgular ve çözer |
 
 Planlanan: her ödemeyi en ucuz sağlayıcıya gönderen bir komisyon yönlendirici ([#51](https://github.com/czaydev/better-payment/issues/51)). Başka bir şeye mi ihtiyacınız var? [Kendi plugin'inizi yazın](/docs/guides/writing-plugins); birkaç satır yeterli.

@@ -160,6 +160,7 @@ export class PaymentCore<P extends Record<string, ProviderEntry> = Record<string
       mode,
       logger: options.logger,
       use: (id) => this.use(id),
+      emit: (event) => this.emitEvent(event),
       get endpoints() {
         return endpoints.map(endpointInfo);
       },
@@ -303,6 +304,21 @@ export class PaymentCore<P extends Record<string, ProviderEntry> = Record<string
     return provider;
   }
 
+  /** @internal Emits an event to registered listeners */
+  async emitEvent(event: PaymentEvent): Promise<void> {
+    const listeners = [
+      ...(this.listeners.get(event.type) ?? []),
+      ...(this.listeners.get('*') ?? []),
+    ];
+    for (const listener of listeners) {
+      try {
+        await listener(event);
+      } catch (cause) {
+        throw new EventListenerError(event, event.result, cause);
+      }
+    }
+  }
+
   /** @internal Emits the event of an operation result, if it has one */
   async emit(
     operation: PaymentOperation,
@@ -312,17 +328,7 @@ export class PaymentCore<P extends Record<string, ProviderEntry> = Record<string
   ): Promise<void> {
     const event = eventFor(operation, provider, request, result);
     if (!event) return;
-    const listeners = [
-      ...(this.listeners.get(event.type) ?? []),
-      ...(this.listeners.get('*') ?? []),
-    ];
-    for (const listener of listeners) {
-      try {
-        await listener(event);
-      } catch (cause) {
-        throw new EventListenerError(event, result, cause);
-      }
-    }
+    await this.emitEvent(event);
   }
 
   /** @internal Runs the plugins' onRequest hooks on an incoming handler request */

@@ -12,5 +12,6 @@
     "three-ds-timeout"
     "captcha"
     "rate-limit"
+    "pending-resolver"
   ]
 }
