@@ -17,6 +17,25 @@ export {
   type ErrorMessageDictionary,
 } from './i18n';
 export { chaos, type ChaosOptions, type ChaosRule } from './chaos';
+// The fraud rules engine is the `better-payment/fraud` entry point: a rules and
+// counter engine does not fit the gzip budget of this barrel, so importing
+// `better-payment/plugins` stays free of it. Its types are here, because they
+// describe the plugin you pass to `betterPayment()`.
+export type {
+  FraudRulesOptions,
+  FraudVelocityRule,
+  FraudRule,
+  FraudRuleHit,
+  FraudStore,
+  FraudWindow,
+  FraudDecision,
+  FraudContext,
+  FraudKeyKind,
+  FraudMemberKind,
+  FraudVerdict,
+  FraudIpSource,
+  FraudIpOptions,
+} from './fraud-rules';
 export {
   notifications,
   formatNotification,

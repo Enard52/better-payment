@@ -3,6 +3,8 @@
   "icon": "plugins",
   "pages": [
     "i18n",
+    "localized-errors",
+    "fraud-rules",
     "chaos",
     "notifications",
     "openapi",

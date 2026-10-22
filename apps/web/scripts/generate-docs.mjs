@@ -11,17 +11,16 @@ const origin = siteUrl(process.env.NEXT_PUBLIC_BASE_PATH);
 const manifest = JSON.parse(await readFile(join(pkg, 'package.json'), 'utf8'));
 
 // Derive entries from the package contract. An unknown/missing source fails the build.
+const sourceOf = (name) => {
+  if (name === 'index') return 'index.ts';
+  // the fraud rules engine lives with the plugins but ships as its own entry point
+  if (name === 'fraud') return 'plugins/fraud-rules.ts';
+  if (['client', 'testing', 'plugins'].includes(name)) return `${name}/index.ts`;
+  return `adapters/${name}.ts`;
+};
 const entries = Object.keys(manifest.exports).map((subpath) => {
   const name = subpath === '.' ? 'index' : subpath.slice(2);
-  return join(
-    pkg,
-    'src',
-    name === 'index'
-      ? 'index.ts'
-      : ['client', 'testing', 'plugins'].includes(name)
-        ? `${name}/index.ts`
-        : `adapters/${name}.ts`,
-  );
+  return join(pkg, 'src', sourceOf(name));
 });
 await Promise.all(entries.map((entry) => access(entry)));
 const app = await Application.bootstrapWithPlugins({

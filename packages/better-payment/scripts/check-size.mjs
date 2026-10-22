@@ -63,6 +63,13 @@ const budgets = [
   // does not import.
   { file: 'dist/plugins/index.mjs', maxGzipKb: 12 },
   { file: 'dist/plugins/index.js', maxGzipKb: 12 },
+  { file: 'dist/plugins/index.mjs', maxGzipKb: 9 },
+  { file: 'dist/plugins/index.js', maxGzipKb: 9 },
+  // The fraud rules engine is a separate subpath (`better-payment/fraud`); the plugins
+  // barrel only re-exports its types, so it costs that entry point nothing. 3.90 kB
+  // gzip measured on the merged tree, so its own budget is 4 kB.
+  { file: 'dist/fraud/index.mjs', maxGzipKb: 4 },
+  { file: 'dist/fraud/index.js', maxGzipKb: 4 },
   { file: 'dist/next/index.mjs', maxGzipKb: 1 },
   { file: 'dist/next/index.js', maxGzipKb: 1 },
   { file: 'dist/express/index.mjs', maxGzipKb: 1 },

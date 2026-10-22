@@ -121,6 +121,11 @@ jobs:
           # better-payment/plugins: a plugin works with the main entry (shared classes)
           node -e "const { localizedErrors } = require('better-payment/plugins'); const bp = require('better-payment'); try { localizedErrors({ locale: 'xx' }); process.exit(1) } catch (e) { if (!(e instanceof bp.ConfigurationError)) process.exit(1) }"
           node --input-type=module -e "import { localizedErrors } from 'better-payment/plugins'; import { betterPayment } from 'better-payment'; const p = betterPayment({ providers: {}, plugins: [localizedErrors({ locale: 'tr' })] }); if (!p.errors.message('INSUFFICIENT_FUNDS').startsWith('Kart')) process.exit(1)"
+          # better-payment/fraud: the fraud rules engine ships as its own subpath
+          node -e "const { fraudRules, MemoryFraudStore } = require('better-payment/fraud'); const bp = require('better-payment'); if (typeof fraudRules !== 'function' || typeof MemoryFraudStore !== 'function') process.exit(1); try { fraudRules({ operations: ['completeThreeDSPayment'] }); process.exit(1) } catch (e) { if (!(e instanceof bp.ConfigurationError)) process.exit(1) }"
+          node --input-type=module -e "import { fraudRules } from 'better-payment/fraud'; if (typeof fraudRules !== 'function') process.exit(1)"
+          # importing better-payment/plugins must not pull the fraud rules engine
+          node -e "const p = require('better-payment/plugins'); if ('fraudRules' in p || 'MemoryFraudStore' in p) process.exit(1)"
 
       - name: Smoke test framework adapter subpaths (CJS and ESM)
         run: |
@@ -144,6 +149,7 @@ jobs:
           test -f dist/client/index.js && test -f dist/client/index.d.ts
           test -f dist/testing/index.js && test -f dist/testing/index.mjs && test -f dist/testing/index.d.ts
           test -f dist/plugins/index.js && test -f dist/plugins/index.mjs && test -f dist/plugins/index.d.ts
+          test -f dist/fraud/index.js && test -f dist/fraud/index.mjs && test -f dist/fraud/index.d.ts
           for adapter in next express hono fastify elysia react-router; do
             for extension in js mjs d.ts; do
               test -f "dist/$adapter/index.$extension"
