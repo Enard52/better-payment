@@ -23,8 +23,8 @@ const payment = betterPayment({
     redact({
       // Masking style for card numbers
       card: 'first6last4', // e.g. 545454******5454
-      // Custom patterns to mask in string values (TCKN 11-digit numbers are masked by default)
-      custom: [/\b\d{11}\b/g],
+      // More patterns to mask in string values (TCKN 11-digit numbers are always masked)
+      custom: [/\bTR\d{24}\b/g], // IBAN
     }),
   ],
 });
@@ -41,16 +41,16 @@ payment.on('payment.succeeded', (event) => {
 ## How It Works
 
 1. **Untouched Provider Delivery**: The real card and customer data is dispatched to the payment gateway without any modification, ensuring successful processing.
-2. **Event Payload Redaction**: In the `after` hook, copies of `request` and `result` passed to `BetterPayment` events (`payment.succeeded`, `payment.failed`, etc.) are masked.
+2. **Event Payload Redaction**: In the `after` hook, copies of `request` and `result` passed to `BetterPayment` events (`payment.succeeded`, `payment.failed`, etc.) are masked. The masked result is also what the call returns, except `paymentId`, `conversationId`, `threeDSHtmlContent`, `redirectUrl`, `checkoutFormContent`, `paymentPageUrl`, `token` and `storedCard`, which stay as the provider sent them.
 3. **Logger Wrapping**: If a `logger` is passed to `betterPayment({ logger })`, its `debug`, `info`, and `error` methods are wrapped so any log messages or metadata matching sensitive keys or PAN patterns are masked before writing to the log destination.
 
 ## Options
 
 | Option | Default | Description |
 | ------ | ------- | ----------- |
-| `fields` | `['cardNumber', 'cvc', 'cvv', 'expireMonth', 'expireYear', 'identityNumber', 'gsmNumber', 'phoneNumber', 'password', ...]` | Object keys whose values are automatically masked |
+| `fields` | — | More object keys to mask, added to the defaults (`cardNumber`, `cardHolderName`, `cvc`, `cvv`, `securityCode`, `expireMonth`, `expireYear`, `identityNumber`, `gsmNumber`, `phoneNumber`, `password`, provider secrets...), which are always masked |
 | `card` | `'first6last4'` | Card masking format: `'first6last4'`, `'last4'`, `'none'`, or custom `(pan) => string` |
-| `custom` | `[/\b\d{11}\b/g]` | Additional RegExp patterns to mask within text strings (e.g. 11-digit TCKN) |
+| `custom` | — | More RegExp patterns to mask within text strings, added to the built-in 11-digit TCKN pattern |
 | `maskString` | `'<redacted>'` | Generic placeholder string |
 | `redactLogger` | `true` | Wrap the configured logger to mask log entries |
 | `redactEvents` | `true` | Mask event payloads before listeners receive them |

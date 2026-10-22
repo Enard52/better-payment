@@ -16,8 +16,9 @@ interface RedactableLogger extends BetterPaymentLogger {
 
 export interface RedactOptions {
   /**
-   * Field names to mask when encountered as object keys.
-   * Defaults to card details, CVV/CVC, expiration dates, identity number (TCKN), phone and secrets.
+   * More field names to mask when encountered as object keys. They are added to
+   * the defaults (card details, CVV/CVC, expiration dates, cardholder name,
+   * identity number, phone and secrets), which always stay masked.
    */
   fields?: string[];
   /**
@@ -29,8 +30,8 @@ export interface RedactOptions {
    */
   card?: CardMaskingStyle;
   /**
-   * Custom regular expression patterns to match and mask anywhere in string values.
-   * e.g. `[/\b\d{11}\b/g]` to mask Turkish ID (TCKN) numbers.
+   * More regular expression patterns to match and mask anywhere in string values,
+   * added to the built-in Turkish ID (TCKN) pattern.
    */
   custom?: RegExp[];
   /**
@@ -52,8 +53,10 @@ export interface RedactOptions {
 
 const DEFAULT_FIELDS: string[] = [
   'cardNumber',
+  'cardHolderName',
   'cvc',
   'cvv',
+  'securityCode',
   'expireMonth',
   'expireYear',
   'identityNumber',
@@ -66,6 +69,28 @@ const DEFAULT_FIELDS: string[] = [
   'merchantSalt',
   'password',
   'clientPassword',
+  'storeKey',
+  'hashKey',
+  'apiSecret',
+  'clientSecret',
+  'terminalProvPassword',
+];
+
+/**
+ * Result fields kept as the provider sent them, because the masked result is also
+ * what the caller gets back: identifiers, the 3D Secure and checkout form pages
+ * (their markup can hold long digit runs that look like card numbers) and the
+ * stored card tokens. Events see them unmasked too.
+ */
+const RESULT_PASSTHROUGH = [
+  'paymentId',
+  'conversationId',
+  'threeDSHtmlContent',
+  'redirectUrl',
+  'checkoutFormContent',
+  'paymentPageUrl',
+  'token',
+  'storedCard',
 ];
 
 /** Matches credit/debit card numbers from 13 to 19 digits, also when glued to a word character */
@@ -101,9 +126,12 @@ function formatPan(pan: string, style: CardMaskingStyle = 'first6last4'): string
  * Creates a redaction transformer based on the provided options.
  */
 export function createRedactor(options: RedactOptions = {}) {
-  const fields = new Set((options.fields ?? DEFAULT_FIELDS).map((f) => f.toLowerCase()));
+  // Options add to the defaults: listing one extra field must not unmask the CVC
+  const fields = new Set(
+    [...DEFAULT_FIELDS, ...(options.fields ?? [])].map((f) => f.toLowerCase())
+  );
   const cardStyle = options.card ?? 'first6last4';
-  const customPatterns = options.custom ?? [TCKN_REGEX];
+  const customPatterns = [TCKN_REGEX, ...(options.custom ?? [])];
   const maskStr = options.maskString ?? '<redacted>';
 
   const maskStringValue = (str: string): string => {
@@ -201,6 +229,19 @@ export function createRedactor(options: RedactOptions = {}) {
  * });
  * ```
  */
+/** The masked result, with the fields the caller needs put back as they were */
+function keepPassthrough(masked: unknown, original: unknown): unknown {
+  if (!masked || typeof masked !== 'object' || !original || typeof original !== 'object') {
+    return masked;
+  }
+  const source = original as Record<string, unknown>;
+  const copy = { ...(masked as Record<string, unknown>) };
+  for (const key of RESULT_PASSTHROUGH) {
+    if (key in source) copy[key] = source[key];
+  }
+  return copy;
+}
+
 export const redact = (options: RedactOptions = {}) => {
   const redactor = createRedactor(options);
   const redactLogger = options.redactLogger ?? true;
@@ -254,7 +295,7 @@ export const redact = (options: RedactOptions = {}) => {
             // Mask request and result copies passed to payment events and listeners.
             // The provider has already completed execution with the real request payload.
             const maskedRequest = redactor.mask(ctx.request);
-            const maskedResult = redactor.mask(ctx.result);
+            const maskedResult = keepPassthrough(redactor.mask(ctx.result), ctx.result);
 
             return {
               request: maskedRequest,
