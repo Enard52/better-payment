@@ -26,6 +26,21 @@
       "import": "./dist/plugins/index.mjs",
       "require": "./dist/plugins/index.js"
     },
+    "./fraud": {
+      "types": "./dist/fraud/index.d.ts",
+      "import": "./dist/fraud/index.mjs",
+      "require": "./dist/fraud/index.js"
+    },
+    "./commission-router": {
+      "types": "./dist/commission-router/index.d.ts",
+      "import": "./dist/commission-router/index.mjs",
+      "require": "./dist/commission-router/index.js"
+    },
+    "./routing": {
+      "types": "./dist/routing/index.d.ts",
+      "import": "./dist/routing/index.mjs",
+      "require": "./dist/routing/index.js"
+    },
     "./next": {
       "types": "./dist/next/index.d.ts",
       "import": "./dist/next/index.mjs",
@@ -143,6 +158,7 @@
     "@commitlint/cli": "^18.6.1",
     "@commitlint/config-conventional": "^18.6.3",
     "@edge-runtime/vm": "^5.0.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@types/express": "^5.0.6",
     "@types/node": "^20.19.43",
     "@typescript-eslint/eslint-plugin": "^6.21.0",

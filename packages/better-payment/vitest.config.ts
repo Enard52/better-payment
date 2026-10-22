@@ -28,17 +28,8 @@ export default defineConfig({
         statements: 87,
       },
     },
-    include: [
-      'tests/**/*.test.ts',
-      'tests/**/*.spec.ts',
-    ],
-    exclude: [
-      'node_modules',
-      'dist',
-      'tests/fixtures/**',
-      'tests/helpers/**',
-      'tests/sandbox/**',
-    ],
+    include: ['tests/**/*.test.ts', 'tests/**/*.spec.ts'],
+    exclude: ['node_modules', 'dist', 'tests/fixtures/**', 'tests/helpers/**', 'tests/sandbox/**'],
     testTimeout: 10000,
     hookTimeout: 10000,
   },
@@ -48,6 +39,12 @@ export default defineConfig({
       '@tests': path.resolve(__dirname, './tests'),
       'better-payment/testing': path.resolve(__dirname, './src/testing/index.ts'),
       'better-payment/plugins': path.resolve(__dirname, './src/plugins/index.ts'),
+      'better-payment/fraud': path.resolve(__dirname, './src/plugins/fraud-rules.ts'),
+      'better-payment/commission-router': path.resolve(
+        __dirname,
+        './src/commission-router/index.ts'
+      ),
+      'better-payment/routing': path.resolve(__dirname, './src/routing/index.ts'),
       'better-payment/next': path.resolve(__dirname, './src/adapters/next.ts'),
       'better-payment/express': path.resolve(__dirname, './src/adapters/express.ts'),
       'better-payment/hono': path.resolve(__dirname, './src/adapters/hono.ts'),

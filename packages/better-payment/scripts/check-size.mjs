@@ -19,11 +19,28 @@ const budgets = [
   { file: 'dist/testing/index.js', maxGzipKb: 8 },
   // Official plugins, with every built-in error message language. Raise this for new
   // languages; translations are never shortened to fit it. 7 kB since the
-  // notifications plugin, 9 kB with the openAPI plugin (beta measures 8.99 kB gzip).
-  // The failover plugin adds 1.34 kB, taking the bundle to 10.33 / 10.34 kB gzip, so
-  // the budget is 11 kB. ESM bundlers drop the plugins an application does not import.
-  { file: 'dist/plugins/index.mjs', maxGzipKb: 11 },
-  { file: 'dist/plugins/index.js', maxGzipKb: 11 },
+  // notifications plugin, 9 kB with the openAPI plugin, 11 kB with failover. The
+  // currencyConversion, redact, threeDSTimeout, captcha, rateLimit, pendingResolver,
+  // refundApproval, webhookForwarding, mcp and telemetry plugins take the bundle to
+  // 22.32 / 22.34 kB gzip, so the budget is 23 kB. ESM bundlers drop the plugins an
+  // application does not import.
+  { file: 'dist/plugins/index.mjs', maxGzipKb: 23 },
+  { file: 'dist/plugins/index.js', maxGzipKb: 23 },
+  // The fraud rules engine is a separate subpath (`better-payment/fraud`); the plugins
+  // barrel only re-exports its types, so it costs that entry point nothing. 3.90 kB
+  // gzip measured on the merged tree, so its own budget is 4 kB.
+  { file: 'dist/fraud/index.mjs', maxGzipKb: 4 },
+  { file: 'dist/fraud/index.js', maxGzipKb: 4 },
+  // The commission router is a separate subpath (`better-payment/commission-router`),
+  // it is deliberately not in the plugins barrel: 7.83 / 7.85 kB gzip measured on the
+  // merged tree, 8 kB leaves room for the matching rules an application adds.
+  { file: 'dist/commission-router/index.mjs', maxGzipKb: 8 },
+  { file: 'dist/commission-router/index.js', maxGzipKb: 8 },
+  // The routing engine is a separate subpath: its conditions, weighted splits,
+  // store and explain() would break the plugins barrel's budget. 5.57 / 5.58 kB gzip
+  // measured against beta; 6 kB leaves room for a few more conditions.
+  { file: 'dist/routing/index.mjs', maxGzipKb: 6 },
+  { file: 'dist/routing/index.js', maxGzipKb: 6 },
   { file: 'dist/next/index.mjs', maxGzipKb: 1 },
   { file: 'dist/next/index.js', maxGzipKb: 1 },
   { file: 'dist/express/index.mjs', maxGzipKb: 1 },
