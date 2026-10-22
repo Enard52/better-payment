@@ -3,7 +3,10 @@ import {
   ConfigurationError,
   definePlugin,
   PaymentStatus,
+  randomHex,
   type BetterPaymentPlugin,
+  type BetterPaymentRequest,
+  type EndpointContext,
   type CancelRequest,
   type CancelResponse,
   type PluginContext,
@@ -19,15 +22,14 @@ import {
  */
 export type RefundApprovalActor = string | Record<string, unknown>;
 
-/** A refund replayed after approval, carrying the `__approved` marker below */
-interface ApprovedRefundRequest extends RefundRequest {
-  __approved?: boolean;
-}
+/**
+ * Marks a request this plugin replays after approval. A symbol key cannot come
+ * from a JSON body or from a caller outside this module, and object spread keeps
+ * it when another plugin's before hook copies the request.
+ */
+const APPROVED = Symbol('refundApproval.approved');
 
-/** A cancellation replayed after approval, carrying the `__approved` marker below */
-interface ApprovedCancelRequest extends CancelRequest {
-  __approved?: boolean;
-}
+type ApprovedRequest = (RefundRequest | CancelRequest) & { [APPROVED]?: true };
 
 /**
  * How the `before` hook reads an incoming refund/cancel request. `ctx.request` is
@@ -44,7 +46,6 @@ interface ApprovalRequestView {
   requestedBy?: RefundApprovalActor;
   by?: RefundApprovalActor;
   userId?: RefundApprovalActor;
-  __approved?: boolean;
 }
 
 export interface RefundApprovalRequest {
@@ -106,8 +107,36 @@ export interface RefundApprovalOptions {
   store?: RefundApprovalStore;
   /** Function determining whether a user is authorized to approve refunds */
   approvers?: (user: unknown) => boolean | Promise<boolean>;
+  /**
+   * Resolves the signed-in user of an HTTP request from your session or token.
+   * The `/refunds/approve` and `/refunds/reject` endpoints take the approver from
+   * here, never from the request body, and answer 403 without it.
+   */
+  getActor?: (
+    request: BetterPaymentRequest
+  ) => RefundApprovalActor | undefined | Promise<RefundApprovalActor | undefined>;
+  /**
+   * Amount of the payment a cancellation voids, looked up in your own records.
+   * A cancel request carries no amount, so without this option, or when it
+   * returns undefined, every cancellation waits for approval.
+   */
+  cancelAmount?: (
+    request: CancelRequest,
+    provider: string
+  ) => number | string | undefined | Promise<number | string | undefined>;
   /** Optional notification hook called when a new approval request is created */
   notify?: (request: RefundApprovalRequest) => Promise<void> | void;
+}
+
+/** A strictly parsed amount: '1,000.00', '' or 'abc' give undefined, not 1 or 0 */
+function parseAmount(value: unknown): number | undefined {
+  const amount =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string' && value.trim()
+        ? Number(value.trim())
+        : NaN;
+  return Number.isFinite(amount) && amount >= 0 ? amount : undefined;
 }
 
 function getUserId(user: RefundApprovalActor | undefined): string | undefined {
@@ -158,7 +187,64 @@ export function refundApproval(options: RefundApprovalOptions): BetterPaymentPlu
   const threshold = options.threshold;
   let pluginCtx: PluginContext;
 
-  const approve = async (
+  // The HTTP endpoints act as the signed-in user only: an approver named in the
+  // request body would let anyone with handler access approve their own refund
+  const actorOf = async (request: BetterPaymentRequest) =>
+    options.getActor ? await options.getActor(request) : undefined;
+  const forbidden = (ctx: EndpointContext) =>
+    ctx.json(
+      {
+        status: 'error',
+        errorMessage: options.getActor
+          ? 'No signed-in approver for this request'
+          : "refundApproval: set the 'getActor' option to use the HTTP endpoints",
+      },
+      403
+    );
+  // A refused approval is the caller's error, not the server's
+  const respond = async (ctx: EndpointContext, run: () => Promise<unknown>) => {
+    try {
+      return ctx.json(await run());
+    } catch (error) {
+      if (!(error instanceof BetterPaymentError)) throw error;
+      const status = error.code === 'INVALID_REQUEST' ? 400 : 403;
+      return ctx.json(
+        { status: 'error', errorCode: error.code, errorMessage: error.message },
+        status
+      );
+    }
+  };
+
+  // Requests being approved or rejected in this process. Two approvals of the
+  // same request read it as pending at the same time, so without this both would
+  // refund. (A shared store across instances needs its own compare-and-set.)
+  const inFlight = new Set<string>();
+  const exclusive = async <T>(id: string, run: () => Promise<T>): Promise<T> => {
+    if (inFlight.has(id)) {
+      throw new BetterPaymentError(
+        `Approval request '${id}' is already being processed`,
+        'INVALID_REQUEST'
+      );
+    }
+    inFlight.add(id);
+    try {
+      return await run();
+    } finally {
+      inFlight.delete(id);
+    }
+  };
+
+  const approve = (
+    id: string,
+    actionOptions: { by: RefundApprovalActor }
+  ): Promise<RefundResponse | CancelResponse> => exclusive(id, () => runApprove(id, actionOptions));
+
+  const reject = (
+    id: string,
+    actionOptions: { by: RefundApprovalActor; reason?: string }
+  ): Promise<RefundApprovalRequest> => exclusive(id, () => runReject(id, actionOptions));
+
+  const runApprove = async (
     id: string,
     actionOptions: { by: RefundApprovalActor }
   ): Promise<RefundResponse | CancelResponse> => {
@@ -190,30 +276,23 @@ export function refundApproval(options: RefundApprovalOptions): BetterPaymentPlu
       );
     }
 
-    const provider = pluginCtx.use(item.provider);
-    let result: RefundResponse | CancelResponse;
-
-    // The `__approved` marker is what makes this plugin's own `before` hook let
-    // the request through; without it the approved refund would queue again.
-    if (item.operation === 'refund') {
-      const request = item.request as ApprovedRefundRequest;
-      request.__approved = true;
-      result = await provider.refund(request);
-    } else {
-      const request = item.request as ApprovedCancelRequest;
-      request.__approved = true;
-      result = await provider.cancel(request);
-    }
-
+    // Saved before the provider call, so a second approval of the same request
+    // finds it already approved instead of refunding twice
     item.status = 'approved';
     item.approvedAt = Date.now();
     item.approvedBy = actionOptions.by;
     await store.save(item);
 
-    return result;
+    const provider = pluginCtx.use(item.provider);
+    // The APPROVED marker is what makes this plugin's own `before` hook let the
+    // request through; without it the approved refund would queue again.
+    const request: ApprovedRequest = { ...item.request, [APPROVED]: true };
+    return item.operation === 'refund'
+      ? await provider.refund(request as RefundRequest)
+      : await provider.cancel(request as CancelRequest);
   };
 
-  const reject = async (
+  const runReject = async (
     id: string,
     actionOptions: { by: RefundApprovalActor; reason?: string }
   ): Promise<RefundApprovalRequest> => {
@@ -261,20 +340,23 @@ export function refundApproval(options: RefundApprovalOptions): BetterPaymentPlu
           matcher: (ctx) => ctx.operation === 'refund' || ctx.operation === 'cancel',
           handler: async (ctx) => {
             const req = ctx.request as ApprovalRequestView;
-            if (req.__approved) {
+            if ((ctx.request as ApprovedRequest)[APPROVED]) {
               return;
             }
 
-            const rawPrice = req.price ?? req.amount;
-            const amount =
-              typeof rawPrice === 'string' ? parseFloat(rawPrice) : Number(rawPrice ?? 0);
+            // A cancellation carries no amount: only the merchant's own records
+            // know what it voids. An amount that cannot be read waits for approval.
+            const rawAmount =
+              ctx.operation === 'cancel'
+                ? await options.cancelAmount?.(ctx.request, ctx.provider ?? 'default')
+                : (req.price ?? req.amount);
+            const amount = parseAmount(rawAmount);
 
-            // If below threshold, allow direct execution without approval
-            if (amount <= threshold) {
+            if (amount !== undefined && amount <= threshold) {
               return;
             }
 
-            const id = `apr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+            const id = `apr_${randomHex(12)}`;
             const requestedBy = req.requestedBy ?? req.by ?? req.userId;
 
             const approvalRecord: RefundApprovalRequest = {
@@ -282,7 +364,7 @@ export function refundApproval(options: RefundApprovalOptions): BetterPaymentPlu
               operation: ctx.operation as 'refund' | 'cancel',
               provider: ctx.provider ?? 'default',
               paymentId: req.paymentId ?? '',
-              amount,
+              amount: amount ?? 0,
               currency: req.currency ?? 'TRY',
               requestedBy,
               status: 'pending',
@@ -351,12 +433,13 @@ export function refundApproval(options: RefundApprovalOptions): BetterPaymentPlu
         privileged: true,
         handler: async (ctx) => {
           pluginCtx = ctx;
-          const body = (ctx.body ?? {}) as { id?: string; by: RefundApprovalActor };
-          if (!body.id) {
+          const body = (ctx.body ?? {}) as { id?: unknown };
+          if (typeof body.id !== 'string' || !body.id) {
             return ctx.json({ status: 'error', errorMessage: 'Missing required field: id' }, 400);
           }
-          const result = await approve(body.id, { by: body.by });
-          return ctx.json(result);
+          const by = await actorOf(ctx.request);
+          if (by === undefined) return forbidden(ctx);
+          return respond(ctx, () => approve(body.id as string, { by }));
         },
       },
       rejectRefund: {
@@ -365,16 +448,14 @@ export function refundApproval(options: RefundApprovalOptions): BetterPaymentPlu
         privileged: true,
         handler: async (ctx) => {
           pluginCtx = ctx;
-          const body = (ctx.body ?? {}) as {
-            id?: string;
-            by: RefundApprovalActor;
-            reason?: string;
-          };
-          if (!body.id) {
+          const body = (ctx.body ?? {}) as { id?: unknown; reason?: unknown };
+          if (typeof body.id !== 'string' || !body.id) {
             return ctx.json({ status: 'error', errorMessage: 'Missing required field: id' }, 400);
           }
-          const result = await reject(body.id, { by: body.by, reason: body.reason });
-          return ctx.json(result);
+          const by = await actorOf(ctx.request);
+          if (by === undefined) return forbidden(ctx);
+          const reason = typeof body.reason === 'string' ? body.reason : undefined;
+          return respond(ctx, () => reject(body.id as string, { by, reason }));
         },
       },
     },
