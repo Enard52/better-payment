@@ -64,3 +64,10 @@ export { captcha, type CaptchaOptions, type CaptchaProvider } from './captcha';
   type PendingResolverOptions,
   type ResolveSummary,
 } from './pending-resolver';
+  refundApproval,
+  MemoryRefundApprovalStore,
+  type RefundApprovalActor,
+  type RefundApprovalOptions,
+  type RefundApprovalRequest,
+  type RefundApprovalStore,
+} from './refund-approval';
