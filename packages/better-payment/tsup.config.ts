@@ -10,6 +10,7 @@ export default defineConfig({
     'express/index': 'src/adapters/express.ts',
     'hono/index': 'src/adapters/hono.ts',
     'fastify/index': 'src/adapters/fastify.ts',
+    'nestjs/index': 'src/adapters/nestjs.ts',
     'elysia/index': 'src/adapters/elysia.ts',
     'react-router/index': 'src/adapters/react-router.ts',
   },

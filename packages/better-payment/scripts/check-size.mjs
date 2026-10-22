@@ -32,6 +32,8 @@ const budgets = [
   { file: 'dist/hono/index.js', maxGzipKb: 1 },
   { file: 'dist/fastify/index.mjs', maxGzipKb: 1 },
   { file: 'dist/fastify/index.js', maxGzipKb: 1 },
+  { file: 'dist/nestjs/index.mjs', maxGzipKb: 1 },
+  { file: 'dist/nestjs/index.js', maxGzipKb: 1 },
   { file: 'dist/elysia/index.mjs', maxGzipKb: 1 },
   { file: 'dist/elysia/index.js', maxGzipKb: 1 },
   { file: 'dist/react-router/index.mjs', maxGzipKb: 1 },
