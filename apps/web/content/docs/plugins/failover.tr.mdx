@@ -7,7 +7,7 @@ description: Sağlayıcı kesintilerinde veya geçici hatalarda ödemeyi otomati
 
 Birden fazla sanal POS veya ödeme kuruluşu ile çalışan işletmeler, birincil sağlayıcıda yaşanan kesintiler, ağ zaman aşımları ya da geçici ağ geçidi hataları yüzünden satış kaybedebilir. `failover` eklentisi, geçici bir altyapı hatası tespit ettiğinde ödemeyi belirlediğiniz sırayla yedek sağlayıcılara yönlendirerek yüksek erişilebilirlik (high availability) sağlar.
 
-En önemlisi, failover **sıfır çift çekim garantisi** sunar: sonucu belirsiz olan işlemleri (`NETWORK_ERROR` veya bankanın çekimi yapmış olabileceği `pending` durumları) kesinlikle tekrar denemez.
+En önemlisi, failover **sıfır çift çekim garantisi** sunar: sonucu belirsiz olan işlemleri (`NETWORK_ERROR` veya bankanın çekimi yapmış olabileceği `pending` durumları) kesinlikle tekrar denemez. Sağlayıcının ya da önündeki gateway'in kart çekildikten sonra da dönebildiği HTTP 500, 502 ve 504 cevaplarından sonra da ödemeyi başka sağlayıcıya taşımaz.
 
 ## Kurulum [#setup]
 
@@ -60,7 +60,7 @@ const result = await payment.createPayment({
 | Seçenek | Varsayılan | Açıklama |
 | ------- | ---------- | -------- |
 | `order` | tüm tanımlı sağlayıcılar | Öncelik sırasına göre sağlayıcı kimlikleri veya dinamik fonksiyon `(ctx) => string[]` |
-| `on` | `PROVIDER_ERROR`, `PROVIDER_UNAVAILABLE`, `TIMEOUT_BEFORE_SEND`, `SYSTEM_ERROR`, `500-504` | Yedeklemeyi tetikleyen hata kodları |
+| `on` | `PROVIDER_ERROR`, `PROVIDER_UNAVAILABLE`, `TIMEOUT_BEFORE_SEND`, `SYSTEM_ERROR`, `503` | Yedeklemeyi tetikleyen hata kodları. HTTP 500, 502 ve 504 listede olsa bile tetiklemez |
 | `operations` | `['createPayment', 'authorize']` | Yedeklemenin geçerli olduğu operasyonlar |
 | `circuitBreaker` | `{ failures: 5, window: '1m', cooldown: '5m' }` | Devre kesici eşiği, zaman penceresi ve bekleme süresi |
 | `onSwitch` | — | Sağlayıcı değiştiğinde tetiklenen geri çağırma fonksiyonu |

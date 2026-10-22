@@ -349,4 +349,57 @@ describe('failover plugin', () => {
     expect(res.paymentId).toBe('probe_ok');
     expect((payment as any).failover.status().a.state).toBe('closed');
   });
+
+  it.each([500, 502, 504])(
+    'never fails over after an HTTP %i answer, which may follow a charge',
+    async (httpStatus) => {
+      const a = new MockProvider();
+      const b = new MockProvider();
+      vi.spyOn(a, 'createPayment').mockResolvedValueOnce({
+        status: PaymentStatus.FAILURE,
+        code: PaymentErrorCode.PROVIDER_ERROR,
+        errorCode: String(httpStatus),
+        errorMessage: 'Gateway error',
+        httpStatus,
+      } as PaymentResponse);
+      vi.spyOn(b, 'createPayment');
+
+      const payment = betterPayment({
+        providers: { a, b },
+        defaultProvider: 'a',
+        // Even when the codes are listed explicitly
+        plugins: [failover({ order: ['a', 'b'], on: ['PROVIDER_ERROR', String(httpStatus)] })],
+      });
+
+      const res = await payment.createPayment(mockPaymentRequest);
+
+      expect(res.status).toBe(PaymentStatus.FAILURE);
+      expect(b.createPayment).not.toHaveBeenCalled();
+    }
+  );
+
+  it('fails over after an HTTP 503 answer', async () => {
+    const a = new MockProvider();
+    const b = new MockProvider();
+    vi.spyOn(a, 'createPayment').mockResolvedValueOnce({
+      status: PaymentStatus.FAILURE,
+      errorCode: '503',
+      errorMessage: 'Service unavailable',
+      httpStatus: 503,
+    } as PaymentResponse);
+    vi.spyOn(b, 'createPayment').mockResolvedValueOnce({
+      status: PaymentStatus.SUCCESS,
+      paymentId: 'pay_from_b',
+    } as PaymentResponse);
+
+    const payment = betterPayment({
+      providers: { a, b },
+      defaultProvider: 'a',
+      plugins: [failover({ order: ['a', 'b'] })],
+    });
+
+    const res = await payment.createPayment(mockPaymentRequest);
+
+    expect(res.paymentId).toBe('pay_from_b');
+  });
 });
