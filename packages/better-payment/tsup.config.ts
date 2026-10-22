@@ -7,6 +7,7 @@ export default defineConfig({
     'testing/index': 'src/testing/index.ts',
     'plugins/index': 'src/plugins/index.ts',
     'fraud/index': 'src/plugins/fraud-rules.ts',
+    'commission-router/index': 'src/commission-router/index.ts',
     'next/index': 'src/adapters/next.ts',
     'express/index': 'src/adapters/express.ts',
     'hono/index': 'src/adapters/hono.ts',

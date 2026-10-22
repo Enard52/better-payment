@@ -19,5 +19,6 @@
     "webhook-forwarding"
     "mcp"
     "telemetry"
+    "commission-router"
   ]
 }

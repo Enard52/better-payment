@@ -76,6 +76,11 @@ const budgets = [
   // drop the plugins an application does not import.
   { file: 'dist/plugins/index.mjs', maxGzipKb: 10 },
   { file: 'dist/plugins/index.js', maxGzipKb: 10 },
+  // The commission router is a separate subpath (`better-payment/commission-router`),
+  // it is deliberately not in the plugins barrel: 7.83 / 7.85 kB gzip measured on the
+  // merged tree, 8 kB leaves room for the matching rules an application adds.
+  { file: 'dist/commission-router/index.mjs', maxGzipKb: 8 },
+  { file: 'dist/commission-router/index.js', maxGzipKb: 8 },
   { file: 'dist/next/index.mjs', maxGzipKb: 1 },
   { file: 'dist/next/index.js', maxGzipKb: 1 },
   { file: 'dist/express/index.mjs', maxGzipKb: 1 },

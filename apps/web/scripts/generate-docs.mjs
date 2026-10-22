@@ -21,6 +21,15 @@ const sourceOf = (name) => {
 const entries = Object.keys(manifest.exports).map((subpath) => {
   const name = subpath === '.' ? 'index' : subpath.slice(2);
   return join(pkg, 'src', sourceOf(name));
+  return join(
+    pkg,
+    'src',
+    name === 'index'
+      ? 'index.ts'
+      : ['client', 'testing', 'plugins', 'commission-router'].includes(name)
+        ? `${name}/index.ts`
+        : `adapters/${name}.ts`,
+  );
 });
 await Promise.all(entries.map((entry) => access(entry)));
 const app = await Application.bootstrapWithPlugins({

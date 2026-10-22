@@ -49,6 +49,11 @@ export default defineConfig({
       'better-payment/testing': path.resolve(__dirname, './src/testing/index.ts'),
       'better-payment/plugins': path.resolve(__dirname, './src/plugins/index.ts'),
       'better-payment/fraud': path.resolve(__dirname, './src/plugins/fraud-rules.ts'),
+      'better-payment/commission-router': path.resolve(
+        __dirname,
+        './src/commission-router/index.ts'
+      ),
+      'better-payment/commission-router': path.resolve(__dirname, './src/commission-router/index.ts'),
       'better-payment/next': path.resolve(__dirname, './src/adapters/next.ts'),
       'better-payment/express': path.resolve(__dirname, './src/adapters/express.ts'),
       'better-payment/hono': path.resolve(__dirname, './src/adapters/hono.ts'),

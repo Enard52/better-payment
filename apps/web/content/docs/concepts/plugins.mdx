@@ -52,7 +52,7 @@ Provider-specific methods (the iyzico checkout form, PWI and subscriptions, PayT
 
 ## Official plugins
 
-Official plugins ship in the package, under `better-payment/plugins`:
+Official plugins ship in the package. Most live under `better-payment/plugins`; the commission router has its own tree-shakable `better-payment/commission-router` entry:
 
 | Plugin | What it does |
 | ------ | ------------ |
@@ -66,5 +66,6 @@ Official plugins ship in the package, under `better-payment/plugins`:
 | [`webhookForwarding`](/docs/plugins/webhook-forwarding) | Forwards payment events to external microservices as HMAC-SHA256 signed webhooks with retries |
 | [`mcp`](/docs/plugins/mcp) | Exposes Better Payment as a Model Context Protocol (MCP) server for AI agents |
 | [`fraudRules`](/docs/plugins/fraud-rules) | Counts attempts per IP, card and buyer and refuses card-testing runs before the provider is called; ships under `better-payment/fraud` |
+| [`commissionRouter`](/docs/plugins/commission-router) | Routes each payment to the cheapest eligible provider from your own commission rate tables |
 
-Planned: a commission router that sends each payment to the cheapest provider ([#51](https://github.com/czaydev/better-payment/issues/51)). Need something else? [Write your own](/docs/guides/writing-plugins); it takes a few lines.
+Need something else? [Write your own](/docs/guides/writing-plugins); it takes a few lines.

@@ -30,6 +30,10 @@
       "types": "./dist/fraud/index.d.ts",
       "import": "./dist/fraud/index.mjs",
       "require": "./dist/fraud/index.js"
+    "./commission-router": {
+      "types": "./dist/commission-router/index.d.ts",
+      "import": "./dist/commission-router/index.mjs",
+      "require": "./dist/commission-router/index.js"
     },
     "./next": {
       "types": "./dist/next/index.d.ts",

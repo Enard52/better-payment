@@ -126,6 +126,9 @@ jobs:
           node --input-type=module -e "import { fraudRules } from 'better-payment/fraud'; if (typeof fraudRules !== 'function') process.exit(1)"
           # importing better-payment/plugins must not pull the fraud rules engine
           node -e "const p = require('better-payment/plugins'); if ('fraudRules' in p || 'MemoryFraudStore' in p) process.exit(1)"
+          # better-payment/commission-router is its own subpath, not part of the plugins barrel
+          node -e "const plugins = require('better-payment/plugins'); if ('commissionRouter' in plugins) process.exit(1); const { commissionRouter } = require('better-payment/commission-router'); const bp = require('better-payment'); try { commissionRouter({ rates: [{ provider: 'x', rate: '101' }] }); process.exit(1) } catch (e) { if (!(e instanceof bp.ConfigurationError)) process.exit(1) }"
+          node --input-type=module -e "import { commissionRouter } from 'better-payment/commission-router'; import { betterPayment } from 'better-payment'; import { MockProvider } from 'better-payment/testing'; const p = betterPayment({ providers: { mock: new MockProvider() }, plugins: [commissionRouter({ rates: [{ provider: 'mock', rate: '1.00' }] })] }); const q = await p.router.quote({ price: '10.00' }); if (q.selected !== 'mock' || q.candidates[0].cost !== '0.10') process.exit(1)"
 
       - name: Smoke test framework adapter subpaths (CJS and ESM)
         run: |
@@ -150,6 +153,7 @@ jobs:
           test -f dist/testing/index.js && test -f dist/testing/index.mjs && test -f dist/testing/index.d.ts
           test -f dist/plugins/index.js && test -f dist/plugins/index.mjs && test -f dist/plugins/index.d.ts
           test -f dist/fraud/index.js && test -f dist/fraud/index.mjs && test -f dist/fraud/index.d.ts
+          test -f dist/commission-router/index.js && test -f dist/commission-router/index.mjs && test -f dist/commission-router/index.d.ts
           for adapter in next express hono fastify elysia react-router; do
             for extension in js mjs d.ts; do
               test -f "dist/$adapter/index.$extension"
