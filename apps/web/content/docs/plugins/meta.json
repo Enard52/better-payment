@@ -10,5 +10,6 @@
     "currency-conversion"
     "redact"
     "three-ds-timeout"
+    "captcha"
   ]
 }

@@ -39,6 +39,10 @@ const budgets = [
   // openAPI plugin (beta measures 8.99 kB gzip). The threeDSTimeout plugin adds
   // 0.83 kB, taking the bundle to 9.82 / 9.83 kB gzip, so the budget is 10 kB.
   // ESM bundlers drop the plugins an application does not import.
+  // notifications plugin (its messages in the same five languages), 9 kB with the
+  // openAPI plugin (beta measures 8.99 kB gzip). The captcha plugin adds 0.82 kB,
+  // taking the bundle to 9.81 kB gzip, so the budget is 10 kB. ESM bundlers
+  // drop the plugins an application does not import.
   { file: 'dist/plugins/index.mjs', maxGzipKb: 10 },
   { file: 'dist/plugins/index.js', maxGzipKb: 10 },
   { file: 'dist/next/index.mjs', maxGzipKb: 1 },

@@ -49,3 +49,4 @@ export { redact, createRedactor, type RedactOptions, type CardMaskingStyle } fro
   type StartedThreeDSFlow,
   type ExpireStaleResult,
 } from './three-ds-timeout';
+export { captcha, type CaptchaOptions, type CaptchaProvider } from './captcha';
