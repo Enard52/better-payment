@@ -19,63 +19,18 @@ const budgets = [
   { file: 'dist/testing/index.js', maxGzipKb: 8 },
   // Official plugins, with every built-in error message language. Raise this for new
   // languages; translations are never shortened to fit it. 7 kB since the
-  // notifications plugin, 9 kB with the openAPI plugin (beta measures 8.99 kB gzip).
-  // The failover plugin adds 1.34 kB, taking the bundle to 10.33 / 10.34 kB gzip, so
-  // the budget is 11 kB. ESM bundlers drop the plugins an application does not import.
-  { file: 'dist/plugins/index.mjs', maxGzipKb: 11 },
-  { file: 'dist/plugins/index.js', maxGzipKb: 11 },
-  // notifications plugin (its messages in the same five languages), 9 kB since the
-  // openAPI plugin (i18n, chaos, notifications and openAPI build to 8.99 kB gzip on
-  // beta). The currencyConversion plugin adds 2.14 kB, taking the bundle to 11.13 kB
-  // gzip, so the budget is 12 kB. ESM bundlers
-  // drop the plugins an application does not import.
-  { file: 'dist/plugins/index.mjs', maxGzipKb: 12 },
-  { file: 'dist/plugins/index.js', maxGzipKb: 12 },
-  // notifications plugin (its messages in the same five languages), 9 kB with the
-  // openAPI plugin (beta measures 8.99 kB gzip). The redact plugin adds 0.89 kB,
-  // taking the bundle to 9.88 kB gzip, so the budget is 10 kB. ESM bundlers
-  // drop the plugins an application does not import.
-  // notifications plugin (its messages in the same five languages), 9 kB with the
-  // openAPI plugin (beta measures 8.99 kB gzip). The threeDSTimeout plugin adds
-  // 0.83 kB, taking the bundle to 9.82 / 9.83 kB gzip, so the budget is 10 kB.
-  // ESM bundlers drop the plugins an application does not import.
-  // notifications plugin (its messages in the same five languages), 9 kB with the
-  // openAPI plugin (beta measures 8.99 kB gzip). The captcha plugin adds 0.82 kB,
-  // taking the bundle to 9.81 kB gzip, so the budget is 10 kB. ESM bundlers
-  // drop the plugins an application does not import.
-  { file: 'dist/plugins/index.mjs', maxGzipKb: 10 },
-  { file: 'dist/plugins/index.js', maxGzipKb: 10 },
-  // With this branch's plugin on top of beta the entry point is 10.4 / 10.41 kB
-  // gzip, so the budget is 11 kB. ESM bundlers drop the plugins an application
-  // does not import.
-  // notifications plugin (its messages in the same five languages), 9 kB with the
-  // openAPI plugin (beta measures 8.99 kB gzip). The pendingResolver plugin takes
-  // the entry point to 10.3 / 10.31 kB gzip, so the budget is 11 kB. ESM bundlers
-  // drop the plugins an application does not import.
-  // With this branch's plugin on top of beta the entry point is 10.16 / 10.16 kB
-  // With this branch's plugin on top of beta the entry point is 10.17 / 10.18 kB
-  // gzip, so the budget is 11 kB. ESM bundlers drop the plugins an application
-  // does not import.
-  { file: 'dist/plugins/index.mjs', maxGzipKb: 11 },
-  { file: 'dist/plugins/index.js', maxGzipKb: 11 },
-  // With this branch's plugin on top of beta the entry point is 11.24 / 11.24 kB
-  // gzip, so the budget is 12 kB. ESM bundlers drop the plugins an application
-  // does not import.
-  { file: 'dist/plugins/index.mjs', maxGzipKb: 12 },
-  { file: 'dist/plugins/index.js', maxGzipKb: 12 },
-  { file: 'dist/plugins/index.mjs', maxGzipKb: 9 },
-  { file: 'dist/plugins/index.js', maxGzipKb: 9 },
+  // notifications plugin, 9 kB with the openAPI plugin, 11 kB with failover. The
+  // currencyConversion, redact, threeDSTimeout, captcha, rateLimit, pendingResolver,
+  // refundApproval, webhookForwarding, mcp and telemetry plugins take the bundle to
+  // 22.32 / 22.34 kB gzip, so the budget is 23 kB. ESM bundlers drop the plugins an
+  // application does not import.
+  { file: 'dist/plugins/index.mjs', maxGzipKb: 23 },
+  { file: 'dist/plugins/index.js', maxGzipKb: 23 },
   // The fraud rules engine is a separate subpath (`better-payment/fraud`); the plugins
   // barrel only re-exports its types, so it costs that entry point nothing. 3.90 kB
   // gzip measured on the merged tree, so its own budget is 4 kB.
   { file: 'dist/fraud/index.mjs', maxGzipKb: 4 },
   { file: 'dist/fraud/index.js', maxGzipKb: 4 },
-  // notifications plugin (its messages in the same five languages), 9 kB with the
-  // openAPI plugin (beta measures 8.99 kB gzip), 10 kB with this telemetry plugin on
-  // top of beta (measured 9.85 kB gzip for both extensions). ESM bundlers
-  // drop the plugins an application does not import.
-  { file: 'dist/plugins/index.mjs', maxGzipKb: 10 },
-  { file: 'dist/plugins/index.js', maxGzipKb: 10 },
   // The commission router is a separate subpath (`better-payment/commission-router`),
   // it is deliberately not in the plugins barrel: 7.83 / 7.85 kB gzip measured on the
   // merged tree, 8 kB leaves room for the matching rules an application adds.
