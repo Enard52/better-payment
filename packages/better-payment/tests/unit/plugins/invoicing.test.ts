@@ -117,6 +117,86 @@ describe('invoicing plugin', () => {
     });
   });
 
+  it('keeps one invoice when payment.succeeded is redelivered', async () => {
+    const createInvoice = vi
+      .fn()
+      .mockResolvedValue({ id: 'inv-redelivered', status: 'created' } satisfies InvoiceResult);
+    const mockAdapter: InvoicingAdapter = {
+      name: 'mock-invoicing',
+      createInvoice,
+    };
+
+    const onInvoiceCreated = vi.fn();
+    const provider = new MockProvider();
+    vi.spyOn(provider, 'createPayment').mockResolvedValue({
+      status: PaymentStatus.SUCCESS,
+      paymentId: 'pay-redelivered',
+      conversationId: 'order-redelivered',
+    });
+
+    const payment = betterPayment({
+      providers: { mock: provider },
+      defaultProvider: 'mock',
+      plugins: [
+        invoicing({
+          adapter: mockAdapter,
+          onInvoiceCreated,
+        }),
+      ],
+    });
+
+    // The gateway re-sends its notification after the first one already won.
+    await payment.createPayment(mockPaymentRequest);
+    await payment.createPayment(mockPaymentRequest);
+
+    expect(createInvoice).toHaveBeenCalledOnce();
+    expect(onInvoiceCreated).toHaveBeenCalledOnce();
+    expect(await payment.invoicing.list()).toHaveLength(1);
+  });
+
+  it('keeps one invoice when two copies arrive while the first is still running', async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const createInvoice = vi.fn(async () => {
+      await gate;
+      return { id: 'inv-concurrent', status: 'created' } satisfies InvoiceResult;
+    });
+    const mockAdapter: InvoicingAdapter = {
+      name: 'mock-invoicing',
+      createInvoice,
+    };
+
+    const provider = new MockProvider();
+    vi.spyOn(provider, 'createPayment').mockResolvedValue({
+      status: PaymentStatus.SUCCESS,
+      paymentId: 'pay-concurrent',
+      conversationId: 'order-concurrent',
+    });
+
+    const payment = betterPayment({
+      providers: { mock: provider },
+      defaultProvider: 'mock',
+      plugins: [
+        invoicing({
+          adapter: mockAdapter,
+        }),
+      ],
+    });
+
+    const first = payment.createPayment(mockPaymentRequest);
+    // Park the first delivery inside the provider call, so the second one lands
+    // while the invoice POST is still open.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const second = payment.createPayment(mockPaymentRequest);
+    release();
+    await Promise.all([first, second]);
+
+    expect(createInvoice).toHaveBeenCalledOnce();
+    expect((await payment.invoicing.get('pay-concurrent'))?.invoiceId).toBe('inv-concurrent');
+  });
+
   it('retries on transient failure and records failure when retries exhausted', async () => {
     let callCount = 0;
     const createInvoice = vi.fn().mockImplementation(() => {
@@ -240,6 +320,49 @@ describe('invoicing plugin', () => {
 
     expect(cancelInvoice).toHaveBeenCalledWith('inv-to-cancel');
     expect((await payment.invoicing.get('pay-refundable'))?.status).toBe('cancelled');
+  });
+
+  it('keeps one return invoice when refund.succeeded is redelivered', async () => {
+    const createReturnInvoice = vi
+      .fn()
+      .mockResolvedValue({ id: 'inv-return-once', status: 'created' } satisfies InvoiceResult);
+    const mockAdapter: InvoicingAdapter = {
+      name: 'mock-returning',
+      createInvoice: vi
+        .fn()
+        .mockResolvedValue({ id: 'inv-sale-once', status: 'created' } satisfies InvoiceResult),
+      createReturnInvoice,
+    };
+
+    const provider = new MockProvider();
+    vi.spyOn(provider, 'createPayment').mockResolvedValue({
+      status: PaymentStatus.SUCCESS,
+      paymentId: 'pay-refund-twice',
+    });
+    vi.spyOn(provider, 'refund').mockResolvedValue({
+      status: PaymentStatus.SUCCESS,
+      paymentId: 'pay-refund-twice',
+    });
+
+    const payment = betterPayment({
+      providers: { mock: provider },
+      defaultProvider: 'mock',
+      plugins: [
+        invoicing({
+          adapter: mockAdapter,
+          onRefund: 'return-invoice',
+        }),
+      ],
+    });
+
+    await payment.createPayment(mockPaymentRequest);
+    await payment.refund({ paymentId: 'pay-refund-twice', amount: '40.00' });
+    await payment.refund({ paymentId: 'pay-refund-twice', amount: '40.00' });
+
+    expect(createReturnInvoice).toHaveBeenCalledOnce();
+    expect((await payment.invoicing.get('pay-refund-twice'))?.returnInvoiceId).toBe(
+      'inv-return-once'
+    );
   });
 
   describe('e-document issuance step', () => {

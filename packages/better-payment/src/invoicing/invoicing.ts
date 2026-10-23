@@ -38,6 +38,8 @@ export const invoicing = (options: InvoicingOptions) => {
 
   let pluginCtx: PluginContext | undefined;
   const issuanceInFlight = new Set<string>();
+  const creationInFlight = new Set<string>();
+  const refundInFlight = new Set<string>();
 
   async function executeWithRetry<T>(fn: () => Promise<T>): Promise<T> {
     let lastError: unknown;
@@ -218,6 +220,17 @@ export const invoicing = (options: InvoicingOptions) => {
       return;
     }
 
+    const previous = await loadRecord(keyedId);
+    if (previous?.invoiceId || creationInFlight.has(keyedId)) {
+      // Gateways redeliver `payment.succeeded`, and the delivery that already
+      // created the invoice can still be in flight. A second POST would be a
+      // second sales invoice for the same payment, so it is dropped here.
+      pluginCtx?.logger?.debug('invoicing: payment already invoiced, ignoring redelivery', {
+        paymentId: keyedId,
+      });
+      return;
+    }
+
     if (!amount) {
       const error = new Error(
         `invoicing: cannot invoice payment '${keyedId}': the event carries no amount`
@@ -294,6 +307,7 @@ export const invoicing = (options: InvoicingOptions) => {
     };
 
     try {
+      creationInFlight.add(keyedId);
       const invoice = await executeWithRetry(() => adapter.createInvoice(params));
       if (!invoice.id) {
         throw new Error(
@@ -342,6 +356,8 @@ export const invoicing = (options: InvoicingOptions) => {
       if (options.onInvoiceFailed) {
         await options.onInvoiceFailed(err instanceof Error ? err : new Error(errorMsg), event);
       }
+    } finally {
+      creationInFlight.delete(keyedId);
     }
   }
 
@@ -355,7 +371,11 @@ export const invoicing = (options: InvoicingOptions) => {
 
     const record = await loadRecord(paymentId);
     if (!record || !record.invoiceId) return;
-
+    if (record.status === 'cancelled' || record.returnInvoiceId || refundInFlight.has(paymentId)) {
+      // Same rule as the sales invoice: the stored record is what proves the
+      // refund document already exists, because the provider cannot dedupe it.
+      return;
+    }
     const req = (event.request as Record<string, unknown>) || {};
     const refundAmount = String(
       event.amount ?? req.refundPrice ?? req.price ?? record.amount ?? ''
@@ -382,12 +402,16 @@ export const invoicing = (options: InvoicingOptions) => {
         };
 
     try {
+      refundInFlight.add(paymentId);
       if (onRefund === 'cancel' && adapter.cancelInvoice) {
         await executeWithRetry(() => adapter.cancelInvoice!(record.invoiceId!));
         record.status = 'cancelled';
         await saveRecord(record);
       } else if (onRefund === 'return-invoice' && adapter.createReturnInvoice) {
-        await executeWithRetry(() => adapter.createReturnInvoice!(record.invoiceId!, returnParams));
+        const returnInvoice = await executeWithRetry(() =>
+          adapter.createReturnInvoice!(record.invoiceId!, returnParams)
+        );
+        if (returnInvoice.id) record.returnInvoiceId = returnInvoice.id;
         await saveRecord(record);
       }
     } catch (err) {
@@ -395,6 +419,8 @@ export const invoicing = (options: InvoicingOptions) => {
         `Refund invoicing action failed for payment ${paymentId}`,
         err instanceof Error ? err : new Error(errorMessage(err))
       );
+    } finally {
+      refundInFlight.delete(paymentId);
     }
   }
 

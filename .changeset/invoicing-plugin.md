@@ -2,7 +2,7 @@
 "better-payment": minor
 ---
 
-Add e-Fatura / e-Arşiv invoicing plugin (`invoicing`) with an official Paraşüt adapter, shipped as the tree-shakable `better-payment/invoicing` subpath: sales-invoice creation plus a separate, provider-confirmed issuance step (e-Fatura / e-Arşiv chosen by the buyer's registered inbox), required OAuth password-grant credentials, a pluggable `InvoicingStore` for legally-relevant records, automatic retries with failure hooks, and refund automation. It is exported only from `better-payment/invoicing`, not from `better-payment/plugins`, so applications that do not invoice pay no bundle cost for the plugin or the Paraşüt adapter.
+Add e-Fatura / e-Arşiv invoicing plugin (`invoicing`) with an official Paraşüt adapter, shipped as the tree-shakable `better-payment/invoicing` subpath: sales-invoice creation plus a separate, provider-confirmed issuance step (e-Fatura / e-Arşiv chosen by the buyer's registered inbox), required OAuth password-grant credentials, a pluggable `InvoicingStore` for legally-relevant records, automatic retries with failure hooks, a guard that drops a redelivered notification instead of issuing a second invoice for the same payment, and refund automation. It is exported only from `better-payment/invoicing`, not from `better-payment/plugins`, so applications that do not invoice pay no bundle cost for the plugin or the Paraşüt adapter.
 
 <!-- docs -->
 section: added

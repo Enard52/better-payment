@@ -85,6 +85,7 @@ Yanıt sonrası arka plan işinin öldüğü serverless çalışma ortamlarında
 - **İki Aşamalı Faturalama:** Satış faturasının oluşturulması ve elektronik belgenin düzenlenmesi ayrı adımlardır ve ayrı kancaları vardır; eklenti sağlayıcı onaylamadan bir faturayı asla düzenlenmiş gibi göstermez.
 - **Asenkron Çalışma:** `payment.succeeded` ve `refund.succeeded` olaylarını dinler. Müşteri ödeme onayını anında alırken, faturalar arka planda üretilir.
 - **Otomatik Yeniden Denemeler (yalnızca oluşturma):** Satış faturası oluşturulurken ağ kesintisi ya da hız limiti yaşanırsa eklenti yapılandırılabilir aralıklarla otomatik tekrar dener. Düzenleme istekleri tek denemedir; yukarıya bakın.
+- **Yenileme Koruması:** Ağ geçidi aynı `payment.succeeded` ya da `refund.succeeded` olayını iki kez iletebilir ve ikinci istek tek satış için ikinci fatura demek olur. Yanında `invoiceId` — iade tarafında `returnInvoiceId` — taşıyan bir kayıt varsa yenileme düşer; aynı süreçte hâlâ sürmekte olan ikinci bir iletim de aynı korumaya takılır.
 - **İade Yönetimi (`onRefund`):**
   - `'return-invoice'` (varsayılan): İade edilen tutarı karşılayan bir iade faturası (`item_type: 'refund'`) düzenler.
   - `'cancel'`: Orijinal satış faturasını entegratörde iptal eder.

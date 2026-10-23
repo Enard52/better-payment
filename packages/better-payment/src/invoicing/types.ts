@@ -146,6 +146,11 @@ export interface InvoicingRecord {
   documentType?: InvoiceDocumentType;
   /** Issuance job id at the provider, while `status` is `pending` */
   issuanceJobId?: string;
+  /**
+   * The sales invoice this refund produced, so a redelivered `refund.succeeded`
+   * cannot create a second return invoice.
+   */
+  returnInvoiceId?: string;
   status: InvoicingStatus;
   amount?: string;
   currency?: string;

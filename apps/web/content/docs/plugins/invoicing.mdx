@@ -85,6 +85,7 @@ On serverless runtimes where background work is killed after the response, use `
 - **Two-Phase Invoicing:** The sales invoice creation and the e-document issuance are separate steps with separate hooks; the plugin never claims an invoice is issued before the provider confirms it.
 - **Asynchronous Execution:** Listens to `payment.succeeded` and `refund.succeeded` events. The customer receives their payment confirmation immediately, while invoices are issued in the background.
 - **Automatic Retries (creation only):** If the invoicing provider experiences temporary network glitches or rate limits while the sales invoice is created, the plugin retries automatically with configurable backoff. Issuance submissions are single-attempt; see above.
+- **Redelivery Guard:** A gateway can deliver the same `payment.succeeded` or `refund.succeeded` twice, and the second POST would be a second invoice for one sale. A record that already carries an `invoiceId` — or a `returnInvoiceId` on the refund side — stops the redelivery, and so does an identical delivery that is still in flight in the same process.
 - **Refund Handling (`onRefund`):**
   - `'return-invoice'` (default): Issues a return invoice (`item_type: 'refund'`) matching the refunded amount.
   - `'cancel'`: Cancels the original sales invoice with the integrator.
