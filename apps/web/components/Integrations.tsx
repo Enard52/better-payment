@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import { Check } from "lucide-react";
 import CompareSlider from "@/components/CompareSlider";
 import SectionHeading from "@/components/SectionHeading";
@@ -9,6 +9,7 @@ import { integrations, providerTiles, type ProviderGroup } from "@/lib/integrati
 import { cn } from "@/lib/utils";
 import type { Dictionary } from "@/lib/i18n/dictionary";
 import { withBasePath } from "@/lib/base-path";
+import { nextProviderTabIndex } from "@/lib/provider-tabs.mjs";
 
 const GROUPS: ProviderGroup[] = ["gateway", "virtualPos", "bankPos"];
 
@@ -29,6 +30,7 @@ export default function Integrations({
   code: Dictionary["code"];
 }) {
   const [active, setActive] = useState(0);
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const tile = providerTiles[active];
   const p = integrations.find((item) => item.id === tile.integration)!;
   const info = t[p.id];
@@ -38,6 +40,15 @@ export default function Integrations({
     ? { ...p.after, code: p.after.code.replaceAll("isbank", tile.bank) }
     : p.after;
   const estBanks = providerTiles.filter((item) => item.integration === "est");
+
+  const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
+    const nextIndex = nextProviderTabIndex(event.key, currentIndex, providerTiles.length);
+    if (nextIndex === null) return;
+
+    event.preventDefault();
+    setActive(nextIndex);
+    tabRefs.current[nextIndex]?.focus();
+  };
 
   return (
     <section id="providers" className="scroll-mt-20 px-5 py-24 sm:px-8 md:py-28">
@@ -49,7 +60,12 @@ export default function Integrations({
             <p className="text-body font-bold tracking-tight text-foreground">{t.summary}</p>
             <p className="text-caption text-muted-foreground">{t.pick}</p>
           </div>
-          <div role="tablist" aria-label={t.capabilities} className="flex flex-col gap-y-4 sm:flex-row sm:flex-wrap sm:gap-x-6">
+          <div
+            role="tablist"
+            aria-label={t.capabilities}
+            aria-orientation="horizontal"
+            className="flex flex-col gap-y-4 sm:flex-row sm:flex-wrap sm:gap-x-6"
+          >
             {GROUPS.map((group) => (
               <div key={group} role="presentation" className="min-w-0">
                 <p className="mb-2 px-1 text-label font-semibold tracking-eyebrow text-muted-foreground uppercase">
@@ -60,12 +76,19 @@ export default function Integrations({
                     item.group !== group ? null : (
                       <button
                         key={item.key}
+                        ref={(node) => {
+                          tabRefs.current[i] = node;
+                        }}
+                        id={`provider-tab-${item.key}`}
                         role="tab"
                         type="button"
                         aria-selected={active === i}
+                        aria-controls="provider-panel"
                         aria-label={item.name}
+                        tabIndex={active === i ? 0 : -1}
                         title={item.name}
                         onClick={() => setActive(i)}
+                        onKeyDown={(event) => handleTabKeyDown(event, i)}
                         className={cn(
                           "grid h-14 w-full place-items-center sm:w-[118px] rounded-xl border px-3 transition-[border-color,box-shadow,background-color] duration-(--bp-d-sm) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
                           active === i
@@ -93,7 +116,12 @@ export default function Integrations({
           </div>
         </div>
 
-        <div className="bp-reveal grid grid-cols-1 gap-5 lg:grid-cols-[0.8fr_1.2fr]">
+        <div
+          id="provider-panel"
+          role="tabpanel"
+          aria-labelledby={`provider-tab-${tile.key}`}
+          className="bp-reveal grid grid-cols-1 gap-5 lg:grid-cols-[0.8fr_1.2fr]"
+        >
           <div className="rounded-2xl border border-border bg-card p-6 sm:p-7">
             <div className="mb-4 flex items-center gap-3">
               <span className="grid size-12 place-items-center rounded-xl border border-border bg-background dark:bg-logo">
