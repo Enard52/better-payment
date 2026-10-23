@@ -67,10 +67,10 @@ export default function Integrations({
                         title={item.name}
                         onClick={() => setActive(i)}
                         className={cn(
-                          "grid h-14 w-full place-items-center sm:w-[118px] rounded-xl border px-3 transition-[border-color,box-shadow,background-color] duration-(--bp-d-sm) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:bg-logo",
+                          "grid h-14 w-full place-items-center sm:w-[118px] rounded-xl border px-3 transition-[border-color,box-shadow,background-color] duration-(--bp-d-sm) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
                           active === i
-                            ? "border-primary bg-background shadow-[0_0_0_4px_var(--bp-tint)]"
-                            : "border-border bg-background hover:border-line-strong",
+                            ? "border-primary bg-background shadow-[0_0_0_4px_var(--bp-tint)] dark:bg-logo dark:shadow-[0_0_0_3px_var(--primary)]"
+                            : "border-border bg-background hover:border-line-strong dark:bg-logo dark:hover:border-line-strong",
                         )}
                       >
                         {item.logo ? (
