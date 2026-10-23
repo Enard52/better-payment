@@ -150,6 +150,12 @@ if (!valid) {
 
 console.log(event?.iyziEventType, result?.status, result?.paymentId);
 ```
+`result.status` follows the notification: `success` for `SUCCESS`, `failure` for an explicit
+`FAILURE` (or a notification that only carries an `errorCode`), and `pending` for any other
+status, which is how an in-progress 3DS or registration step arrives. Only terminal
+notifications broadcast `payment.succeeded` or `payment.failed`; anything else broadcasts
+`payment.pending`.
+
 
 Using `BetterPaymentHandler` automatically handles the `/api/pay/iyzico/webhook` route:
 

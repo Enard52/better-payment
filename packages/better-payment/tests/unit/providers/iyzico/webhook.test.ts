@@ -1,10 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  betterPayment,
-  iyzico,
-  PaymentStatus,
-  type PaymentEvent,
-} from 'better-payment';
+import { betterPayment, iyzico, PaymentStatus, type PaymentEvent } from 'better-payment';
 import { hmac, toHex } from '../../../../src/core/crypto';
 
 const apiKey = 'test_api_key';
@@ -181,5 +176,82 @@ describe('iyzico webhooks (merchant notifications)', () => {
     expect(res2.status).toBe(200);
     // Must NOT emit duplicate event
     expect(eventSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('broadcasts payment.pending for a webhook that is not terminal', async () => {
+    const payment = betterPayment({
+      providers: {
+        iyzico: iyzico({ apiKey, secretKey }),
+      },
+    });
+
+    const failed: PaymentEvent[] = [];
+    const pending: PaymentEvent[] = [];
+    payment.on('payment.failed', (event) => failed.push(event));
+    payment.on('payment.pending', (event) => pending.push(event));
+
+    const payload = {
+      iyziEventType: 'CREATE_INIT_3DS',
+      paymentId: '445566',
+      paymentConversationId: 'CONV-777',
+      status: 'WAITING_FOR_AUTH',
+    };
+
+    const signature = await generateSignature(secretKey, payload);
+
+    const response = await payment.handler.handle({
+      method: 'POST',
+      url: 'https://example.com/api/pay/iyzico/webhook',
+      headers: {
+        'content-type': 'application/json',
+        'x-iyz-signature-v3': signature,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    expect(response.status).toBe(200);
+    expect(pending).toHaveLength(1);
+    expect(pending[0].paymentId).toBe('445566');
+    // A 3DS step that is still in progress is not a failed payment
+    expect(failed).toHaveLength(0);
+  });
+
+  it('keeps an explicit FAILURE webhook, and an error-only notification, failed', async () => {
+    const payment = betterPayment({
+      providers: {
+        iyzico: iyzico({ apiKey, secretKey }),
+      },
+    });
+
+    const failedPayload = {
+      iyziEventType: 'CHECKOUT_FORM_AUTH',
+      paymentId: '135790',
+      paymentConversationId: 'CONV-900',
+      status: 'FAILURE',
+      errorCode: '51',
+    };
+    const failedSignature = await generateSignature(secretKey, failedPayload);
+    const failedVerification = await payment.iyzico.verifyWebhook(
+      { 'x-iyz-signature-v3': failedSignature },
+      failedPayload
+    );
+    expect(failedVerification.valid).toBe(true);
+    expect(failedVerification.result?.status).toBe(PaymentStatus.FAILURE);
+
+    const errorOnlyPayload = {
+      iyziEventType: 'CHECKOUT_FORM_AUTH',
+      paymentId: '246813',
+      paymentConversationId: 'CONV-901',
+      errorCode: '12',
+    };
+    const errorOnlySignature = await generateSignature(secretKey, {
+      ...errorOnlyPayload,
+      status: '',
+    });
+    const errorOnlyVerification = await payment.iyzico.verifyWebhook(
+      { 'x-iyz-signature-v3': errorOnlySignature },
+      errorOnlyPayload
+    );
+    expect(errorOnlyVerification.result?.status).toBe(PaymentStatus.FAILURE);
   });
 });

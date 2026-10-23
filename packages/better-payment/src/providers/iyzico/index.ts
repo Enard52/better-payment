@@ -561,8 +561,19 @@ export class Iyzico extends PaymentProvider<IyzicoConfig> {
       return { valid: false };
     }
 
-    const paymentStatus =
-      status.toUpperCase() === 'SUCCESS' ? PaymentStatus.SUCCESS : PaymentStatus.FAILURE;
+    // Only a terminal notification has an outcome to report. iyzico also posts 3DS
+    // and registration steps here, and `payment.pending` exists for exactly those:
+    // folding them into FAILURE would broadcast a failed payment for money that is
+    // still being authorized.
+    const upperStatus = status.toUpperCase();
+    let paymentStatus: PaymentStatus;
+    if (upperStatus === 'SUCCESS') {
+      paymentStatus = PaymentStatus.SUCCESS;
+    } else if (upperStatus === 'FAILURE' || (!upperStatus && payload.errorCode)) {
+      paymentStatus = PaymentStatus.FAILURE;
+    } else {
+      paymentStatus = PaymentStatus.PENDING;
+    }
 
     const result: PaymentResponse = this.withErrorCode({
       status: paymentStatus,

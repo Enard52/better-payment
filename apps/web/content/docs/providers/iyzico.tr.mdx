@@ -147,6 +147,11 @@ if (!valid) {
 
 console.log(event?.iyziEventType, result?.status, result?.paymentId);
 ```
+`result.status` bildirime göre belirlenir: `SUCCESS` için `success`, açık bir `FAILURE` için
+(veya yalnızca `errorCode` taşıyan bildirimde) `failure`, diğer tüm durumlar için `pending` —
+devam eden 3DS ya da kayıt adımı böyle gelir. Yalnızca sonlanan bildirimler
+`payment.succeeded` ya da `payment.failed` yayar; diğerleri `payment.pending` yayar.
+
 
 `BetterPaymentHandler` veya HTTP adaptörleri kullanıldığında `/api/pay/iyzico/webhook` rotası otomatik karşılanır:
 
