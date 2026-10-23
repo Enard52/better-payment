@@ -67,13 +67,14 @@ export interface PaymentLinkStore {
   ): Promise<PaymentLink | undefined> | PaymentLink | undefined;
   /**
    * Compares the record against `expect` and applies `patch` only if it still matches,
-   * as one atomic step. Optional: a store without it is guarded per process only, so
-   * implement it when several instances share one backend.
+   * as one atomic step. Only the fields present in `expect` are compared. Optional: a
+   * store without it is guarded per process only, so implement it when several
+   * instances share one backend.
    */
   claim?(
     id: string,
     patch: Partial<PaymentLink>,
-    expect: Pick<PaymentLink, 'status' | 'useCount'>
+    expect: Partial<Pick<PaymentLink, 'status' | 'useCount' | 'attempts'>>
   ): Promise<PaymentLink | undefined> | PaymentLink | undefined;
 }
 
@@ -99,11 +100,16 @@ export class MemoryPaymentLinkStore implements PaymentLinkStore {
   async claim(
     id: string,
     patch: Partial<PaymentLink>,
-    expect: Pick<PaymentLink, 'status' | 'useCount'>
+    expect: Partial<Pick<PaymentLink, 'status' | 'useCount' | 'attempts'>>
   ): Promise<PaymentLink | undefined> {
     // Map reads and writes are synchronous, so no other task can settle between them.
     const existing = this.items.get(id);
-    if (!existing || existing.status !== expect.status || existing.useCount !== expect.useCount) {
+    if (!existing) return undefined;
+    if (expect.status !== undefined && existing.status !== expect.status) return undefined;
+    if (expect.useCount !== undefined && existing.useCount !== expect.useCount) {
+      return undefined;
+    }
+    if (expect.attempts !== undefined && (existing.attempts ?? 0) !== expect.attempts) {
       return undefined;
     }
     const updated = { ...existing, ...patch };
@@ -277,6 +283,29 @@ export function paymentLinks(options: PaymentLinksOptions): BetterPaymentPlugin 
     return updated && updated.useCount === patch.useCount ? updated : undefined;
   }
 
+  /**
+   * Counts one payment attempt against the link. The limit is a card-testing control,
+   * so the increment is a compare-and-set on `attempts`: visitors whose requests overlap
+   * cannot all be admitted against the value they each read. `undefined` means the link
+   * is at its limit, so the caller must refuse.
+   */
+  async function claimAttempt(link: PaymentLink): Promise<PaymentLink | undefined> {
+    if (!store.claim) {
+      const attempts = (link.attempts ?? 0) + 1;
+      const updated = await store.update(link.id, { attempts });
+      return updated && updated.attempts === attempts ? updated : undefined;
+    }
+    let current: PaymentLink | undefined = link;
+    for (let round = 0; round < 3 && current; round++) {
+      const attempts = current.attempts ?? 0;
+      if (attempts >= maxAttempts) return undefined;
+      const claimed = await store.claim(current.id, { attempts: attempts + 1 }, { attempts });
+      if (claimed) return claimed;
+      current = await store.get(current.id);
+    }
+    return undefined;
+  }
+
   async function settle(
     link: PaymentLink,
     claimed: PaymentLink,
@@ -412,8 +441,8 @@ export function paymentLinks(options: PaymentLinksOptions): BetterPaymentPlugin 
             );
           }
 
-          const attempts = link.attempts ?? 0;
-          if (attempts >= maxAttempts) {
+          const counted = await claimAttempt(link);
+          if (!counted) {
             return ctx.json(
               {
                 error: true,
@@ -422,7 +451,6 @@ export function paymentLinks(options: PaymentLinksOptions): BetterPaymentPlugin 
               429
             );
           }
-          await store.update(link.id, { attempts: attempts + 1 });
 
           const provider = providerOf(ctx, link);
           if (!provider) {
@@ -430,7 +458,7 @@ export function paymentLinks(options: PaymentLinksOptions): BetterPaymentPlugin 
           }
 
           const target = ctx.use(provider);
-          const conversationId = conversationIdOf(link.id, attempts + 1);
+          const conversationId = conversationIdOf(link.id, counted.attempts ?? 1);
           const paymentRequest = buildRequest(link, body, conversationId);
 
           if (!options.allowDirectPayment) {

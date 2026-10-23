@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { betterPayment, ConfigurationError, PaymentStatus } from 'better-payment';
 import { MockProvider } from 'better-payment/testing';
 import {
@@ -398,6 +398,37 @@ describe('paymentLinks plugin', () => {
     });
     expect(refused.status).toBe(429);
     expect(parse(refused.body).message).toContain('attempt limit (2)');
+  });
+
+  it('holds the attempt limit when visitors post the same link at once', async () => {
+    const { payment, mock } = createTestPayment({ maxAttempts: 3 });
+    const handler = payment.handler;
+    const link = await payment.links.create({ amount: '20.00' });
+    const init = vi.spyOn(mock, 'initThreeDSPayment');
+
+    const responses = await Promise.all(
+      Array.from({ length: 10 }, () =>
+        handler.handle({
+          method: 'POST',
+          url: `${BASE_URL}/links/pay`,
+          headers: { 'Content-Type': 'application/json' },
+          body: payBody(link),
+        })
+      )
+    );
+
+    const statuses = responses.map((r) => r.status);
+    const accepted = statuses.filter((s) => s === 200).length;
+    const stored = await payment.links.get(link.id);
+
+    // The cap is a card-testing control, so it has to hold for overlapping requests,
+    // not only for sequential ones: neither the provider fan-out nor the counter may
+    // pass maxAttempts.
+    expect(accepted).toBeLessThanOrEqual(3);
+    expect(init).toHaveBeenCalledTimes(accepted);
+    expect(stored?.attempts).toBeLessThanOrEqual(3);
+    expect(statuses.every((s) => s === 200 || s === 429)).toBe(true);
+    expect(statuses.filter((s) => s === 429).length).toBeGreaterThan(0);
   });
 
   it('requires a callback url while the pay endpoint stays 3D Secure', () => {
