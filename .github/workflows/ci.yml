@@ -47,6 +47,8 @@ jobs:
       - run: pnpm --filter better-payment build
       - run: pnpm --filter web lint
       - run: pnpm --filter web docs:test
+      - name: Provider tabs keyboard navigation tests
+        run: pnpm --filter web tabs:test
       - name: Roadmap scroll regression tests
         run: node --test apps/web/scripts/roadmap-scroll.test.mjs
       - run: pnpm --filter web build
